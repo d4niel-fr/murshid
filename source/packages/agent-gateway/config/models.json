@@ -1,0 +1,66 @@
+{
+  "$comment": "Prices are USD per 1M tokens as given in the Murshid brief (Oct 2026); verify against provider pricing pages before launch. provider_model slugs are placeholders until each provider's exact model id is confirmed. pii_allowed=false means the router never sends requests flagged as containing student personal data to that model (data-residency / transfer policy, to be confirmed by legal).",
+  "currency": "USD",
+  "providers": {
+    "openai": { "kind": "openai_compatible", "base_url_env": "OPENAI_BASE_URL", "api_key_env": "OPENAI_API_KEY", "data_region": "US/EU (confirm)" },
+    "deepseek": { "kind": "openai_compatible", "base_url_env": "DEEPSEEK_BASE_URL", "api_key_env": "DEEPSEEK_API_KEY", "data_region": "CN" },
+    "google": { "kind": "openai_compatible", "base_url_env": "GEMINI_OPENAI_BASE_URL", "api_key_env": "GEMINI_API_KEY", "data_region": "configurable (confirm)" },
+    "anthropic": { "kind": "openai_compatible", "base_url_env": "ANTHROPIC_OPENAI_BASE_URL", "api_key_env": "ANTHROPIC_API_KEY", "data_region": "US/EU (confirm)" },
+    "self_hosted": { "kind": "openai_compatible", "base_url_env": "SELF_HOSTED_BASE_URL", "api_key_env": "SELF_HOSTED_API_KEY", "data_region": "UAE (own infra)" }
+  },
+  "models": [
+    {
+      "id": "gpt-6-luna", "provider": "openai", "provider_model": "gpt-6-luna",
+      "price": { "input_per_m": 0.10, "output_per_m": 0.50 },
+      "capabilities": ["chat", "json", "tools", "vision"], "languages": ["en", "ar"],
+      "context_tokens": 128000, "pii_allowed": true, "tier": "cheap"
+    },
+    {
+      "id": "deepseek-v4.1-flash", "provider": "deepseek", "provider_model": "deepseek-v4.1-flash",
+      "price": { "input_per_m": 0.30, "output_per_m": 1.20 },
+      "off_peak": { "window_utc": ["16:30", "00:30"], "multiplier": 0.5, "$comment": "Off-peak = half price per brief; window assumed from DeepSeek's historical discount hours, confirm." },
+      "capabilities": ["chat", "json", "tools"], "languages": ["en", "ar"],
+      "context_tokens": 128000, "pii_allowed": false, "tier": "cheap"
+    },
+    {
+      "id": "deepseek-v4-pro", "provider": "deepseek", "provider_model": "deepseek-v4-pro",
+      "price": { "input_per_m": 1.32, "output_per_m": 3.96 },
+      "capabilities": ["chat", "json", "tools", "reasoning"], "languages": ["en", "ar"],
+      "context_tokens": 128000, "pii_allowed": false, "tier": "mid"
+    },
+    {
+      "id": "gemini-3.1-flash-lite", "provider": "google", "provider_model": "gemini-3.1-flash-lite",
+      "price": { "input_per_m": 0.25, "output_per_m": 1.50 },
+      "capabilities": ["chat", "json", "tools", "vision", "long_context"], "languages": ["en", "ar"],
+      "context_tokens": 1000000, "pii_allowed": true, "tier": "cheap"
+    },
+    {
+      "id": "claude-haiku-5.5", "provider": "anthropic", "provider_model": "claude-haiku-5.5",
+      "price": { "input_per_m": 0.10, "output_per_m": 0.50 },
+      "capabilities": ["chat", "json", "tools", "vision"], "languages": ["en", "ar"],
+      "context_tokens": 200000, "pii_allowed": true, "tier": "cheap"
+    },
+    {
+      "id": "claude-sonnet-5.5", "provider": "anthropic", "provider_model": "claude-sonnet-5.5",
+      "price": { "input_per_m": 2.00, "output_per_m": 10.00 },
+      "capabilities": ["chat", "json", "tools", "vision", "reasoning", "long_context"], "languages": ["en", "ar"],
+      "context_tokens": 200000, "pii_allowed": true, "tier": "premium"
+    },
+    {
+      "id": "falcon-h1-arabic", "provider": "self_hosted", "provider_model": "tiiuae/Falcon-H1-Arabic",
+      "price": { "input_per_m": 0, "output_per_m": 0 },
+      "$comment": "Self-hosted: zero marginal token price; infra cost tracked separately (set infra_cost_per_m to amortised GPU cost when known).",
+      "infra_cost_per_m": null,
+      "capabilities": ["chat", "json"], "languages": ["ar", "en"],
+      "context_tokens": 32000, "pii_allowed": true, "tier": "self_hosted"
+    },
+    {
+      "id": "murshid-embed", "provider": "self_hosted", "provider_model": "BAAI/bge-m3",
+      "price": { "input_per_m": 0, "output_per_m": 0 },
+      "$comment": "ASSUMPTION: no embedding model was named in the brief; placeholder self-hosted multilingual embedder (EN/AR). Replace when chosen.",
+      "infra_cost_per_m": null,
+      "capabilities": ["embeddings"], "languages": ["ar", "en"],
+      "context_tokens": 8192, "pii_allowed": true, "tier": "self_hosted"
+    }
+  ]
+}

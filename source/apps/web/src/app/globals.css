@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
+/* Design team: contract tokens (light/dark, bands, RTL) + Tailwind/shadcn bridge. */
+@import "@murshid/design/tokens.css";
+@import "@murshid/design/bridge.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fonts are bundled via @fontsource (no network at build); fill the vars tokens.css reads. */
+:root {
+  --font-inter: "Inter Variable";
+  --font-plex-arabic: "IBM Plex Sans Arabic";
+}
+
+/* App-only aliases on top of bridge.css */
+@theme inline {
+  --color-line: var(--border);
+  --color-ink: var(--text);
+  --radius-card: var(--radius-lg);
+  --radius-chip: var(--radius-sm);
+}
+
+@layer base {
+  html, body { background: var(--bg); color: var(--text); min-height: 100dvh; }
+  html { scrollbar-gutter: stable; }
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--text-muted) 35%, transparent) transparent; }
+  [dir="rtl"] body { line-height: 1.6; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+}
+
+@layer components {
+  /* Card anatomy (DESIGN §6) */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+  }
+  .eyebrow {
+    font-size: var(--text-2xs);
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  [dir="rtl"] .eyebrow { text-transform: none; letter-spacing: 0; font-size: var(--text-xs); font-weight: 600; }
+  /* Hover lift: transform via Motion; shadow via one CSS transition */
+  .lift { transition: box-shadow 200ms ease, border-color 200ms ease; }
+  .lift:hover { box-shadow: var(--shadow-2); }
+  .tint-success { background: color-mix(in oklab, var(--success) 12%, transparent); color: color-mix(in oklab, var(--success) 72%, var(--text)); }
+  .tint-warning { background: color-mix(in oklab, var(--warning) 14%, transparent); color: color-mix(in oklab, var(--warning) 58%, var(--text)); }
+  .tint-danger { background: color-mix(in oklab, var(--danger) 12%, transparent); color: color-mix(in oklab, var(--danger) 78%, var(--text)); }
+  .tint-info { background: color-mix(in oklab, var(--info) 12%, transparent); color: color-mix(in oklab, var(--info) 80%, var(--text)); }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}
+
+/* Recharts follows tokens */
+.recharts-wrapper:focus, .recharts-surface:focus, .recharts-sector:focus, .recharts-layer:focus { outline: none; }
+.recharts-text { font-family: var(--font-sans); }
+
+/* ── App shell: sidebar widths are pure CSS so SSR markup never jumps ── */
+.sidebar { width: 64px; }
+.nav-label, .nav-label-icon, .nav-avatar { display: none; }
+.nav-rail-icon { display: block; }
+.shell-main { padding-inline-start: 0; }
+@media (min-width: 1024px) { .shell-main { padding-inline-start: 64px; } }
+@media (min-width: 1280px) {
+  [data-collapsed="false"] .sidebar { width: 248px; }
+  [data-collapsed="false"] .nav-label { display: block; }
+  [data-collapsed="false"] .nav-avatar { display: inline-flex; }
+  [data-collapsed="false"] .nav-label-icon { display: block; }
+  [data-collapsed="false"] .nav-rail-icon { display: none; }
+  [data-collapsed="false"] .shell-main { padding-inline-start: 248px; }
+}
+[data-overlay="true"] .sidebar { width: 248px; box-shadow: var(--shadow-2); }
+[data-overlay="true"] .nav-label, [data-overlay="true"] .nav-label-icon { display: block; }
+[data-overlay="true"] .nav-avatar { display: inline-flex; }
+[data-overlay="true"] .nav-rail-icon { display: none; }
+.shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }

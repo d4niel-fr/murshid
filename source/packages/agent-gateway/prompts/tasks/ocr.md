@@ -1,0 +1,1 @@
+Transcribe the text in the attached image exactly as written (keep line breaks, maths notation as LaTeX, Arabic as Arabic). Mark anything unreadable as [unclear]. Don't solve, summarise or correct anything. If the image is a test or exam paper and the AI-use level is "none", reply only: "This looks like assessed work, so I can only help you plan for it."

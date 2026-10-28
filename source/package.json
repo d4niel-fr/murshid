@@ -1,0 +1,16 @@
+{
+  "name": "murshid",
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "sim": "pnpm --filter @murshid/api sim",
+    "build": "pnpm --filter web build && pnpm --filter admin build"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.18"
+    }
+  }
+}

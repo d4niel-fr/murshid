@@ -1,0 +1,19 @@
+{
+  "id": "exam-outage",
+  "title": "Model outage on the first morning of mock exams",
+  "setting": "Murshid runs on low-cost hosted models with a rule-engine fallback. All details are synthetic.",
+  "stages": [
+    {"t": "Mon 08:30 (T+0)", "events": [
+      {"id": "E1", "visible_to": ["murshid_operator"], "tags": ["model_outage"],
+       "text": "First day of Grade 12 mock exams: the model provider returns HTTP 429/503 and the free daily quota is exhausted. Revision plans, reminders and Q&A for about 1,900 students stop generating."}]},
+    {"t": "Mon 09:15 (T+45m)", "events": [
+      {"id": "E2", "visible_to": ["school_khda"], "tags": ["model_outage", "exam"],
+       "text": "Teachers report students cannot open their AI revision notes before the 10:00 paper; parents are calling the school."}]},
+    {"t": "Mon 10:00 (T+1.5h)", "events": [
+      {"id": "E3", "visible_to": ["murshid_operator"], "tags": ["cross_border", "model_outage"],
+       "text": "The only paid fallback model with capacity is served from a region outside the UAE; switching would send student prompts (names, subjects, grades) abroad."}]},
+    {"t": "Tue 15:00 (T+1d)", "events": [
+      {"id": "E4", "visible_to": ["moe", "school_khda"], "tags": ["exam", "ai_use"],
+       "text": "Several students used a different public chatbot during the outage to write take-home assessed coursework. Teachers ask what the rule is."}]}
+  ]
+}

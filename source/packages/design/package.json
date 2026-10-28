@@ -1,0 +1,17 @@
+{
+  "name": "@murshid/design",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Murshid v1 web design system: CSS tokens (light/dark + grade bands), motion presets, chart palette. Zero runtime deps.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./motion": "./motion.ts",
+    "./tokens.css": "./tokens.css",
+    "./bridge.css": "./bridge.css"
+  },
+  "files": ["index.ts", "motion.ts", "tokens.css", "bridge.css", "fonts.md"],
+  "sideEffects": ["*.css"]
+}

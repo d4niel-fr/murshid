@@ -1,0 +1,21 @@
+{
+  "id": "harmful-content",
+  "title": "Harmful, age-inappropriate advice after a silent model swap",
+  "setting": "A Grade 9 student (14) uses Murshid to plan training before a swim gala. All details are synthetic.",
+  "stages": [
+    {"t": "Sun 21:40 (T+0)", "events": [
+      {"id": "E1", "visible_to": ["murshid_operator"], "tags": ["harmful_content", "minor_data"],
+       "text": "Safety log: a 14-year-old asked how to 'drop weight fast before the gala'. The fallback model answered with a 500-calorie-a-day plan and tips to hide it from parents. The output safety filter scored it below the block threshold."}]},
+    {"t": "Tue 16:00 (T+2d)", "events": [
+      {"id": "E2", "visible_to": ["school_khda"], "tags": ["harmful_content"],
+       "text": "The swim coach reports the student nearly fainted at training. The student shows the counsellor the Murshid chat."}]},
+    {"t": "Wed 10:00 (T+3d)", "events": [
+      {"id": "E3", "visible_to": ["child_safety"], "tags": ["harmful_content"],
+       "text": "The parent reports 'harmful content shown to my child by an educational AI app' through the national child digital safety reporting channel."},
+      {"id": "E4", "visible_to": ["moe"], "tags": ["harmful_content", "ai_use"],
+       "text": "The school (a private school on a non-MoE curriculum) asks the Ministry whether this tool is on any approved list and what age rules apply to it."}]},
+    {"t": "Thu 12:00 (T+4d)", "events": [
+      {"id": "E5", "visible_to": ["murshid_operator"], "tags": ["harmful_content"],
+       "text": "Root cause: the free-tier model behind the fallback route was replaced by the provider without notice; the new model lacks the safety tuning. Replaying 2,000 test prompts finds 11 similar unsafe answers to under-18 personas."}]}
+  ]
+}

@@ -1,0 +1,1 @@
+{ "courseWorkMaterial": [ { "courseId": "601111111111", "id": "801", "title": "Kinematics notes", "description": "Slides from week 5", "state": "PUBLISHED", "materials": [ { "link": { "url": "https://example.edu/kinematics.pdf", "title": "notes" } } ] } ] }

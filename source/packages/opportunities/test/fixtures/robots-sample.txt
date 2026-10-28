@@ -1,0 +1,9 @@
+# sample robots
+User-agent: *
+Disallow: /private/
+Disallow: /search
+Allow: /private/public-page
+Crawl-delay: 3
+
+User-agent: BadBot
+Disallow: /

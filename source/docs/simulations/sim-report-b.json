@@ -1,0 +1,283 @@
+{
+  "startedAt": "2026-10-10T20:52:14.783Z",
+  "finishedAt": "2026-10-10T20:52:24.195Z",
+  "api": "http://localhost:8787",
+  "health": {
+    "ok": true,
+    "auth_mode": "dev",
+    "chat": {
+      "provider": "openrouter",
+      "models": [
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        "google/gemma-4-31b-it:free",
+        "nvidia/nemotron-3.5-lightning:free"
+      ],
+      "mode": "orchestrator+models"
+    }
+  },
+  "summary": [
+    {
+      "sim": "B",
+      "turns": 3,
+      "passed": 3,
+      "fallbackTurns": 3,
+      "avgLatencyMs": 100
+    }
+  ],
+  "adminSteps": [
+    {
+      "sim": "B",
+      "step": "admin adds an assessment",
+      "method": "POST",
+      "path": "/admin/students/demo-g11/assessments",
+      "status": 201,
+      "ok": true,
+      "id": "demo-g11-physics-adm-1efk"
+    },
+    {
+      "sim": "B",
+      "step": "admin adds a task",
+      "method": "POST",
+      "path": "/admin/students/demo-g11/tasks",
+      "status": 201,
+      "ok": true,
+      "id": "task-a-2efs"
+    },
+    {
+      "sim": "B",
+      "step": "admin publishes an opportunity to this student",
+      "method": "POST",
+      "path": "/admin/opportunities",
+      "status": 201,
+      "ok": true,
+      "id": "opp-adm-3efx"
+    },
+    {
+      "sim": "B",
+      "step": "admin detail shows the 3 edits in the change log",
+      "method": "GET",
+      "path": "/admin/students/demo-g11",
+      "status": 200,
+      "ok": false
+    }
+  ],
+  "turns": [
+    {
+      "sim": "B",
+      "turn": 1,
+      "actor": "demo-g11",
+      "message": "Do I have any new exams or tests coming up this week?",
+      "route": [
+        "academics"
+      ],
+      "router": "rules",
+      "agents": [
+        {
+          "name": "Academics coach",
+          "model": null,
+          "ms": 191,
+          "fallback": true,
+          "rounds": 0,
+          "modelsTried": [
+            "nemotron-3-super-120b-a12b:free:429"
+          ],
+          "tools": [
+            "get_academics(prefetch)"
+          ],
+          "error": "nvidia/nemotron-3-super-120b-a12b:free HTTP 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day\",\"code\":429,\"metadata\":{\"headers\":{\"X-RateLimit-Limit\":\"50\",\"X-RateLimit-Remaining\":\"0\",\"X-RateLimit-Reset\":\"1791676800000\"},\"limi"
+        }
+      ],
+      "toolsCalled": [
+        "get_academics"
+      ],
+      "writes": [],
+      "uiCards": [
+        "render_chart"
+      ],
+      "latencyMs": 238,
+      "firstAgentEventMs": 54,
+      "generatedBy": "rules",
+      "fallback": true,
+      "modelsUsed": [],
+      "text": "Average 83.5% across 5 subjects. Furthest from target: English Literature (72.7% vs 80%). Next assessment: English Literature test — unit 3 on 2026-10-13. New from school: Physics practical: projectile motion on 2026-10-14.",
+      "checks": [
+        {
+          "name": "non-empty reply",
+          "pass": true,
+          "detail": "223 chars"
+        },
+        {
+          "name": "clean text (no raw tool-call markup or tables)",
+          "pass": true
+        },
+        {
+          "name": "every sub-agent answered (no empty section)",
+          "pass": true
+        },
+        {
+          "name": "agents ran: academics",
+          "pass": true,
+          "detail": "ran: academics"
+        },
+        {
+          "name": "tools used: get_academics",
+          "pass": true,
+          "detail": "ok tools: get_academics"
+        },
+        {
+          "name": "text matches /projectile|practical/i",
+          "pass": true
+        }
+      ],
+      "pass": true,
+      "httpStatus": 200
+    },
+    {
+      "sim": "B",
+      "turn": 2,
+      "actor": "demo-g11",
+      "message": "What tasks and deadlines do I have this week? Anything my teachers set?",
+      "route": [
+        "planner",
+        "academics"
+      ],
+      "router": "rules",
+      "agents": [
+        {
+          "name": "Planner",
+          "model": null,
+          "ms": 13,
+          "fallback": true,
+          "rounds": 0,
+          "modelsTried": [],
+          "tools": [
+            "get_upcoming(prefetch)",
+            "get_tasks(prefetch)"
+          ],
+          "error": "daily free-model quota exhausted until 2026-10-11T00:00:00.000Z"
+        },
+        {
+          "name": "Academics coach",
+          "model": null,
+          "ms": 13,
+          "fallback": true,
+          "rounds": 0,
+          "modelsTried": [],
+          "tools": [
+            "get_academics(prefetch)"
+          ],
+          "error": "daily free-model quota exhausted until 2026-10-11T00:00:00.000Z"
+        }
+      ],
+      "toolsCalled": [
+        "get_upcoming",
+        "get_tasks",
+        "get_academics"
+      ],
+      "writes": [],
+      "uiCards": [
+        "render_chart"
+      ],
+      "latencyMs": 52,
+      "firstAgentEventMs": 52,
+      "generatedBy": "rules",
+      "fallback": true,
+      "modelsUsed": [],
+      "text": "Here's what your team put together, Zayed:\n\n**Planner**\n6 assessments, 1 deadlines and 0 fixtures/events in the next 14 days. First: English Literature test — unit 3 on 2026-10-13.\n\n21 open of 21 tasks (next 7 days + overdue). \"Submit FTC engineering notebook to Mr. Sample\" (2026-10-12, set by school).\n\n**Academics coach**\nAverage 83.5% across 5 subjects. Furthest from target: English Literature (72.7% vs 80%). Next assessment: English Literature test — unit 3 on 2026-10-13. New from school: Physics practical: projectile motion on 2026-10-14.",
+      "checks": [
+        {
+          "name": "non-empty reply",
+          "pass": true,
+          "detail": "548 chars"
+        },
+        {
+          "name": "clean text (no raw tool-call markup or tables)",
+          "pass": true
+        },
+        {
+          "name": "every sub-agent answered (no empty section)",
+          "pass": true
+        },
+        {
+          "name": "one of: planner | academics | general",
+          "pass": true,
+          "detail": "ran: planner, academics"
+        },
+        {
+          "name": "text matches /notebook|FTC/i",
+          "pass": true
+        }
+      ],
+      "pass": true,
+      "httpStatus": 200
+    },
+    {
+      "sim": "B",
+      "turn": 3,
+      "actor": "demo-g11",
+      "message": "Has my school shared any new competitions or opportunities with me?",
+      "route": [
+        "opportunities"
+      ],
+      "router": "rules",
+      "agents": [
+        {
+          "name": "Opportunities scout",
+          "model": null,
+          "ms": 1,
+          "fallback": true,
+          "rounds": 0,
+          "modelsTried": [],
+          "tools": [
+            "find_opportunities(prefetch)"
+          ],
+          "error": "daily free-model quota exhausted until 2026-10-11T00:00:00.000Z"
+        }
+      ],
+      "toolsCalled": [
+        "find_opportunities"
+      ],
+      "writes": [],
+      "uiCards": [
+        "show_opportunities"
+      ],
+      "latencyMs": 10,
+      "firstAgentEventMs": 10,
+      "generatedBy": "rules",
+      "fallback": true,
+      "modelsUsed": [],
+      "text": "6 open matches. Best fit: Dubai Future Engineers Challenge (Demo) (16 days left). Published by your school: Dubai Future Engineers Challenge (Demo).",
+      "checks": [
+        {
+          "name": "non-empty reply",
+          "pass": true,
+          "detail": "148 chars"
+        },
+        {
+          "name": "clean text (no raw tool-call markup or tables)",
+          "pass": true
+        },
+        {
+          "name": "every sub-agent answered (no empty section)",
+          "pass": true
+        },
+        {
+          "name": "agents ran: opportunities",
+          "pass": true,
+          "detail": "ran: opportunities"
+        },
+        {
+          "name": "tools used: find_opportunities",
+          "pass": true,
+          "detail": "ok tools: find_opportunities"
+        },
+        {
+          "name": "text matches /Future Engineers/i",
+          "pass": true
+        }
+      ],
+      "pass": true,
+      "httpStatus": 200
+    }
+  ]
+}

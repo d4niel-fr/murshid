@@ -1,0 +1,59 @@
+{
+  "scenario": "minor-data-leak",
+  "mode": "offline",
+  "out_dir": "/workspace/murshid/itu-hackathon/solution/outputs/minor-data-leak-offline-20261021T100320Z",
+  "turns": 10,
+  "llm_calls": 0,
+  "cost_usd": 0.0,
+  "findings": [
+    {
+      "type": "late_awareness",
+      "tag": "breach",
+      "agent": "data_office",
+      "stages_late": 1,
+      "detail": "Data-protection authority agent learned of 'breach' 1 stage(s) after it first occurred."
+    },
+    {
+      "type": "late_awareness",
+      "tag": "breach",
+      "agent": "school_khda",
+      "stages_late": 1,
+      "detail": "School and KHDA regulator agent learned of 'breach' 1 stage(s) after it first occurred."
+    },
+    {
+      "type": "never_informed",
+      "tag": "minor_data",
+      "agent": "data_office",
+      "detail": "Data-protection authority agent has a mandate over 'minor_data' but never received that information."
+    },
+    {
+      "type": "late_awareness",
+      "tag": "minor_data",
+      "agent": "child_safety",
+      "stages_late": 1,
+      "detail": "Child digital safety agent learned of 'minor_data' 1 stage(s) after it first occurred."
+    },
+    {
+      "type": "late_awareness",
+      "tag": "cross_border",
+      "agent": "data_office",
+      "stages_late": 1,
+      "detail": "Data-protection authority agent learned of 'cross_border' 1 stage(s) after it first occurred."
+    },
+    {
+      "type": "deadline_undefined",
+      "agent": "murshid_operator",
+      "detail": "PDPL Art. 9: 'within the period ... set by the Executive Regulations' (no number of hours in the law itself)"
+    }
+  ],
+  "gaps": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G8",
+    "G9"
+  ],
+  "audit_ok": true,
+  "audit_records": 19
+}

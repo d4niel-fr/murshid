@@ -1,0 +1,74 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+@font-face{font-family:PS;src:url(file:///opt/deckbuild/fonts/PublicSans-Regular.ttf);font-weight:400}
+@font-face{font-family:PS;src:url(file:///opt/deckbuild/fonts/PublicSans-Bold.ttf);font-weight:700}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:960px;height:958px;background:#F7F8FA;font-family:PS,sans-serif;color:#1B1D21}
+.wrap{position:relative;width:960px;height:958px;padding:28px 92px 24px 28px;display:flex;flex-direction:column;justify-content:center}
+.step{display:flex;gap:18px;align-items:stretch;background:#fff;border:1.5px solid #D9DEE7;border-radius:14px;padding:16px 20px;}
+.tag{flex:0 0 132px;display:flex;flex-direction:column;justify-content:center}
+.num{font-size:15px;font-weight:700;color:#2563EB;letter-spacing:.08em}
+.lab{font-size:25px;font-weight:700;letter-spacing:.02em}
+.txt{flex:1;font-size:19px;line-height:1.35;display:flex;flex-direction:column;justify-content:center}
+.txt b{font-weight:700}
+.arrow{height:26px;display:flex;justify-content:flex-start;padding-left:80px}
+.arrow svg{display:block}
+.chips{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.chip{background:#EEF3FE;border:1.5px solid #C7D7FB;border-radius:9px;padding:7px 9px;font-size:15.5px;line-height:1.2;font-weight:700;color:#1B3A8A}
+.chip small{display:block;font-weight:400;font-size:12.5px;color:#4A5568;margin-top:2px}
+.guard{background:#1B1D21;color:#fff;border-color:#1B1D21}
+.guard .num{color:#8FB0FF}
+.route{margin-top:18px;border:1.5px dashed #2563EB;border-radius:14px;padding:14px 18px;background:#fff}
+.route h4{font-size:15px;letter-spacing:.08em;color:#2563EB;font-weight:700;margin-bottom:9px}
+.lane{display:flex;align-items:center;gap:8px}
+.r{flex:1;background:#F2F4F8;border-radius:9px;padding:8px 10px;font-size:15px;line-height:1.25;font-weight:700;text-align:center}
+.r small{display:block;font-weight:400;font-size:12.5px;color:#4A5568}
+.r.acc{background:#2563EB;color:#fff}.r.acc small{color:#DCE6FF}
+.ar{font-size:20px;color:#2563EB;font-weight:700}
+.foot{margin-top:8px;font-size:12.5px;color:#4A5568}
+.loop{position:absolute;right:26px;top:60px;width:60px;height:640px}
+.loop .lt{position:absolute;right:-4px;top:250px;writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:700;color:#2563EB;letter-spacing:.06em}
+</style></head><body><div class="wrap">
+
+<div class="step"><div class="tag"><span class="num">01</span><span class="lab">GOAL</span></div>
+<div class="txt">“Plan my week around my mid-term and both sports.”<span style="font-size:15px;color:#4A5568;margin-top:3px">From a student, or a teacher posting work</span></div></div>
+<div class="arrow"><svg width="20" height="26"><path d="M10 0 V18 M3 13 L10 22 L17 13" stroke="#2563EB" stroke-width="3" fill="none"/></svg></div>
+
+<div class="step"><div class="tag"><span class="num">02</span><span class="lab">PLAN</span></div>
+<div class="txt"><span>A lead agent breaks the goal into steps and hands them to specialists: <b>academics, sports, planner, opportunities, career</b>.</span></div></div>
+<div class="arrow"><svg width="20" height="26"><path d="M10 0 V18 M3 13 L10 22 L17 13" stroke="#2563EB" stroke-width="3" fill="none"/></svg></div>
+
+<div class="step"><div class="tag"><span class="num">03</span><span class="lab">TOOLS</span></div>
+<div class="txt"><div class="chips">
+<div class="chip">Timetable &amp; tasks<small>classes, tests, fixtures</small></div>
+<div class="chip">Microsoft 365 / Teams<small>assignments · simulated in prototype</small></div>
+<div class="chip">Calendar<small>whole-week load</small></div>
+<div class="chip">Opportunity search<small>crawled UAE database</small></div>
+<div class="chip">CV builder<small>LinkedIn-ready PDF</small></div>
+<div class="chip">Class analytics<small>fixed, explainable rules</small></div>
+</div></div></div>
+<div class="arrow"><svg width="20" height="26"><path d="M10 0 V18 M3 13 L10 22 L17 13" stroke="#2563EB" stroke-width="3" fill="none"/></svg></div>
+
+<div class="step"><div class="tag"><span class="num">04</span><span class="lab">ACTIONS</span></div>
+<div class="txt">Builds the week plan with protected revision and rest · creates tasks · saves an opportunity with a checklist · drafts the CV.</div></div>
+<div class="arrow"><svg width="20" height="26"><path d="M10 0 V18 M3 13 L10 22 L17 13" stroke="#2563EB" stroke-width="3" fill="none"/></svg></div>
+
+<div class="step guard"><div class="tag"><span class="num">05</span><span class="lab">APPROVAL</span></div>
+<div class="txt">The student confirms every write. Only the lead agent can write. Every change goes to the school's audit log. No ghost-writing of assessed work.</div></div>
+
+<div class="route"><h4>MODEL ROUTING</h4>
+<div class="lane">
+<div class="r">Rules first<small>simple intents · no model cost</small></div><span class="ar">→</span>
+<div class="r acc">Fast model<small>routing &amp; chat</small></div><span class="ar">→</span>
+<div class="r acc">Strong model<small>plans &amp; CV</small></div><span class="ar">→</span>
+<div class="r">Rules fallback<small>if a model fails</small></div>
+</div>
+<div class="foot">Prototype: NVIDIA Nemotron models via OpenRouter, with the rules engine as safety net. Per-student budget drops to cheaper models near the cap.</div>
+</div>
+
+<svg class="loop" viewBox="0 0 60 640" style="position:absolute;right:22px;top:115px" width="60" height="640">
+<path d="M0 600 H34 Q48 600 48 586 V28 Q48 14 34 14 H6" stroke="#2563EB" stroke-width="3" fill="none" stroke-dasharray="7 6"/>
+<path d="M12 6 L2 14 L12 22" stroke="#2563EB" stroke-width="3" fill="none"/>
+</svg>
+<div style="position:absolute;right:2px;top:300px;writing-mode:vertical-rl;font-size:14px;font-weight:700;color:#2563EB;letter-spacing:.06em">RESULTS FEED THE NEXT PLAN</div>
+</div></body></html>

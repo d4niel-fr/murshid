@@ -1,0 +1,133 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
+import { readConfig, type AppEnv, type Config, type Deps } from './lib/context';
+import { Api } from './lib/router';
+import { createMemoryRepository } from './repo/memory';
+import { seedRepository } from './repo/seed';
+import type { Repository } from './repo/types';
+import { registerStudents } from './routes/students';
+import { registerGoals } from './routes/goals';
+import { registerCourses } from './routes/courses';
+import { registerAchievements, registerCalendar, registerTasks } from './routes/simple';
+import { registerApplications, registerOpportunities } from './routes/opportunities';
+import { registerAgent, registerConnections, registerCv, registerGuardian, registerPlanner } from './routes/misc';
+import { demoView, registerV1 } from './v1/routes';
+import { registerAdmin, requireAdmin } from './admin/routes';
+import { registerSurvey, surveySinkFromEnv, type SurveySink } from './survey/routes';
+import { registerSchools } from './schools/routes';
+import { SchoolStore } from './schools/store';
+import { DemoStore } from './v1/store';
+import { createChatEngine, type ChatEngine } from './v1/chat';
+import type { ChatProvider } from '@murshid/agent-gateway';
+
+export interface CreateAppOptions {
+  repo?: Repository;
+  config?: Partial<Config>;
+  now?: () => Date;
+  /** shared store for the student API, the admin portal and Murshid's agents (default: fresh) */
+  store?: DemoStore;
+  /** tenancy + school state (licences, roster, teacher portal; default: fresh) */
+  schools?: SchoolStore;
+  /** model provider for the chat orchestrator (default: from env GATEWAY_MODE) */
+  chatProvider?: ChatProvider;
+  /** where survey responses go (default: Supabase when configured, else memory) */
+  surveySink?: SurveySink;
+}
+
+export function buildApi(opts: CreateAppOptions = {}) {
+  const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+  const deps: Deps = {
+    repo: opts.repo ?? createMemoryRepository(),
+    config: { ...readConfig(env), ...opts.config },
+    now: opts.now ?? (() => new Date()),
+  };
+  const app = new Hono<AppEnv>();
+  // The v1 web app runs on http://localhost:3000 (Next.js); Expo web on :8081. Extra origins: CORS_ORIGINS (comma-separated).
+  const allowed = new Set([
+    'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8081',
+    ...(env.CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+  ]);
+  app.use('*', cors({
+    origin: (origin) => (origin && allowed.has(origin) ? origin : '*'),
+    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    maxAge: 600,
+  }));
+  app.use('*', async (c, next) => { c.set('deps', deps); await next(); });
+  // Public demo deployments: when ADMIN_PASSCODE is set, admin data (platform admin, school admin, survey results,
+  // AI status) and the study buddy guardian/school switch need the passcode in x-admin-passcode, so random visitors
+  // to the demo cannot read or change them. Students and teachers (synthetic personas) stay one-click.
+  const adminPasscode = (env.ADMIN_PASSCODE ?? '').trim();
+  if (adminPasscode) {
+    app.use('*', async (c, next) => {
+      if (c.req.method === 'OPTIONS') return next();
+      const path = new URL(c.req.url).pathname;
+      const adminish = c.req.header('x-dev-role') === 'admin' || c.req.header('x-dev-role') === 'counsellor'
+        || path.startsWith('/admin') || path.startsWith('/licensing') || /^\/orgs\/[^/]+(\/|$)/.test(path)
+        // study buddy switches (guardian and school): visitors to the public demo can see the buddy, not flip it
+        || (c.req.method === 'PUT' && path === '/buddy/controls');
+      if (adminish && c.req.header('x-admin-passcode') !== adminPasscode) {
+        return c.json({ error: 'admin passcode required', code: 'admin_passcode' }, 401);
+      }
+      return next();
+    });
+  }
+
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return c.json({ error: err.message, ...(err.cause ? { details: err.cause } : {}) }, err.status);
+    }
+    console.error(err);
+    return c.json({ error: 'internal error' }, 500);
+  });
+  app.notFound((c) => c.json({ error: 'route not found' }, 404));
+
+  const api = new Api(app);
+  const store = opts.store ?? new DemoStore();
+  const schools = opts.schools ?? new SchoolStore();
+  const engine: ChatEngine = opts.chatProvider ? createChatEngine({}, opts.chatProvider) : createChatEngine(env);
+  api.route({ method: 'get', path: '/health', tag: 'meta', summary: 'Health check (auth mode, chat engine)', auth: 'none' }, (c) =>
+    c.json({ ok: true, auth_mode: deps.config.authMode, chat: { provider: engine.provider?.name ?? null, models: engine.provider ? engine.models : [], mode: engine.provider ? 'orchestrator+models' : 'orchestrator+rules', budget: engine.guard ? (({ used, dailyLimit, state }) => ({ used, dailyLimit, state }))(engine.guard.status()) : null } }));
+  api.route({ method: 'get', path: '/admin/ai-status', tag: 'admin', auth: 'custom', summary: 'AI engine status: models vs rules, today\'s model requests vs the daily budget, demo replay cache' }, async (c) => {
+    await requireAdmin(c);
+    const g = engine.guard?.status() ?? null;
+    return c.json({
+      mode: !engine.provider ? 'rules_only' : g?.state === 'budget_reached' ? 'rules_budget' : g?.state === 'degraded' ? 'degraded' : 'live',
+      provider: engine.provider?.name ?? null, models: engine.provider ? engine.models : [], guard: g,
+      note: !engine.provider ? 'No model key configured: every reply uses the rule-based engine.'
+        : 'Free OpenRouter models allow ~50 requests a day per key. ~US$10 of credit raises that to 1,000 a day (needs approval before buying).',
+    });
+  });
+  registerStudents(api);
+  registerGoals(api);
+  registerCourses(api);
+  registerTasks(api);
+  registerCalendar(api);
+  registerOpportunities(api);
+  registerApplications(api);
+  registerAchievements(api);
+  registerCv(api);
+  registerConnections(api);
+  registerGuardian(api);
+  registerPlanner(api);
+  registerAgent(api);
+  registerV1(api, store, engine);
+  registerAdmin(api, store, (id) => schools.licenceOf(id));
+  registerSchools(api, schools, store, (c) => demoView(c, store));
+  registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);
+  api.route({ method: 'get', path: '/openapi.json', tag: 'meta', summary: 'This OpenAPI document', auth: 'none' }, (c) => c.json(api.openapi()));
+
+  return { app, api, deps, store, schools };
+}
+
+export function createApp(opts: CreateAppOptions = {}) {
+  return buildApi(opts).app;
+}
+
+/** App with a seeded in-memory repository (dev, demo, edge deploy without a DB). */
+export async function createSeededApp(opts: Omit<CreateAppOptions, 'repo'> = {}) {
+  const repo = createMemoryRepository();
+  await seedRepository(repo, opts.now?.() ?? new Date());
+  return buildApi({ ...opts, repo });
+}

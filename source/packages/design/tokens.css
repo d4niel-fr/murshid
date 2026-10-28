@@ -1,0 +1,164 @@
+/*
+ * @murshid/design — tokens.css
+ * Contract: docs/V1-WEB-CONTRACT.md ("Design tokens contract").
+ * Theme name: "Clay" — warm off-white paper, ink text, one confident clay accent.
+ *
+ * Usage:
+ *   <html lang="en" dir="ltr" class="dark?" data-band="g9-10">
+ *   import "@murshid/design/tokens.css";   // then optionally "@murshid/design/bridge.css"
+ *
+ * data-band may sit on <html> (together with .dark) or on any wrapper inside it.
+ * Default (no data-band) === g9-10.
+ * Only the contract variables (+ --scale) are defined here. Shadcn/Tailwind aliases live in bridge.css.
+ */
+
+/* ───────────────────────── Light (default) ───────────────────────── */
+:root {
+  /* Surfaces */
+  --bg: #faf9f7;          /* warm paper */
+  --surface: #ffffff;     /* cards */
+  --surface-2: #f3f1ec;   /* wells, inputs, composer, hover */
+  --border: #e8e4dc;      /* hairlines */
+
+  /* Text */
+  --text: #1c1a17;        /* ink — 16.5:1 on --bg */
+  --text-muted: #6f6a62;  /* 5.1:1 on --bg */
+
+  /* Accent (Clay) */
+  --accent: #b9562f;      /* white text 4.74:1 */
+  --accent-fg: #ffffff;
+  --accent-soft: #f6e7df; /* tinted chips, selected nav, ring fills */
+
+  /* Status (muted, never neon) */
+  --success: #3f8f5f;
+  --warning: #c98a1b;
+  --danger: #c4483c;
+  --info: #3d6fb6;
+
+  /* Charts — ordered for maximum adjacent contrast; chart-1 always = accent */
+  --chart-1: var(--accent);
+  --chart-2: #5b7fbf;     /* slate blue */
+  --chart-3: #6f9e80;     /* sage */
+  --chart-4: #e0a43c;     /* amber */
+  --chart-5: #c47a8c;     /* dusty rose */
+  --chart-6: #a39e93;     /* warm gray (baseline / "other") */
+
+  /* Shape */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+
+  /* Elevation — soft, warm-tinted, two layers */
+  --shadow-1: 0 1px 2px rgb(28 26 23 / 0.04), 0 2px 8px -2px rgb(28 26 23 / 0.06);
+  --shadow-2: 0 2px 4px rgb(28 26 23 / 0.04), 0 16px 40px -12px rgb(28 26 23 / 0.14);
+
+  /* Type */
+  --font-sans: var(--font-inter, "Inter"), var(--font-geist, "Geist"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-arabic: var(--font-plex-arabic, "IBM Plex Sans Arabic"), "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif;
+  --scale: 1;             /* multiplies the whole type scale (see bridge.css) */
+
+  color-scheme: light;
+}
+
+/* ───────────────────────── Dark ───────────────────────── */
+.dark {
+  --bg: #141312;
+  --surface: #1c1b19;
+  --surface-2: #252321;
+  --border: #2e2c29;
+
+  --text: #edeae4;        /* 15.5:1 */
+  --text-muted: #9b958b;  /* 6.2:1 */
+
+  --accent: #e07a52;
+  --accent-fg: #141312;
+  --accent-soft: #3a2219;
+
+  --success: #5fb07f;
+  --warning: #e0a94a;
+  --danger: #e36b5e;
+  --info: #6f9be0;
+
+  --chart-2: #7d9fdb;
+  --chart-3: #86b896;
+  --chart-4: #e8b65a;
+  --chart-5: #d895a6;
+  --chart-6: #7c776e;
+
+  /* Dark: shadows mostly invisible — rely on border + a 1px top highlight */
+  --shadow-1: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -12px rgb(0 0 0 / 0.55);
+
+  color-scheme: dark;
+}
+
+/* ───────────────────────── Arabic / RTL ───────────────────────── */
+/* Arabic glyphs read small at the same px: Plex Arabic first, +4% scale. */
+[dir="rtl"],
+:lang(ar) {
+  --font-sans: var(--font-arabic);
+  --scale: calc(1.04 * var(--band-scale, 1));
+}
+
+/* ───────────────────────── Grade bands ─────────────────────────
+ * Each band sets: accent trio, radii, --band-scale (and --scale).
+ * g5-6   "Sunrise" — playful, rounder, larger type, dark text on tangerine.
+ * g7-8   "Coral"   — friendly, slightly rounder.
+ * g9-10  "Clay"    — the default above.
+ * g11-12 "Ink"     — focused/professional, tighter radii, ink-blue accent.
+ */
+[data-band="g5-6"] {
+  --accent: #e8833a;      /* dark fg 6.4:1 */
+  --accent-fg: #1c1a17;
+  --accent-soft: #fdebd9;
+  --radius-sm: 12px;
+  --radius: 18px;
+  --radius-lg: 28px;
+  --band-scale: 1.0625;
+  --scale: 1.0625;
+}
+[data-band="g7-8"] {
+  --accent: #b5452f;      /* white fg 5.44:1 */
+  --accent-fg: #ffffff;
+  --accent-soft: #f8e3dd;
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --band-scale: 1.03;
+  --scale: 1.03;
+}
+[data-band="g9-10"] {
+  --accent: #b9562f;
+  --accent-fg: #ffffff;
+  --accent-soft: #f6e7df;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --band-scale: 1;
+  --scale: 1;
+}
+[data-band="g11-12"] {
+  --accent: #2f54c8;      /* white fg 6.52:1 */
+  --accent-fg: #ffffff;
+  --accent-soft: #e3e9fa;
+  --chart-2: #b9562f;     /* clay moves to series 2 so it stays in the family */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --band-scale: 0.985;
+  --scale: 0.985;
+}
+
+/* Bands in dark mode (data-band on <html class="dark"> or on a wrapper inside .dark) */
+.dark[data-band="g5-6"],  .dark [data-band="g5-6"]  { --accent: #ee8e4e; --accent-fg: #141312; --accent-soft: #3b2615; }
+.dark[data-band="g7-8"],  .dark [data-band="g7-8"]  { --accent: #e36f57; --accent-fg: #141312; --accent-soft: #3a1f19; }
+.dark[data-band="g9-10"], .dark [data-band="g9-10"] { --accent: #e07a52; --accent-fg: #141312; --accent-soft: #3a2219; }
+.dark[data-band="g11-12"], .dark [data-band="g11-12"] { --accent: #7aa2f7; --accent-fg: #0f1424; --accent-soft: #1b2440; --chart-2: #e07a52; }
+
+/* RTL inside a band keeps the band scale and adds the Arabic bump */
+[dir="rtl"] [data-band], [dir="rtl"][data-band], [data-band] [dir="rtl"] {
+  --scale: calc(1.04 * var(--band-scale, 1));
+}
+
+/* Custom properties resolve where declared: re-bind chart-1 wherever the accent changes. */
+.dark, [data-band] { --chart-1: var(--accent); }

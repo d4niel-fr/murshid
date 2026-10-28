@@ -1,0 +1,90 @@
+# LiteLLM proxy config for Murshid (EXAMPLE — not used by tests, no live calls in this phase).
+# Run later with:  litellm --config config/litellm.config.yaml
+# Model names here are the Murshid model ids from config/models.json, so the gateway can
+# point its OpenAI-compatible provider at LITELLM_BASE_URL and pass the id as `model`.
+# provider/model slugs are PLACEHOLDERS: confirm each provider's exact id before enabling.
+
+model_list:
+  - model_name: gpt-6-luna
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_key: os.environ/OPENAI_API_KEY
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
+
+  - model_name: deepseek-v4.1-flash
+    litellm_params:
+      model: deepseek/deepseek-v4.1-flash
+      api_key: os.environ/DEEPSEEK_API_KEY
+      input_cost_per_token: 0.0000003   # off-peak half price is applied by the gateway's cost accounting
+      output_cost_per_token: 0.0000012
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: deepseek/deepseek-v4-pro
+      api_key: os.environ/DEEPSEEK_API_KEY
+      input_cost_per_token: 0.00000132
+      output_cost_per_token: 0.00000396
+
+  - model_name: gemini-3.1-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      input_cost_per_token: 0.00000025
+      output_cost_per_token: 0.0000015
+
+  - model_name: claude-haiku-5.5
+    litellm_params:
+      model: anthropic/claude-haiku-5.5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
+
+  - model_name: claude-sonnet-5.5
+    litellm_params:
+      model: anthropic/claude-sonnet-5.5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
+
+  - model_name: falcon-h1-arabic
+    litellm_params:
+      model: openai/tiiuae/Falcon-H1-Arabic      # self-hosted vLLM / TGI OpenAI-compatible server
+      api_base: os.environ/SELF_HOSTED_BASE_URL
+      api_key: os.environ/SELF_HOSTED_API_KEY
+      input_cost_per_token: 0
+      output_cost_per_token: 0
+
+  - model_name: murshid-embed
+    litellm_params:
+      model: openai/BAAI/bge-m3                   # placeholder embedder, self-hosted
+      api_base: os.environ/SELF_HOSTED_BASE_URL
+      api_key: os.environ/SELF_HOSTED_API_KEY
+    model_info:
+      mode: embedding
+
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 1
+  timeout: 30
+  # Mirrors config/routing.json fallbacks. The gateway also applies these itself;
+  # keep LiteLLM fallbacks for transport-level failures only.
+  fallbacks:
+    - claude-haiku-5.5: [gpt-6-luna, gemini-3.1-flash-lite]
+    - claude-sonnet-5.5: [claude-haiku-5.5]
+    - gemini-3.1-flash-lite: [claude-haiku-5.5]
+    - falcon-h1-arabic: [claude-haiku-5.5]
+    - gpt-6-luna: [claude-haiku-5.5]
+
+litellm_settings:
+  drop_params: true
+  # Don't log prompts/responses (student data). Only metadata/cost callbacks.
+  turn_off_message_logging: true
+  redact_messages_in_exceptions: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # Per-student budgets are enforced by the gateway (src/budget.ts). LiteLLM virtual-key
+  # budgets can be used as a second, coarse safety net per environment:
+  # max_budget: 200        # USD per budget_duration for the whole app
+  # budget_duration: 30d

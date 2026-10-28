@@ -1,0 +1,34 @@
+{
+  "name": "admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack -p 3001",
+    "build": "next build --webpack",
+    "start": "next start -p 3001",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@murshid/design": "workspace:*",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.54.0",
+    "next": "^16.4.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "zod": "^4.1.0",
+    "@murshid/survey": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.5",
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
