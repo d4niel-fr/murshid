@@ -36,3 +36,18 @@ export function isActive(pathname: string, href: string): boolean {
   if (path === '/') return pathname === '/';
   return pathname === path || pathname.startsWith(`${path}/`);
 }
+
+/** Sidebar groups: what you do today, what you are learning, where you are going. */
+export type NavSection = 'main' | 'learn' | 'grow';
+const SECTION: Record<string, NavSection> = {
+  home: 'main', school: 'main', today: 'main', planner: 'main', chat: 'main',
+  schoolwork: 'learn', subjects: 'learn', insights: 'learn', goals: 'learn', badges: 'learn',
+  activities: 'grow', clubs: 'grow', competitions: 'grow', opportunities: 'grow', careers: 'grow',
+  applications: 'grow', university: 'grow', portfolio: 'grow', cv: 'grow', links: 'grow',
+};
+export const navSection = (key: string): NavSection => SECTION[key] ?? 'grow';
+export const SECTION_LABEL: Record<NavSection, { en: string; ar: string } | null> = {
+  main: null,
+  learn: { en: 'Learning', ar: 'التعلّم' },
+  grow: { en: 'Growth', ar: 'النمو' },
+};

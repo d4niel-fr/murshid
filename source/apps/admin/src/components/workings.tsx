@@ -31,7 +31,7 @@ export function Workings({ trace, who, className }: { trace: any; who?: string; 
       {open && (
         <div className="grid gap-3 border-t border-dashed border-[var(--border)] px-3 py-3 text-sm">
           {rows.map(([title, body]) => (
-            <div key={title}><p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{title}</p><div className="mt-1 leading-relaxed">{body}</div></div>
+            <div key={title}><p className="text-xs font-medium text-[var(--text-muted)]">{title}</p><div className="mt-1 leading-relaxed">{body}</div></div>
           ))}
         </div>
       )}

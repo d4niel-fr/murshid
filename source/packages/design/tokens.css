@@ -1,99 +1,121 @@
 /*
  * @murshid/design — tokens.css
- * Contract: docs/V1-WEB-CONTRACT.md ("Design tokens contract").
- * Theme name: "Clay" — warm off-white paper, ink text, one confident clay accent.
+ * Contract: docs/V1-WEB-CONTRACT.md ("Design tokens contract"). Full spec: packages/design/SYSTEM.md.
+ * Theme name: "Navy" — white page, deep-navy brand blocks, soft grey cards, royal-blue actions, Onest type.
+ * One system for the landing site, the student app and the teacher portal.
  *
  * Usage:
- *   <html lang="en" dir="ltr" class="dark?" data-band="g9-10">
+ *   <html lang="en" dir="ltr" class="dark?" data-band="g11-12">
  *   import "@murshid/design/tokens.css";   // then optionally "@murshid/design/bridge.css"
  *
  * data-band may sit on <html> (together with .dark) or on any wrapper inside it.
  * Default (no data-band) === g9-10.
- * Only the contract variables (+ --scale) are defined here. Shadcn/Tailwind aliases live in bridge.css.
  */
 
 /* ───────────────────────── Light (default) ───────────────────────── */
 :root {
-  /* Surfaces */
-  --bg: #faf9f7;          /* warm paper */
-  --surface: #ffffff;     /* cards */
-  --surface-2: #f3f1ec;   /* wells, inputs, composer, hover */
-  --border: #e8e4dc;      /* hairlines */
+  /* Surfaces: a white page, soft grey cards, white wells and fields inside them */
+  --canvas: #ffffff;      /* the page frame behind everything */
+  --bg: #ffffff;          /* page */
+  --surface: #f4f5f7;     /* cards (no border, no shadow) */
+  --surface-2: #ffffff;   /* wells, chips and hovers inside a card */
+  --field: #ffffff;       /* inputs */
+  --popover: #ffffff;     /* menus, dialogs, toasts */
+  --border: #e6e8ec;      /* hairlines */
 
   /* Text */
-  --text: #1c1a17;        /* ink — 16.5:1 on --bg */
-  --text-muted: #6f6a62;  /* 5.1:1 on --bg */
+  --text: #0a0a0a;        /* ink */
+  --text-muted: #666c79;  /* 5.3:1 on white, 4.8:1 on cards */
+  --ghost: #d7dae1;       /* oversized ghost type */
 
-  /* Accent (Clay) */
-  --accent: #b9562f;      /* white text 4.74:1 */
+  /* Accent (default band g9-10 = teal) */
+  --accent: #0b6e97;
   --accent-fg: #ffffff;
-  --accent-soft: #f6e7df; /* tinted chips, selected nav, ring fills */
+  --accent-soft: #e4f1f6;
 
-  /* Status (muted, never neon) */
-  --success: #3f8f5f;
-  --warning: #c98a1b;
-  --danger: #c4483c;
-  --info: #3d6fb6;
+  /* Brand constants (the same in every band) */
+  --deep: #0f2f63;        /* navy: sidebar, hero cards, stats bands, footer */
+  --deep-2: #163b78;
+  --brand: #2563c9;       /* royal blue */
+  --brand-light: #5790e6; /* light blue: accents on navy, focus ring */
+  --spark: #c2e029;       /* lime: tiny highlights only (dots, live marks) */
+  --teal: #0b6e97;
 
-  /* Charts — ordered for maximum adjacent contrast; chart-1 always = accent */
+  /* Status (reserved: never used as a chart series) */
+  --success: #1b7a50;   /* all three pass 4.5:1 on white and on cards */
+  --warning: #946207;
+  --danger: #b23a31;
+  --info: #2563c9;
+
+  /* Charts: validated with the dataviz validator (light, on #f4f5f7). chart-1 always = accent. */
   --chart-1: var(--accent);
-  --chart-2: #5b7fbf;     /* slate blue */
-  --chart-3: #6f9e80;     /* sage */
-  --chart-4: #e0a43c;     /* amber */
-  --chart-5: #c47a8c;     /* dusty rose */
-  --chart-6: #a39e93;     /* warm gray (baseline / "other") */
+  --chart-2: #eb6834;     /* orange */
+  --chart-3: #0e9f8a;     /* aqua */
+  --chart-4: #eda100;     /* yellow */
+  --chart-5: #d65a8f;     /* magenta */
+  --chart-6: #6250d6;     /* violet */
 
-  /* Shape */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 20px;
+  /* Shape: 12 inner / 16 controls / 24 cards / 32 bands (--radius-band) / pill */
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-band: 32px;  /* navy bands, hero cards, the sidebar */
+  --radius-pill: 999px;
 
-  /* Elevation — soft, warm-tinted, two layers */
-  --shadow-1: 0 1px 2px rgb(28 26 23 / 0.04), 0 2px 8px -2px rgb(28 26 23 / 0.06);
-  --shadow-2: 0 2px 4px rgb(28 26 23 / 0.04), 0 16px 40px -12px rgb(28 26 23 / 0.14);
+  /* Elevation: cards are flat; only floating things cast a shadow */
+  --shadow-1: none;
+  --shadow-2: 0 24px 60px -20px rgb(15 47 99 / 0.35), 0 0 0 1px rgb(15 47 99 / 0.06);
 
-  /* Type */
-  --font-sans: var(--font-inter, "Inter"), var(--font-geist, "Geist"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Type: Onest everywhere (400 body, 500 headings and labels) */
+  --font-sans: var(--font-onest, "Onest Variable"), "Onest", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
   --font-arabic: var(--font-plex-arabic, "IBM Plex Sans Arabic"), "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif;
-  --scale: 1;             /* multiplies the whole type scale (see bridge.css) */
+  --scale: 1;
 
   color-scheme: light;
 }
 
-/* ───────────────────────── Dark ───────────────────────── */
+/* ───────────────────────── Dark (night navy) ───────────────────────── */
 .dark {
-  --bg: #141312;
-  --surface: #1c1b19;
-  --surface-2: #252321;
-  --border: #2e2c29;
+  --canvas: #060d1a;
+  --bg: #060d1a;
+  --surface: #0e1b31;
+  --surface-2: #14243f;
+  --field: #0a1527;
+  --popover: #0f1d35;
+  --border: #1d2d4a;
 
-  --text: #edeae4;        /* 15.5:1 */
-  --text-muted: #9b958b;  /* 6.2:1 */
+  --text: #eef2f8;
+  --text-muted: #94a1b8;
+  --ghost: #1b2a45;
 
-  --accent: #e07a52;
-  --accent-fg: #141312;
-  --accent-soft: #3a2219;
+  --accent: #3fa7cf;
+  --accent-fg: #06101f;
+  --accent-soft: #0c2b3b;
 
-  --success: #5fb07f;
+  --deep: #0f2f63;
+  --deep-2: #163b78;
+
+  --success: #5fb38a;
   --warning: #e0a94a;
   --danger: #e36b5e;
-  --info: #6f9be0;
+  --info: #5790e6;
 
-  --chart-2: #7d9fdb;
-  --chart-3: #86b896;
-  --chart-4: #e8b65a;
-  --chart-5: #d895a6;
-  --chart-6: #7c776e;
+  /* validated (dark, on #0e1b31) */
+  --chart-2: #d95926;
+  --chart-3: #199e8a;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #9085e9;
 
-  /* Dark: shadows mostly invisible — rely on border + a 1px top highlight */
-  --shadow-1: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-2: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -12px rgb(0 0 0 / 0.55);
+  --shadow-1: none;
+  --shadow-2: 0 24px 60px -20px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.06);
 
   color-scheme: dark;
 }
 
 /* ───────────────────────── Arabic / RTL ───────────────────────── */
-/* Arabic glyphs read small at the same px: Plex Arabic first, +4% scale. */
 [dir="rtl"],
 :lang(ar) {
   --font-sans: var(--font-arabic);
@@ -101,64 +123,58 @@
 }
 
 /* ───────────────────────── Grade bands ─────────────────────────
- * Each band sets: accent trio, radii, --band-scale (and --scale).
- * g5-6   "Sunrise" — playful, rounder, larger type, dark text on tangerine.
- * g7-8   "Coral"   — friendly, slightly rounder.
- * g9-10  "Clay"    — the default above.
- * g11-12 "Ink"     — focused/professional, tighter radii, ink-blue accent.
+ * Each band sets: accent trio, radii, --band-scale (and --scale). The navy frame never changes.
+ * g5-6 "Sunrise" (orange), g7-8 "Coral", g9-10 "Teal" (default), g11-12 "Royal" (brand blue).
  */
 [data-band="g5-6"] {
-  --accent: #e8833a;      /* dark fg 6.4:1 */
-  --accent-fg: #1c1a17;
-  --accent-soft: #fdebd9;
-  --radius-sm: 12px;
-  --radius: 18px;
-  --radius-lg: 28px;
-  --band-scale: 1.0625;
-  --scale: 1.0625;
+  --accent: #e8833a; --accent-fg: #0a0a0a; --accent-soft: #fdefe2;
+  --chart-2: #2563c9;
+  --radius-sm: 14px; --radius: 18px; --radius-lg: 28px;
+  --band-scale: 1.0625; --scale: 1.0625;
 }
 [data-band="g7-8"] {
-  --accent: #b5452f;      /* white fg 5.44:1 */
-  --accent-fg: #ffffff;
-  --accent-soft: #f8e3dd;
-  --radius-sm: 10px;
-  --radius: 14px;
-  --radius-lg: 22px;
-  --band-scale: 1.03;
-  --scale: 1.03;
+  --accent: #c4533a; --accent-fg: #ffffff; --accent-soft: #fbece7;
+  --chart-2: #2563c9;
+  --radius-sm: 13px; --radius: 17px; --radius-lg: 26px;
+  --band-scale: 1.03; --scale: 1.03;
 }
 [data-band="g9-10"] {
-  --accent: #b9562f;
-  --accent-fg: #ffffff;
-  --accent-soft: #f6e7df;
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 20px;
-  --band-scale: 1;
-  --scale: 1;
+  --accent: #0b6e97; --accent-fg: #ffffff; --accent-soft: #e4f1f6;
+  --chart-3: #2563c9;
+  --radius-sm: 12px; --radius: 16px; --radius-lg: 24px;
+  --band-scale: 1; --scale: 1;
 }
 [data-band="g11-12"] {
-  --accent: #2f54c8;      /* white fg 6.52:1 */
-  --accent-fg: #ffffff;
-  --accent-soft: #e3e9fa;
-  --chart-2: #b9562f;     /* clay moves to series 2 so it stays in the family */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --band-scale: 0.985;
-  --scale: 0.985;
+  --accent: #2563c9; --accent-fg: #ffffff; --accent-soft: #e9f0fb;
+  --radius-sm: 12px; --radius: 16px; --radius-lg: 24px;
+  --band-scale: 0.985; --scale: 0.985;
 }
 
-/* Bands in dark mode (data-band on <html class="dark"> or on a wrapper inside .dark) */
-.dark[data-band="g5-6"],  .dark [data-band="g5-6"]  { --accent: #ee8e4e; --accent-fg: #141312; --accent-soft: #3b2615; }
-.dark[data-band="g7-8"],  .dark [data-band="g7-8"]  { --accent: #e36f57; --accent-fg: #141312; --accent-soft: #3a1f19; }
-.dark[data-band="g9-10"], .dark [data-band="g9-10"] { --accent: #e07a52; --accent-fg: #141312; --accent-soft: #3a2219; }
-.dark[data-band="g11-12"], .dark [data-band="g11-12"] { --accent: #7aa2f7; --accent-fg: #0f1424; --accent-soft: #1b2440; --chart-2: #e07a52; }
+.dark[data-band="g5-6"],  .dark [data-band="g5-6"]  { --accent: #ee8e4e; --accent-fg: #0a0a0a; --accent-soft: #33220f; --chart-2: #4a86e0; }
+.dark[data-band="g7-8"],  .dark [data-band="g7-8"]  { --accent: #e36f57; --accent-fg: #0a0a0a; --accent-soft: #331c16; --chart-2: #4a86e0; }
+.dark[data-band="g9-10"], .dark [data-band="g9-10"] { --accent: #3fa7cf; --accent-fg: #06101f; --accent-soft: #0c2b3b; --chart-3: #4a86e0; }
+.dark[data-band="g11-12"], .dark [data-band="g11-12"] { --accent: #5790e6; --accent-fg: #06101f; --accent-soft: #13284d; }
 
-/* RTL inside a band keeps the band scale and adds the Arabic bump */
 [dir="rtl"] [data-band], [dir="rtl"][data-band], [data-band] [dir="rtl"] {
   --scale: calc(1.04 * var(--band-scale, 1));
 }
 
 /* Custom properties resolve where declared: re-bind chart-1 wherever the accent changes. */
 .dark, [data-band] { --chart-1: var(--accent); }
+
+/* Inside a navy block (sidebar, hero, stats band, footer): every token flips to "on navy". */
+.on-deep {
+  --bg: var(--deep);
+  --surface: rgb(255 255 255 / 0.08);
+  --surface-2: rgb(255 255 255 / 0.12);
+  --field: rgb(255 255 255 / 0.08);
+  --border: rgb(255 255 255 / 0.15);
+  --text: #ffffff;
+  --text-muted: rgb(255 255 255 / 0.68);
+  --ghost: rgb(255 255 255 / 0.14);
+  --accent: #ffffff;
+  --accent-fg: var(--deep);
+  --accent-soft: rgb(255 255 255 / 0.14);
+  background: var(--deep);
+  color: #ffffff;
+}

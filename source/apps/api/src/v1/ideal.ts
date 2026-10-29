@@ -1,6 +1,6 @@
 /**
  * The flagship "ideal student" persona (synthetic). Ahamed Mehta is a fictional Grade 11 student in the proposed Grade 11 pilot (not agreed) at
- * GEMS Our Own High School Al Warqa'a, Dubai (in the demo the school licenses Murshid for its students; the student and his data are synthetic): two serious sports (football for the school 1st XI, competitive club swimming),
+ * Demo Secondary School, Dubai (a fictional school) (in the demo the school licenses Murshid for its students; the student and his data are synthetic): two serious sports (football for the school 1st XI, competitive club swimming),
  * a small online business he is growing (Tideline: custom swim caps and team kit for school clubs), strong A Level
  * grades and a university goal. Every name, number, school, club and customer here is invented.
  */
@@ -13,7 +13,7 @@ const sub = (id: string, name: string, nameAr: string, teacher: string, base: nu
 
 export const IDEAL_PROFILE: DemoProfile = {
   id: 'demo-ideal', name: 'Ahamed Mehta', preferredName: 'Ahamed', nameAr: 'أحمد ميهتا', grade: 11, band: 'g11-12', age: 16,
-  school: "GEMS Our Own High School Al Warqa'a", curriculum: 'indian_cbse', classLabel: 'Grade 11 (11B)', emirate: 'dubai',
+  school: 'Demo Secondary School', curriculum: 'indian_cbse', classLabel: 'Grade 11 (11B)', emirate: 'dubai',
   nationality: 'Indian', flagship: true,
   languages: ['English', 'Hindi', 'Arabic (basic)'],
   interests: ['football', 'swimming', 'entrepreneurship', 'economics', 'design'],

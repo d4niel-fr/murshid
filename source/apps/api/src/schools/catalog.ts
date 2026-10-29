@@ -7,7 +7,7 @@
  *   - institution: a school (or school group) licenses Murshid per student per year. The tenant is the school
  *                  org; teachers and school admins belong to it and only ever see its students.
  *
- * The example institution is GEMS Education / Our Own High School Al Warqa'a, modelled as a proposed Grade 11 pilot.
+ * The example institution is the fictional Demo Secondary School (Demo Schools Group), modelled as a proposed Grade 11 pilot.
  * Every student and teacher here is fictional (synthetic demo data); the school tenant models a proposed pilot (not a confirmed partnership).
  */
 
@@ -91,18 +91,18 @@ export interface Org {
   microsoft: MicrosoftLink | null;
 }
 
-export const GEMS_GROUP = 'gems-education';
-export const OOW = 'gems-oow';
+export const SCHOOL_GROUP = 'demo-group';
+export const DEMO_SCHOOL = 'demo-school';
 export const OTHER_SCHOOL = 'demo-british';
 
 export function seedOrgs(): Org[] {
   return [
-    { id: GEMS_GROUP, name: 'GEMS Education', shortName: 'GEMS', kind: 'school_group', parentOrgId: null, emirate: 'dubai', licence: null, joinCode: null, microsoft: null },
+    { id: SCHOOL_GROUP, name: 'Demo Schools Group', shortName: 'Demo group', kind: 'school_group', parentOrgId: null, emirate: 'dubai', licence: null, joinCode: null, microsoft: null },
     {
-      id: OOW, name: "Our Own High School Al Warqa'a", shortName: 'OOW', kind: 'school', parentOrgId: GEMS_GROUP, emirate: 'dubai',
+      id: DEMO_SCHOOL, name: 'Demo Secondary School', shortName: 'DSS', kind: 'school', parentOrgId: SCHOOL_GROUP, emirate: 'dubai',
       licence: { type: 'institution', plan: 'school-pilot', status: 'pilot', boughtBy: 'school', seats: 120, priceAed: 150, per: 'student-year', startDate: '2026-09-01', endDate: '2027-06-30', note: 'Proposed Grade 11 pilot (demo tenant; not a confirmed partnership)' },
-      joinCode: 'OOW-G11',
-      microsoft: { connected: false, tenantId: 'sim-tenant-gems-oow', domain: 'oow.gems-demo.example', connectedAt: null, connectedBy: null, lastSyncAt: null, synced: null },
+      joinCode: 'DSS-G11',
+      microsoft: { connected: false, tenantId: 'sim-tenant-demo-school', domain: 'dss-demo.example', connectedAt: null, connectedBy: null, lastSyncAt: null, synced: null },
     },
     {
       id: OTHER_SCHOOL, name: 'Demo British School', shortName: 'DBS', kind: 'school', parentOrgId: null, emirate: 'dubai',
@@ -127,7 +127,7 @@ export function familyOrg(id: string, name: string, boughtBy: 'parent' | 'studen
 
 /** Which tenant each app student (DemoStore id) belongs to. */
 export const STUDENT_TENANT: Record<string, string> = {
-  'demo-ideal': OOW,
+  'demo-ideal': DEMO_SCHOOL,
   'demo-g11': OTHER_SCHOOL,
   'demo-g9': 'fam-menon',
   'demo-g7': 'fam-siddiqui',
@@ -151,7 +151,7 @@ export function seedAccounts(): Account[] {
     { id: 'acc-parent-haddad', orgId: 'fam-haddad', role: 'parent', name: 'Rana Haddad', email: 'rana.haddad@example.com', studentIds: ['demo-g5'], via: 'email', createdAt: '2026-09-01' },
     { id: 'acc-parent-siddiqui', orgId: 'fam-siddiqui', role: 'parent', name: 'Imran Siddiqui', email: 'imran.siddiqui@example.com', studentIds: ['demo-g7'], via: 'email', createdAt: '2026-09-03' },
     { id: 'acc-student-menon', orgId: 'fam-menon', role: 'student', name: 'Priya Menon', email: 'priya.menon@example.com', studentIds: ['demo-g9'], via: 'email', createdAt: '2026-09-05' },
-    { id: 'acc-oow-admin', orgId: OOW, role: 'school_admin', name: 'Murshid pilot lead (OOW)', email: 'pilot.lead@oow.gems-demo.example', studentIds: [], via: 'microsoft', createdAt: '2026-09-01' },
+    { id: 'acc-dss-admin', orgId: DEMO_SCHOOL, role: 'school_admin', name: 'Murshid pilot lead (DSS)', email: 'pilot.lead@dss-demo.example', studentIds: [], via: 'microsoft', createdAt: '2026-09-01' },
   ];
 }
 
@@ -194,6 +194,8 @@ export interface RosterStudent {
   orgId: string;
   name: string;
   section: '11A' | '11B' | '11C';
+  /** fixed key the synthetic numbers are generated from (kept stable so ids can change) */
+  seed?: string;
   /** the student's id in the Murshid app (DemoStore), when they use it in this demo */
   appId: string | null;
   electives: SubjectId[];
@@ -207,7 +209,7 @@ export interface RosterStudent {
 }
 
 const T = (id: string, name: string, subject: SubjectId, portal = false): Teacher =>
-  ({ id, orgId: OOW, name, email: `${name.replace(/^(Ms|Mr|Dr)\.\s*/, '').toLowerCase().replace(/[^a-z]+/g, '.')}@oow.gems-demo.example`, subject, portal });
+  ({ id, orgId: DEMO_SCHOOL, name, email: `${name.replace(/^(Ms|Mr|Dr)\.\s*/, '').toLowerCase().replace(/[^a-z]+/g, '.')}@dss-demo.example`, subject, portal });
 
 export const TEACHERS: Teacher[] = [
   T('t-thomas', 'Ms. Sana Thomas', 'english', true),
@@ -259,10 +261,14 @@ function hash(s: string): number {
 
 export function seedRoster(): RosterStudent[] {
   return NAMES.map(([name, section], i) => {
-    const id = `oow-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+    const slug = name.toLowerCase().replace(/[^a-z]+/g, '-');
+    const id = `dss-${slug}`;
+    // the synthetic numbers are seeded from this fixed key, so renaming ids never reshuffles the class
+    const key = `oow-${slug}`;
+    const seed = key;
     if (name === 'Ahamed Mehta') {
       return {
-        id, orgId: OOW, name, section, appId: 'demo-ideal', electives: ['physics', 'economics', 'business'],
+        id, seed, orgId: DEMO_SCHOOL, name, section, appId: 'demo-ideal', electives: ['physics', 'economics', 'business'],
         activities: [
           { name: 'Football, 1st XI (vice-captain)', days: [1, 3], minutes: 90 },
           { name: 'Club swimming', days: [0, 2, 4, 6], minutes: 75 },
@@ -271,14 +277,14 @@ export function seedRoster(): RosterStudent[] {
         events: ['football', 'swim-gala'], diligence: 0.93, ability: 0.86,
       };
     }
-    const h = hash(id);
-    const h2 = hash(`${id}:b`);
-    const h3 = hash(`${id}:c`);
+    const h = hash(key);
+    const h2 = hash(`${key}:b`);
+    const h3 = hash(`${key}:c`);
     const set = ACTIVITY_SETS[Math.floor(h2 * ACTIVITY_SETS.length)]!;
     // a few students carry real risk; most are steady
     const diligence = i % 9 === 4 ? 0.48 + h * 0.12 : i % 11 === 7 ? 0.6 + h * 0.1 : 0.74 + h * 0.24;
     return {
-      id, orgId: OOW, name, section, appId: null,
+      id, seed, orgId: DEMO_SCHOOL, name, section, appId: null,
       electives: ELECTIVE_SETS[Math.floor(h3 * ELECTIVE_SETS.length)]!,
       activities: set.acts, events: set.events,
       diligence: Math.round(diligence * 100) / 100,
@@ -290,16 +296,16 @@ export function seedRoster(): RosterStudent[] {
 export function seedStreams(roster: RosterStudent[]): { streams: Stream[]; members: Record<string, string[]> } {
   const ids = roster.map((s) => s.id);
   const streams: Stream[] = [
-    { id: 'cls-eng-11ab', orgId: OOW, subject: 'english', teacherId: 't-thomas', name: 'Grade 11 English (11A/11B)', setDays: [1, 3], minutes: 45, teamsClassId: 'teams-eng-11ab' },
-    { id: 'cls-eng-11c', orgId: OOW, subject: 'english', teacherId: 't-pereira', name: 'Grade 11 English (11C)', setDays: [2, 4], minutes: 40, teamsClassId: 'teams-eng-11c' },
-    { id: 'cls-math-11bc', orgId: OOW, subject: 'maths', teacherId: 't-desai', name: 'Grade 11 Mathematics (11B/11C)', setDays: [2, 4], minutes: 40, teamsClassId: 'teams-math-11bc' },
-    { id: 'cls-math-11a', orgId: OOW, subject: 'maths', teacherId: 't-shetty', name: 'Grade 11 Mathematics (11A)', setDays: [1, 3], minutes: 40, teamsClassId: 'teams-math-11a' },
-    { id: 'cls-phy-11', orgId: OOW, subject: 'physics', teacherId: 't-george', name: 'Grade 11 Physics', setDays: [1], minutes: 50, teamsClassId: 'teams-phy-11' },
-    { id: 'cls-chem-11', orgId: OOW, subject: 'chemistry', teacherId: 't-karim', name: 'Grade 11 Chemistry', setDays: [2], minutes: 45, teamsClassId: 'teams-chem-11' },
-    { id: 'cls-bio-11', orgId: OOW, subject: 'biology', teacherId: 't-saleh', name: 'Grade 11 Biology', setDays: [3], minutes: 40, teamsClassId: 'teams-bio-11' },
-    { id: 'cls-eco-11', orgId: OOW, subject: 'economics', teacherId: 't-bansal', name: 'Grade 11 Economics', setDays: [1, 4], minutes: 45, teamsClassId: 'teams-eco-11' },
-    { id: 'cls-bus-11', orgId: OOW, subject: 'business', teacherId: 't-dsouza', name: 'Grade 11 Business Studies', setDays: [3], minutes: 40, teamsClassId: 'teams-bus-11' },
-    { id: 'cls-cs-11', orgId: OOW, subject: 'cs', teacherId: 't-bhat', name: 'Grade 11 Computer Science', setDays: [2], minutes: 60, teamsClassId: 'teams-cs-11' },
+    { id: 'cls-eng-11ab', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-thomas', name: 'Grade 11 English (11A/11B)', setDays: [1, 3], minutes: 45, teamsClassId: 'teams-eng-11ab' },
+    { id: 'cls-eng-11c', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-pereira', name: 'Grade 11 English (11C)', setDays: [2, 4], minutes: 40, teamsClassId: 'teams-eng-11c' },
+    { id: 'cls-math-11bc', orgId: DEMO_SCHOOL, subject: 'maths', teacherId: 't-desai', name: 'Grade 11 Mathematics (11B/11C)', setDays: [2, 4], minutes: 40, teamsClassId: 'teams-math-11bc' },
+    { id: 'cls-math-11a', orgId: DEMO_SCHOOL, subject: 'maths', teacherId: 't-shetty', name: 'Grade 11 Mathematics (11A)', setDays: [1, 3], minutes: 40, teamsClassId: 'teams-math-11a' },
+    { id: 'cls-phy-11', orgId: DEMO_SCHOOL, subject: 'physics', teacherId: 't-george', name: 'Grade 11 Physics', setDays: [1], minutes: 50, teamsClassId: 'teams-phy-11' },
+    { id: 'cls-chem-11', orgId: DEMO_SCHOOL, subject: 'chemistry', teacherId: 't-karim', name: 'Grade 11 Chemistry', setDays: [2], minutes: 45, teamsClassId: 'teams-chem-11' },
+    { id: 'cls-bio-11', orgId: DEMO_SCHOOL, subject: 'biology', teacherId: 't-saleh', name: 'Grade 11 Biology', setDays: [3], minutes: 40, teamsClassId: 'teams-bio-11' },
+    { id: 'cls-eco-11', orgId: DEMO_SCHOOL, subject: 'economics', teacherId: 't-bansal', name: 'Grade 11 Economics', setDays: [1, 4], minutes: 45, teamsClassId: 'teams-eco-11' },
+    { id: 'cls-bus-11', orgId: DEMO_SCHOOL, subject: 'business', teacherId: 't-dsouza', name: 'Grade 11 Business Studies', setDays: [3], minutes: 40, teamsClassId: 'teams-bus-11' },
+    { id: 'cls-cs-11', orgId: DEMO_SCHOOL, subject: 'cs', teacherId: 't-bhat', name: 'Grade 11 Computer Science', setDays: [2], minutes: 60, teamsClassId: 'teams-cs-11' },
   ];
   const members: Record<string, string[]> = {
     'cls-eng-11ab': ids.slice(0, 30),

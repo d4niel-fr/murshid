@@ -30,8 +30,8 @@ describe('licensing: families vs institutions', () => {
   it('keeps every app student in exactly one tenant, typed by licence', async () => {
     const { req } = await setup();
     const o = (await req('GET', '/licensing/overview', ADMIN)).body;
-    const oow = o.institutions.find((i: any) => i.id === 'gems-oow');
-    expect(oow).toMatchObject({ name: "Our Own High School Al Warqa'a", group: { name: 'GEMS Education' }, licence: { type: 'institution', status: 'pilot' } });
+    const oow = o.institutions.find((i: any) => i.id === 'demo-school');
+    expect(oow).toMatchObject({ name: 'Demo Secondary School', group: { name: 'Demo Schools Group' }, licence: { type: 'institution', status: 'pilot' } });
     expect(oow.students.map((s: any) => s.id)).toEqual(['demo-ideal']);
     expect(o.families.every((f: any) => f.licence.type === 'family')).toBe(true);
     const famIds = o.families.flatMap((f: any) => f.students.map((s: any) => s.id));
@@ -45,9 +45,9 @@ describe('licensing: families vs institutions', () => {
     const { req } = await setup();
     const inst = (await req('GET', '/admin/students?licence=institution', ADMIN)).body.items.map((s: any) => s.id).sort();
     expect(inst).toEqual(['demo-g11', 'demo-ideal']);
-    const oow = (await req('GET', '/admin/students?orgId=gems-oow', ADMIN)).body.items;
+    const oow = (await req('GET', '/admin/students?orgId=demo-school', ADMIN)).body.items;
     expect(oow.map((s: any) => s.id)).toEqual(['demo-ideal']);
-    expect(oow[0].licence).toMatchObject({ type: 'institution', orgName: "Our Own High School Al Warqa'a" });
+    expect(oow[0].licence).toMatchObject({ type: 'institution', orgName: 'Demo Secondary School' });
   });
 
   it('onboards a parent, a student and a school student into separate tenants', async () => {
@@ -61,12 +61,12 @@ describe('licensing: families vs institutions', () => {
     expect(student.body.licence).toMatchObject({ type: 'family', boughtBy: 'student', plan: 'family-plus' });
     expect(student.body.org.id).not.toBe(parent.body.org.id);
 
-    const school = await req('POST', '/onboarding', {}, { path: 'school', via: 'join_code', joinCode: 'oow-g11', name: 'New Student', email: 'new@example.com', grade: 11 });
-    expect(school.body.licence).toMatchObject({ type: 'institution', orgId: 'gems-oow', boughtBy: 'school' });
+    const school = await req('POST', '/onboarding', {}, { path: 'school', via: 'join_code', joinCode: 'dss-g11', name: 'New Student', email: 'new@example.com', grade: 11 });
+    expect(school.body.licence).toMatchObject({ type: 'institution', orgId: 'demo-school', boughtBy: 'school' });
     expect((await req('POST', '/onboarding', {}, { path: 'school', via: 'join_code', joinCode: 'NOPE', name: 'X', email: 'x@example.com', grade: 11 })).status).toBe(400);
 
     // the school sees its own new student but never the family ones
-    const roster = (await req('GET', '/orgs/gems-oow/students', ADMIN)).body.appStudents.map((s: any) => s.id);
+    const roster = (await req('GET', '/orgs/demo-school/students', ADMIN)).body.appStudents.map((s: any) => s.id);
     expect(roster).toContain(school.body.student.id);
     expect(roster).not.toContain(parent.body.student.id);
     expect(roster).not.toContain(student.body.student.id);
@@ -76,9 +76,9 @@ describe('licensing: families vs institutions', () => {
 describe('Microsoft 365 (simulated connector)', () => {
   it('signs a teacher in and maps them to the portal', async () => {
     const { req } = await setup();
-    const start = (await req('GET', '/auth/microsoft/authorize?org=gems-oow&role=teacher')).body;
+    const start = (await req('GET', '/auth/microsoft/authorize?org=demo-school&role=teacher')).body;
     expect(start).toMatchObject({ connector: 'microsoft365', simulated: true });
-    const accounts = (await req('GET', '/auth/microsoft/accounts?org=gems-oow&role=teacher')).body.items;
+    const accounts = (await req('GET', '/auth/microsoft/accounts?org=demo-school&role=teacher')).body.items;
     expect(accounts.map((a: any) => a.name)).toEqual(['Ms. Sana Thomas', 'Mr. Vikram Desai']);
     const cb = await req('POST', '/auth/microsoft/callback', {}, { code: accounts[0].code, state: start.state });
     expect(cb.body.session.headers).toEqual({ 'x-dev-role': 'teacher', 'x-dev-user-id': 't-thomas' });
@@ -90,7 +90,7 @@ describe('Microsoft 365 (simulated connector)', () => {
 
   it('a student signs in with Microsoft and lands on their school licence', async () => {
     const { req } = await setup();
-    const acc = (await req('GET', '/auth/microsoft/accounts?org=gems-oow&role=student')).body.items[0];
+    const acc = (await req('GET', '/auth/microsoft/accounts?org=demo-school&role=student')).body.items[0];
     const r = await req('POST', '/onboarding', {}, { path: 'school', via: 'microsoft', code: acc.code });
     expect(r.status).toBe(201);
     expect(r.body.student).toEqual({ id: 'demo-ideal', name: 'Ahamed Mehta' });
@@ -99,8 +99,8 @@ describe('Microsoft 365 (simulated connector)', () => {
 
   it('school admin connects Microsoft 365 and Teams classes sync', async () => {
     const { req } = await setup();
-    expect((await req('GET', '/orgs/gems-oow', ADMIN)).body.microsoft.connected).toBe(false);
-    const r = await req('POST', '/orgs/gems-oow/microsoft/connect', ADMIN);
+    expect((await req('GET', '/orgs/demo-school', ADMIN)).body.microsoft.connected).toBe(false);
+    const r = await req('POST', '/orgs/demo-school/microsoft/connect', ADMIN);
     expect(r.status).toBe(200);
     expect(r.body.microsoft).toMatchObject({ connected: true, simulated: true, synced: { classes: 10, teachers: 10, students: 38 } });
     expect(r.body.microsoft.synced.assignments).toBeGreaterThan(20);
@@ -243,7 +243,7 @@ describe('teacher portal', () => {
   it('student school page: school licence with classes, family licence without', async () => {
     const { req } = await setup();
     const s = (await req('GET', '/student/school', { 'x-dev-user': 'demo-ideal' })).body;
-    expect(s.licence).toMatchObject({ type: 'institution', orgName: "Our Own High School Al Warqa'a", parentOrgName: 'GEMS Education', connectedVia: 'portal' });
+    expect(s.licence).toMatchObject({ type: 'institution', orgName: 'Demo Secondary School', parentOrgName: 'Demo Schools Group', connectedVia: 'portal' });
     expect(s.school.classes.map((c: any) => c.subject).sort()).toEqual(['business', 'economics', 'english', 'maths', 'physics']);
     expect(s.school.weeklyReport.status).toBe('draft');
     const f = (await req('GET', '/student/school', { 'x-dev-user': 'demo-g7' })).body;

@@ -1,12 +1,13 @@
 'use client';
 
-import { Flame } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarDays } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useApp, useEndpoint } from '@/components/providers/app-provider';
-import { Bento, Page } from '@/components/shared/page';
-import { Badge } from '@/components/ui/badge';
+import { Bento, Page, RevealTitle } from '@/components/shared/page';
+import { Arrow, Button } from '@/components/ui/button';
 import { visibleWidgets, greetingKey, type WidgetId } from '@/lib/bands';
-import { dubaiHour, formatDate } from '@/lib/dates';
+import { diffDays, dubaiHour, formatDate, relativeDay, weekdayIndex } from '@/lib/dates';
 import { applyTaskState } from '@/lib/merge';
 import type { Dashboard } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -64,22 +65,13 @@ export function DashboardView() {
 
   return (
     <Page wide>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4 xl:mb-7">
-        <div>
-          <p className="eyebrow mb-1.5">{formatDate(world.today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{hello.includes(name) ? hello : `${hello}, ${name}`}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{subtitle !== 'dashboard.subtitle' ? subtitle : data.highlights[0]}</p>
-        </div>
-        {!widgets.includes('streaks') && (
-          <Badge tone="brand" className="h-8 px-3 text-sm"><Flame className="size-4" />{data.streaks.current}</Badge>
-        )}
-      </header>
+      <DashHero data={data} hello={hello.includes(name) ? hello : `${hello}, ${name}`} subtitle={subtitle !== 'dashboard.subtitle' ? subtitle : data.highlights[0] ?? ''} />
       {/* Desktop: two columns (8 + 4). iPad: one stacked column of full-width cards, side widgets pair up 6+6. */}
       <Bento className="items-start">
-        <div className="col-span-12 grid min-w-0 grid-cols-12 gap-3.5 lg:col-span-7 xl:col-span-8 xl:gap-4">
+        <div className="col-span-12 grid min-w-0 grid-cols-12 gap-4 lg:col-span-7 xl:col-span-8">
           {main.map((w) => <Slot key={w} w={w}>{render(w)}</Slot>)}
         </div>
-        <div className="col-span-12 grid min-w-0 grid-cols-12 gap-3.5 lg:col-span-5 xl:col-span-4 xl:gap-4">
+        <div className="col-span-12 grid min-w-0 grid-cols-12 gap-4 lg:col-span-5 xl:col-span-4">
           {side.map((w) => <Slot key={w} w={w} side>{render(w)}</Slot>)}
         </div>
       </Bento>
@@ -90,4 +82,67 @@ export function DashboardView() {
 function Slot({ children, side }: { w: WidgetId; side?: boolean; children: ReactNode }) {
   if (!children) return null;
   return <div className={cn('col-span-12 grid min-w-0', side && 'md:col-span-6 lg:col-span-12')}>{children}</div>;
+}
+
+/**
+ * The navy hero card that opens Home: today's date, the greeting, and three glass readouts.
+ * Behind it, the school week as faint columns, with today's column lit.
+ */
+function DashHero({ data, hello, subtitle }: { data: Dashboard; hello: string; subtitle: string }) {
+  const { world, locale, tx } = useApp();
+  const done = data.today.filter((x) => x.done).length;
+  const total = data.today.length;
+  const next = data.upcoming.find((u) => u.date >= world.today);
+  const week = data.upcoming.filter((u) => u.date >= world.today && diffDays(u.date, world.today) <= 7);
+  const tests = week.filter((u) => u.type === 'test' || u.type === 'exam').length;
+  const today = weekdayIndex(world.today);
+  const days = locale === 'ar' ? ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return (
+    <section className="on-deep relative isolate mb-4 overflow-hidden rounded-[var(--radius-band)] px-6 pb-6 pt-6 sm:px-9 sm:pb-9 sm:pt-7">
+      <div className="relative">
+        {/* the week, drawn as columns behind the greeting */}
+        <div aria-hidden className="pointer-events-none absolute -bottom-2 -top-7 end-[-2.25rem] -z-10 hidden w-[58%] grid-cols-7 sm:grid">
+          {days.map((d, i) => (
+            <div key={d} className={cn('relative border-s border-white/[0.08] px-3 pt-20 text-[10px] font-medium uppercase tracking-[0.2em] text-white/25 rtl:tracking-normal', i === today && 'bg-white/[0.04] text-white/75')}>
+              {i === today && <span className="absolute start-3 top-[3.9rem] size-1.5 rounded-full bg-[var(--spark)]" />}
+              {d}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="eyebrow">{formatDate(world.today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="glass" size="sm"><Link href="/planner"><CalendarDays />{tx('Planner', 'المخطط')}</Link></Button>
+            <Button asChild variant="light" size="sm"><Link href="/chat">{tx('Ask Murshid', 'اسأل مرشد')}<Arrow /></Link></Button>
+          </div>
+        </div>
+        <h1 className="display mt-12 max-w-[14ch] text-[2.5rem] leading-[0.98] sm:mt-16 sm:text-[3.75rem]"><RevealTitle text={hello} /></h1>
+        <p className="mt-4 max-w-[48ch] pb-2 text-[15px] leading-relaxed text-white/70">{subtitle}</p>
+      </div>
+      <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:max-w-[52rem]">
+        <Glass label={tx('Today', 'اليوم')}>
+          <p className="figure text-[1.75rem]">{done}<span className="text-white/60">/{total}</span></p>
+          <p className="mt-1 text-xs text-white/60">{tx('tasks done', 'مهام منجزة')}</p>
+          <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[var(--spark)]" style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></div>
+        </Glass>
+        <Glass label={tx('Next up', 'التالي')}>
+          <p className="truncate text-[15px] font-medium">{next?.title ?? tx('Nothing due', 'لا شيء مستحق')}</p>
+          <p className="mt-1 text-xs text-white/60">{next ? `${formatDate(next.date, locale, { weekday: 'short', day: 'numeric', month: 'short' })} · ${relativeDay(next.date, world.today, locale)}` : ''}</p>
+        </Glass>
+        <Glass label={tx('Next 7 days', 'الأيام السبعة القادمة')}>
+          <p className="figure text-[1.75rem]">{tests}<span className="ms-1.5 text-sm font-normal tracking-normal text-white/60">{tx(tests === 1 ? 'test' : 'tests', 'اختبارات')}</span></p>
+          <p className="mt-1 text-xs text-white/60">{tx(`${week.length} things on the calendar`, `${week.length} مواعيد في التقويم`)}</p>
+        </Glass>
+      </div>
+    </section>
+  );
+}
+
+function Glass({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="glass min-w-0 p-4">
+      <p className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/55 rtl:tracking-normal">{label}</p>
+      {children}
+    </div>
+  );
 }

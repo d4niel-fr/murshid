@@ -62,15 +62,20 @@ function View() {
           const on = sel.includes(s.id);
           const pct = s.scale === 'ib7' ? (s.current / 7) * 100 : s.current;
           return (
-            <Card key={s.id} interactive className={cn('col-span-12 cursor-pointer md:col-span-6 xl:col-span-4', on && 'ring-2 ring-[var(--accent)]')} onClick={() => toggle(s.id)} role="button" aria-pressed={on}>
+            <Card key={s.id} interactive className={cn('col-span-12 cursor-pointer md:col-span-6 xl:col-span-4', on && 'border-transparent ring-[1.5px] ring-[var(--accent)]')} onClick={() => toggle(s.id)} role="button" aria-pressed={on}>
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{s.name}</p>
                   <p className="text-xs text-muted-foreground">{tx('Target', 'الهدف')} {fmtScore(s.target, s.scale)}</p>
                 </div>
-                <Badge tone={s.current >= s.target ? 'success' : s.target - s.current <= (s.scale === 'ib7' ? 1 : 3) ? 'warning' : 'neutral'}>
-                  {s.current >= s.target ? tx('On target', 'عند الهدف') : tx('Below target', 'دون الهدف')}
-                </Badge>
+                {(() => {
+                  const near = s.target - s.current <= (s.scale === 'ib7' ? 1 : 3);
+                  return (
+                    <Badge tone={s.current >= s.target ? 'success' : near ? 'warning' : 'danger'}>
+                      {s.current >= s.target ? tx('On target', 'عند الهدف') : near ? tx('Close to target', 'قريب من الهدف') : tx('Below target', 'دون الهدف')}
+                    </Badge>
+                  );
+                })()}
               </div>
               <div className="flex items-end justify-between gap-3">
                 <div>

@@ -12658,7 +12658,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "gems-oow",
+              "default": "demo-school",
               "type": "string",
               "maxLength": 60
             }
@@ -12724,7 +12724,7 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "gems-oow",
+              "default": "demo-school",
               "type": "string",
               "maxLength": 60
             }

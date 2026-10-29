@@ -1,22 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/inter";
+/* One typeface for the whole product: Onest (variable, 100–900). Arabic falls back to Plex Arabic. */
+@import "@fontsource-variable/onest";
 @import "@fontsource/ibm-plex-sans-arabic/400.css";
 @import "@fontsource/ibm-plex-sans-arabic/500.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
-/* Design team: contract tokens (light/dark, bands, RTL) + Tailwind/shadcn bridge. */
+/* Design team: contract tokens (light/dark, bands, RTL) + Tailwind/shadcn bridge. Spec: packages/design/SYSTEM.md */
 @import "@murshid/design/tokens.css";
 @import "@murshid/design/bridge.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Fonts are bundled via @fontsource (no network at build); fill the vars tokens.css reads. */
 :root {
-  --font-inter: "Inter Variable";
+  --font-onest: "Onest Variable";
   --font-plex-arabic: "IBM Plex Sans Arabic";
+  --topbar-h: 4.25rem;
+  --inset: 0.75rem;      /* the white frame around the navy sidebar */
+  --rail: 5rem;          /* sidebar widths (without the inset) */
+  --side: 16rem;
 }
+@media (max-width: 639px) { :root { --inset: 0.5rem; } }
 
-/* App-only aliases on top of bridge.css */
 @theme inline {
   --color-line: var(--border);
   --color-ink: var(--text);
@@ -27,35 +31,47 @@
 @layer base {
   html, body { background: var(--bg); color: var(--text); min-height: 100dvh; }
   html { scrollbar-gutter: stable; }
-  * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--text-muted) 35%, transparent) transparent; }
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--text-muted) 30%, transparent) transparent; }
   [dir="rtl"] body { line-height: 1.6; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
 }
 
 @layer components {
-  /* Card anatomy (DESIGN §6) */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-1);
-  }
+  /* Card: a soft grey slab. No border, no shadow: spacing does the separating. */
+  .card { position: relative; background: var(--surface); border-radius: var(--radius-lg); }
+  .card-title { font-size: calc(0.9375rem * var(--scale)); line-height: 1.35; font-weight: 500; letter-spacing: -0.01em; color: var(--text); }
+  /* Eyebrow: tracked caps led by a small dot */
   .eyebrow {
-    font-size: var(--text-2xs);
-    line-height: 1.4;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-size: calc(0.6875rem * var(--scale)); line-height: 1.2; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted);
   }
+  .eyebrow::before { content: ""; width: 0.375rem; height: 0.375rem; flex-shrink: 0; border-radius: 999px; background: var(--brand); }
+  .on-deep .eyebrow { color: rgb(255 255 255 / 0.7); }
+  .on-deep .eyebrow::before { background: var(--brand-light); }
+  .eyebrow-plain::before { display: none; }
   [dir="rtl"] .eyebrow { text-transform: none; letter-spacing: 0; font-size: var(--text-xs); font-weight: 600; }
-  /* Hover lift: transform via Motion; shadow via one CSS transition */
-  .lift { transition: box-shadow 200ms ease, border-color 200ms ease; }
-  .lift:hover { box-shadow: var(--shadow-2); }
-  .tint-success { background: color-mix(in oklab, var(--success) 12%, transparent); color: color-mix(in oklab, var(--success) 72%, var(--text)); }
-  .tint-warning { background: color-mix(in oklab, var(--warning) 14%, transparent); color: color-mix(in oklab, var(--warning) 58%, var(--text)); }
-  .tint-danger { background: color-mix(in oklab, var(--danger) 12%, transparent); color: color-mix(in oklab, var(--danger) 78%, var(--text)); }
-  .tint-info { background: color-mix(in oklab, var(--info) 12%, transparent); color: color-mix(in oklab, var(--info) 80%, var(--text)); }
+  /* Display: page titles. Onest 500, set tight. */
+  .display { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; }
+  .figure { font-weight: 500; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; }
+  [dir="rtl"] .display, [dir="rtl"] .figure { font-family: var(--font-arabic); letter-spacing: 0; line-height: 1.25; }
+  /* Glass: a translucent card on navy */
+  .glass { background: rgb(255 255 255 / 0.08); border: 1px solid rgb(255 255 255 / 0.15); border-radius: var(--radius-lg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  .clip-line { display: block; overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+  .clip-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+  .clip-word > span, .clip-line > span { display: inline-block; will-change: transform; }
+  /* Hover lift on interactive cards (transform via Motion) */
+  .lift { transition: background-color 200ms ease; }
+  .lift:hover { background: color-mix(in oklab, var(--surface) 88%, var(--text) 4%); }
+  /* A trailing arrow that nudges on hover (pill buttons, rows) */
+  .nudge { transition: transform 260ms cubic-bezier(.3,1.5,.5,1); }
+  .group:hover .nudge, .group\/btn:hover .nudge, .group\/row:hover .nudge { transform: translateX(5px); }
+  [dir="rtl"] .group:hover .nudge, [dir="rtl"] .group\/btn:hover .nudge { transform: translateX(-5px) scaleX(-1); }
+  [dir="rtl"] .nudge { transform: scaleX(-1); }
+  .tint-success { background: color-mix(in oklab, var(--success) 12%, transparent); color: color-mix(in oklab, var(--success) 78%, var(--text)); }
+  .tint-warning { background: color-mix(in oklab, var(--warning) 14%, transparent); color: color-mix(in oklab, var(--warning) 62%, var(--text)); }
+  .tint-danger { background: color-mix(in oklab, var(--danger) 11%, transparent); color: color-mix(in oklab, var(--danger) 80%, var(--text)); }
+  .tint-info { background: color-mix(in oklab, var(--info) 11%, transparent); color: color-mix(in oklab, var(--info) 82%, var(--text)); }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }
@@ -64,22 +80,30 @@
 .recharts-wrapper:focus, .recharts-surface:focus, .recharts-sector:focus, .recharts-layer:focus { outline: none; }
 .recharts-text { font-family: var(--font-sans); }
 
-/* ── App shell: sidebar widths are pure CSS so SSR markup never jumps ── */
-.sidebar { width: 64px; }
-.nav-label, .nav-label-icon, .nav-avatar { display: none; }
-.nav-rail-icon { display: block; }
+/* ── App shell ──────────────────────────────────────────────────────────────
+ * A white page with a navy sidebar card inset from the edge (pure-CSS widths, so SSR never jumps).
+ * ≥1280 expanded unless collapsed · 1024–1279 icon rail that can open as an overlay · <1024 drawer.
+ */
+.sidebar { width: var(--rail); }
+.nav-label, .nav-label-icon, .nav-avatar, .nav-section, .nav-wide { display: none; }
+.nav-rail-icon, .nav-divider { display: block; }
 .shell-main { padding-inline-start: 0; }
-@media (min-width: 1024px) { .shell-main { padding-inline-start: 64px; } }
-@media (min-width: 1280px) {
-  [data-collapsed="false"] .sidebar { width: 248px; }
-  [data-collapsed="false"] .nav-label { display: block; }
-  [data-collapsed="false"] .nav-avatar { display: inline-flex; }
-  [data-collapsed="false"] .nav-label-icon { display: block; }
-  [data-collapsed="false"] .nav-rail-icon { display: none; }
-  [data-collapsed="false"] .shell-main { padding-inline-start: 248px; }
+@media (min-width: 1024px) {
+  .sidebar { inset-block: var(--inset); inset-inline-start: var(--inset); border-radius: var(--radius-band); }
+  .shell-main { padding-inline-start: calc(var(--rail) + var(--inset)); }
 }
-[data-overlay="true"] .sidebar { width: 248px; box-shadow: var(--shadow-2); }
-[data-overlay="true"] .nav-label, [data-overlay="true"] .nav-label-icon { display: block; }
-[data-overlay="true"] .nav-avatar { display: inline-flex; }
-[data-overlay="true"] .nav-rail-icon { display: none; }
+@media (min-width: 1280px) {
+  [data-collapsed="false"] .sidebar { width: var(--side); }
+  [data-collapsed="false"] .nav-label, [data-collapsed="false"] .nav-section { display: block; }
+  [data-collapsed="false"] .nav-avatar, [data-collapsed="false"] .nav-wide { display: flex; }
+  [data-collapsed="false"] .nav-label-icon { display: block; }
+  [data-collapsed="false"] .nav-rail-icon, [data-collapsed="false"] .nav-divider { display: none; }
+  [data-collapsed="false"] .shell-main { padding-inline-start: calc(var(--side) + var(--inset)); }
+}
+[data-overlay="true"] .sidebar { width: var(--side); box-shadow: var(--shadow-2); }
+[data-overlay="true"] .nav-label, [data-overlay="true"] .nav-label-icon, [data-overlay="true"] .nav-section { display: block; }
+[data-overlay="true"] .nav-avatar, [data-overlay="true"] .nav-wide { display: flex; }
+[data-overlay="true"] .nav-rail-icon, [data-overlay="true"] .nav-divider { display: none; }
 .shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }
+/* full-height views (chat) fill what is left under the top bar */
+.fill-view { height: calc(100dvh - var(--topbar-h)); }

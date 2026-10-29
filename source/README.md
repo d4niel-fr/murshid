@@ -5,7 +5,7 @@
 Built by Vardan (Sam) Kapur, Grade 11, Dubai, for the Dubai Chamber **Create AI Agents Championship (Youth)**.
 
 > Demo build. Every student and teacher is fictional (synthetic data). Microsoft 365 sign-in is simulated.
-> The Grade 11 pilot at Our Own High School Al Warqa'a is **proposed**, subject to the school's approval. It is not a confirmed partnership.
+> A Grade 11 pilot at a Dubai secondary school is **proposed**, subject to the school's approval. The school in the demo (Demo Secondary School) is fictional. It is not a confirmed partnership.
 
 ## Try it (live)
 

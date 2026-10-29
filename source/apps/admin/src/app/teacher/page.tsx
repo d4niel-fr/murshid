@@ -58,7 +58,7 @@ function TeacherPortal() {
     <>
       <PageHeader
         title={t ? <span>{t.name} <span className="font-normal text-[var(--text-muted)]">&middot; {c?.name ?? ''}</span></span> : 'My classes'}
-        sub={me.data ? <span className="inline-flex flex-wrap items-center gap-x-2">{me.data.org.name} &middot; {me.data.org.group?.name} &middot; {c?.students ?? 0} students &middot; <span className="inline-flex items-center gap-1"><MicrosoftMark className="size-3" />{me.data.org.microsoft?.connected ? 'Demo: simulated Microsoft 365 sign-in (Teams classes sync)' : 'Demo: simulated Microsoft 365 sign-in'}</span></span> : null}
+        sub={me.data ? <span className="inline-flex flex-wrap items-center gap-x-2">{me.data.org.name} &middot; {c?.students ?? 0} students{me.data.org.microsoft?.connected && <> &middot; <span className="inline-flex items-center gap-1"><MicrosoftMark className="size-3" />Teams classes sync</span></>}</span> : null}
         action={<div className="flex items-center gap-2">
           {(me.data?.classes?.length ?? 0) > 1 && (
             <select aria-label="Class" className="input w-64" value={cls ?? ''} onChange={(e) => setClassId(e.target.value)}>

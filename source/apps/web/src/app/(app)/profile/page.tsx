@@ -43,7 +43,7 @@ function ConnectDialog({ p, open, setOpen, onConnect }: { p: (typeof PROVIDERS)[
         <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="grid gap-4">
           <div>
             <Label htmlFor="h">{tx('Profile', 'الملف')}</Label>
-            <div className="flex items-center overflow-hidden rounded-sm border border-border bg-surface focus-within:border-[var(--accent)]" dir="ltr">
+            <div className="flex items-center overflow-hidden rounded-[var(--radius-sm)] border border-border bg-field focus-within:border-[var(--brand-light)]" dir="ltr">
               <span className="whitespace-nowrap bg-surface-2 px-3 py-2.5 text-sm text-muted-foreground">{p.prefix}</span>
               <input id="h" autoFocus value={handle} onChange={(e) => setHandle(e.target.value)} placeholder={p.placeholder} className="h-10 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" />
             </div>
@@ -112,7 +112,7 @@ export default function ProfilePage() {
           {links.resumeUrl ? (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3 rounded-[var(--radius)] bg-surface-2 p-3">
-                <span className="inline-flex size-10 items-center justify-center rounded-md bg-surface shadow-soft"><FileText className="size-5 text-primary" /></span>
+                <span className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)]"><FileText className="size-5 text-white" /></span>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{links.resumeName ?? 'resume.pdf'}</p><p className="text-xs text-muted-foreground">{preview ? tx('Preview below', 'المعاينة أدناه') : tx('Stored for your applications', 'محفوظة لطلباتك')}</p></div>
                 <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload />{tx('Replace', 'استبدال')}</Button>
                 <Button size="icon-sm" variant="ghost" aria-label={tx('Remove resume', 'حذف السيرة')} onClick={() => { setPreview(null); save({ ...links, resumeUrl: null, resumeName: null, connectedAt: { ...links.connectedAt, resume: null } }); toast({ title: tx('Resume removed', 'تم حذف السيرة'), tone: 'info' }); }}><Trash2 /></Button>
@@ -120,7 +120,7 @@ export default function ProfilePage() {
               {preview && preview.type === 'application/pdf' ? (
                 <iframe title="Resume preview" src={preview.url} className="h-[420px] w-full rounded-[var(--radius)] border border-border bg-surface" />
               ) : (
-                <div className="rounded-[var(--radius)] border border-border bg-surface p-5">
+                <div className="rounded-[var(--radius)] bg-surface-2 p-5">
                   <p className="text-lg font-semibold">{world.dashboard.student.firstName} {world.dashboard.student.lastName}</p>
                   <p className="text-sm text-muted-foreground">{world.dashboard.student.classLabel} · {world.dashboard.student.school}</p>
                   <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -133,7 +133,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <button onClick={() => fileRef.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]); }}
-              className="flex flex-col items-center gap-2 rounded-[var(--radius)] border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:border-[var(--accent)] hover:bg-surface-2">
+              className="flex flex-col items-center gap-2 rounded-[var(--radius)] border-[1.5px] border-dashed border-[color-mix(in_oklab,var(--text-muted)_45%,transparent)] bg-surface-2 px-6 py-10 text-center transition-colors hover:border-[var(--accent)] hover:bg-surface-2">
               <Upload className="size-6 text-muted-foreground" />
               <span className="text-sm font-medium">{tx('Upload your resume', 'ارفع سيرتك الذاتية')}</span>
               <span className="text-xs text-muted-foreground">{tx('PDF or Word, up to 5 MB. Drag and drop works too.', 'PDF أو Word حتى ٥ ميغابايت. يمكنك السحب والإفلات.')}</span>

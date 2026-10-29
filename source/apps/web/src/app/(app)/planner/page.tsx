@@ -91,7 +91,7 @@ export default function PlannerPage() {
         title={tx('Planner', 'المخطط')}
         subtitle={tx('Deadlines, sessions you logged and the study blocks you plan, side by side.', 'المواعيد والجلسات المسجلة وأوقات الدراسة المخططة جنباً إلى جنب.')}
         actions={<>
-          <div className="flex items-center rounded-full border border-border bg-surface p-0.5">
+          <div className="flex items-center rounded-full bg-surface p-1">
             <Button size="icon-sm" variant="ghost" className="rounded-full" aria-label={tx('Previous week', 'الأسبوع السابق')} onClick={() => setOffset((o) => o - 1)}><ChevronLeft className="rtl:-scale-x-100" /></Button>
             <button onClick={() => setOffset(0)} className="px-2 text-sm font-medium tabular">{offset === 0 ? tx('This week', 'هذا الأسبوع') : label}</button>
             <Button size="icon-sm" variant="ghost" className="rounded-full" aria-label={tx('Next week', 'الأسبوع التالي')} onClick={() => setOffset((o) => o + 1)}><ChevronRight className="rtl:-scale-x-100" /></Button>
@@ -104,7 +104,7 @@ export default function PlannerPage() {
           {days.map((d) => {
             const isToday = d === world.today;
             return (
-              <motion.div key={d} variants={fadeUp} className={cn('card flex min-h-[220px] min-w-0 flex-col p-3', isToday && 'ring-2 ring-[var(--accent)]')}>
+              <motion.div key={d} variants={fadeUp} className={cn('card flex min-h-[220px] min-w-0 flex-col p-3', isToday && 'border-transparent ring-[1.5px] ring-[var(--accent)]')}>
                 <div className="mb-2 flex items-baseline justify-between">
                   <span className="text-xs font-medium text-muted-foreground">{formatDate(d, locale, { weekday: 'short' })}</span>
                   <span className={cn('text-lg font-semibold tabular', isToday && 'text-primary')}>{formatDate(d, locale, { day: 'numeric' })}</span>
@@ -131,7 +131,7 @@ export default function PlannerPage() {
           })}
         </motion.div>
         <div className="card h-fit p-5">
-          <p className="eyebrow mb-3">{tx("Today's tasks", 'مهام اليوم')}</p>
+          <p className="card-title mb-3">{tx("Today's tasks", "مهام اليوم")}</p>
           <TaskList tasks={world.dashboard.today} />
         </div>
       </div>

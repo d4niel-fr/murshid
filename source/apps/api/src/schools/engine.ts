@@ -96,7 +96,7 @@ export function streamItems(school: School, stream: Stream, today: string): Work
 /** Deterministic submission outcome for one student and one item, as of `today`. */
 export function submission(st: RosterStudent, item: WorkItem, today: string): Submission {
   if (item.setDate > today) return { status: 'not_set', grade: null, submittedOn: null };
-  const r = rng(`${st.id}|${item.id}`);
+  const r = rng(`${st.seed ?? st.id}|${item.id}`);
   const a = r(); const b = r(); const g = r();
   const grade = (late: boolean) => clamp(Math.round(100 * (st.ability * 0.8 + 0.15) + (g - 0.5) * 14 - (late ? 6 : 0)), 35, 99);
   if (item.posted) {

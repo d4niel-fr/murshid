@@ -19,7 +19,7 @@ function Section({ icon: Icon, title, children }: { icon: typeof Target; title: 
     <div className="flex gap-3">
       <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted-foreground"><Icon className="size-3.5" /></span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
         <div className="mt-1 text-sm leading-relaxed">{children}</div>
       </div>
     </div>
@@ -34,7 +34,7 @@ export function Workings({ trace, defaultOpen = false, className }: { trace: Wor
   const [open, setOpen] = useState(defaultOpen);
   const mode = MODE[trace.engine.mode] ?? MODE.rules;
   return (
-    <div className={cn('rounded-[var(--radius)] border border-dashed border-border bg-surface/60', className)} data-testid="workings">
+    <div className={cn('rounded-[var(--radius-lg)] bg-surface', className)} data-testid="workings">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
         className="flex w-full items-center gap-2 px-3 py-2 text-start text-sm font-medium text-muted-foreground hover:text-foreground">
         <Eye className="size-4" />
@@ -43,7 +43,7 @@ export function Workings({ trace, defaultOpen = false, className }: { trace: Wor
         <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="flex flex-col gap-3 border-t border-dashed border-border px-3 py-3">
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-4">
           <Section icon={Target} title="1 · Goal understood"><p>{trace.goal}</p></Section>
           <Section icon={ListChecks} title="2 · Steps planned">
             <ol className="list-decimal space-y-0.5 ps-4">{trace.plan.map((p, i) => <li key={i}>{p}</li>)}</ol>

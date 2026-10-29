@@ -25,7 +25,7 @@
   --color-foreground: var(--text);
   --color-card: var(--surface);
   --color-card-foreground: var(--text);
-  --color-popover: var(--surface);
+  --color-popover: var(--popover);
   --color-popover-foreground: var(--text);
   --color-primary: var(--accent);
   --color-primary-foreground: var(--accent-fg);
@@ -38,9 +38,16 @@
   --color-destructive: var(--danger);
   --color-border: var(--border);
   --color-input: var(--border);
+  --color-field: var(--field);
+  --color-deep: var(--deep);
+  --color-royal: var(--brand);
+  --color-sky: var(--brand-light);
+  --color-spark: var(--spark);
+  --color-ghost: var(--ghost);
   --color-ring: var(--accent);
 
-  --color-sidebar: var(--bg);
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--canvas);
   --color-sidebar-foreground: var(--text);
   --color-sidebar-primary: var(--accent);
   --color-sidebar-primary-foreground: var(--accent-fg);
@@ -67,7 +74,7 @@
 
   --radius-md: var(--radius);
   --radius-xl: var(--radius-lg);
-  --radius-2xl: calc(var(--radius-lg) + 4px);
+  --radius-2xl: var(--radius-band);
   --radius-pill: 9999px;
 
   --shadow-soft: var(--shadow-1);
@@ -107,13 +114,14 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-feature-settings: "cv11", "ss01", "ss03"; /* Inter: single-storey a off, open digits */
+    font-feature-settings: normal;
+    letter-spacing: -0.005em;
   }
   [dir="rtl"] body { font-feature-settings: normal; letter-spacing: 0; }
   * { border-color: var(--border); }
   ::selection { background: var(--accent-soft); color: var(--text); }
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid color-mix(in oklab, var(--accent) 75%, transparent);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }

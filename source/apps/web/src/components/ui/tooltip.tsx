@@ -10,7 +10,7 @@ export function Tip({ label, children, side = 'top' }: { label: ReactNode; child
     <T.Root delayDuration={250}>
       <T.Trigger asChild>{children}</T.Trigger>
       <T.Portal>
-        <T.Content side={side} sideOffset={8} className="z-50 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground shadow-lift data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0">
+        <T.Content side={side} sideOffset={8} className="z-50 rounded-full bg-[var(--deep)] px-3 py-1.5 text-xs text-white shadow-lift data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0">
           {label}
         </T.Content>
       </T.Portal>

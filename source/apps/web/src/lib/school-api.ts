@@ -17,8 +17,8 @@ async function req<T>(path: string, init: { method?: string; body?: unknown; dev
 
 export interface Plan { id: string; audience: 'families' | 'schools'; name: string; priceAed: number; per: 'month' | 'student-year'; yearlyAed?: number; rangeAed?: [number, number]; featured: boolean; blurb: string; features: string[] }
 export const getPlans = () => req<{ families: Plan[]; schools: Plan[] }>('/plans');
-export const getMsAccounts = (org = 'gems-oow') => req<{ org: { name: string; domain: string } | null; items: { id: string; name: string; email: string; role: string; code: string }[] }>(`/auth/microsoft/accounts?org=${org}&role=student`);
-export const startMs = (org = 'gems-oow') => req<{ url: string; state: string }>(`/auth/microsoft/authorize?org=${org}&role=student`);
+export const getMsAccounts = (org = 'demo-school') => req<{ org: { name: string; domain: string } | null; items: { id: string; name: string; email: string; role: string; code: string }[] }>(`/auth/microsoft/accounts?org=${org}&role=student`);
+export const startMs = (org = 'demo-school') => req<{ url: string; state: string }>(`/auth/microsoft/authorize?org=${org}&role=student`);
 export const onboard = (body: Record<string, unknown>) => req<any>('/onboarding', { method: 'POST', body });
 export const getSchool = (devUser: string) => req<any>('/student/school', { devUser });
 

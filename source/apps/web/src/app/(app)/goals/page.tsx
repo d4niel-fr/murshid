@@ -53,7 +53,7 @@ function AddGoal() {
             <div><Label htmlFor="g-due">{tx('By', 'بحلول')}</Label><Input id="g-due" type="date" min={world.today} value={due} onChange={(e) => setDue(e.target.value)} /></div>
           </div>
           <div><Label htmlFor="g-steps">{tx('Milestones (one per line, optional)', 'المراحل (سطر لكل مرحلة، اختياري)')}</Label>
-            <textarea id="g-steps" value={steps} onChange={(e) => setSteps(e.target.value)} className="min-h-24 w-full rounded-sm border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" /></div>
+            <textarea id="g-steps" value={steps} onChange={(e) => setSteps(e.target.value)} className="min-h-24 w-full rounded-[var(--radius-sm)] border border-border bg-field px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" /></div>
           <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim()}>{tx('Add goal', 'إضافة')}</Button></div>
         </form>
       </DialogContent>

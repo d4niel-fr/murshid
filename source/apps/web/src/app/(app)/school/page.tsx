@@ -56,7 +56,7 @@ export default function SchoolPage() {
     <Page wide>
       <PageHeader eyebrow={lic.parentOrgName ?? tx('Your school', 'مدرستك')} title={lic.orgName}
         subtitle={tx('Demo school tenant for the proposed Grade 11 pilot. Work your teachers set lands here and in your plan automatically.', 'مدرسة تجريبية للمشروع التجريبي المقترح للصف 11. الواجبات التي يحددها معلموك تصل هنا وإلى خطتك تلقائيًا.')}
-        actions={<span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium">{lic.connectedVia === 'microsoft365' ? <><MicrosoftMark className="size-3.5" />{tx('Demo: simulated Microsoft 365 sign-in', 'تجريبي: تسجيل دخول Microsoft 365 محاكى')}</> : <><CheckCircle2 className="size-3.5 text-success" />{tx('School licence', 'ترخيص مدرسي')}</>}</span>} />
+        actions={<span className="inline-flex h-9 items-center gap-2 rounded-full bg-surface px-4 text-xs font-medium">{lic.connectedVia === 'microsoft365' ? <><MicrosoftMark className="size-3.5" />{tx('Demo: simulated Microsoft 365 sign-in', 'تجريبي: تسجيل دخول Microsoft 365 محاكى')}</> : <><CheckCircle2 className="size-3.5 text-success" />{tx('School licence', 'ترخيص مدرسي')}</>}</span>} />
       <Bento>
         <Card className="col-span-12 xl:col-span-7">
           <CardHeader title={tx('From your teachers', 'من معلميك')} icon={<ClipboardList />} action={<Badge tone="outline">{sc.assignments.length}</Badge>} />

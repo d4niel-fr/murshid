@@ -11,7 +11,7 @@ const shortDate = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('
 
 function Avatar({ initials, app }: { initials: string; app?: boolean }) {
   return (
-    <span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-[var(--accent-soft)] text-[11px] font-semibold text-[var(--accent)]">
+    <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-[var(--deep)] text-[11px] font-medium text-white">
       {initials}
       {app && <span title="Uses the Murshid app" className="absolute -bottom-0.5 -right-0.5 grid size-3.5 place-items-center rounded-full bg-[var(--success)] text-white"><Smartphone className="size-2.5" /></span>}
     </span>
@@ -27,15 +27,21 @@ export function SummaryStats({ s }: { s: any }) {
     ['Class average', s.avgGrade === null ? '\u2014' : `${s.avgGrade}%`, 'recent marked work'],
   ];
   return (
-    <div className="mb-5 grid grid-cols-5 gap-3">
-      {items.map(([label, value, sub, tone]) => (
-        <div key={label} className="card min-w-0 p-4">
-          <div className="eyebrow truncate">{label}</div>
-          <div className={cn('mt-1 text-2xl font-semibold tabular-nums', tone === 'danger' && 'text-[var(--danger)]', tone === 'warning' && 'text-[color-mix(in_oklab,var(--warning)_75%,var(--text))]')}>{value}</div>
-          {sub && <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{sub}</div>}
-        </div>
-      ))}
-    </div>
+    <section className="on-deep mb-6 rounded-[var(--radius-band)] px-8 pb-8 pt-7">
+      <div className="flex items-center justify-between gap-4">
+        <span className="eyebrow">This week, in numbers</span>
+        <span className="text-xs text-white/55">Worked out with fixed rules from the class&rsquo;s own work, tests and activities</span>
+      </div>
+      <dl className="mt-8 grid grid-cols-5 gap-x-6">
+        {items.map(([label, value, sub, tone]) => (
+          <div key={label} className="min-w-0 border-t border-white/20 pt-5">
+            <dt className="truncate text-[10.5px] font-medium uppercase tracking-[0.2em] text-white/60">{label}</dt>
+            <dd className={cn('figure mt-4 text-[3rem]', tone === 'danger' && 'text-[#ff9b8f]', tone === 'warning' && 'text-[#f3c76f]')}>{value}</dd>
+            {sub && <dd className="mt-2 truncate text-xs text-white/60">{sub}</dd>}
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -43,12 +49,12 @@ export function ProgressTable({ report, subjectName }: { report: any; subjectNam
   const [filter, setFilter] = useState<string>('all');
   const rows = report.students.filter((r: any) => filter === 'all' || r.status === filter);
   const chip = (id: string, label: string, n: number) => (
-    <button key={id} onClick={() => setFilter(id)} className={cn('h-7 shrink-0 rounded-full border px-2.5 text-xs', filter === id ? 'border-[var(--accent)] bg-[var(--accent-soft)] font-medium text-[var(--accent)]' : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]')}>{label} {n}</button>
+    <button key={id} onClick={() => setFilter(id)} className={cn('inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium transition-colors', filter === id ? 'bg-[var(--deep)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]')}>{label}<span className={cn('tabular-nums', filter === id ? 'text-white/60' : 'text-[var(--text-muted)]')}>{n}</span></button>
   );
   const s = report.summary;
   return (
     <Card pad={false} title={<span>Class progress <span className="hidden font-normal text-[var(--text-muted)] xl:inline">&middot; {subjectName} work, with each student&rsquo;s whole week in view</span></span>}
-      action={<div className="flex flex-wrap justify-end gap-1.5">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
+      action={<div className="flex flex-wrap justify-end gap-0.5 rounded-full bg-[var(--surface-2)] p-1">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
       <table className="tbl">
         <thead><tr><th>Student</th><th>Status</th><th>Handed in</th><th>Avg</th><th>Still to do</th><th>Next 7 days</th><th className="w-[30%]">Why</th></tr></thead>
         <tbody>
@@ -149,15 +155,15 @@ export function HomeworkTiming({ t, minutes, onMinutes, onUse }: { t: any; minut
   return (
     <div className="space-y-4">
       <div className="card overflow-hidden" data-testid="best-day">
-        <div className="flex items-center justify-between gap-5 p-5" style={{ background: 'color-mix(in oklab, var(--success) 9%, var(--surface))' }}>
+        <div className="on-deep flex items-center justify-between gap-8 rounded-[var(--radius-lg)] p-7">
           <div className="min-w-0 flex-1">
             <div className="eyebrow">Recommendation for a {t.minutes}-minute task</div>
-            <div className="mt-1 text-[22px] font-semibold leading-tight tracking-tight">{t.best.headline}</div>
-            <p className="mt-1.5 max-w-3xl text-sm text-[var(--text-muted)]">{t.best.reason}</p>
+            <div className="display mt-4 text-[1.75rem] leading-tight">{t.best.headline}</div>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/68">{t.best.reason}</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
-            <div className="text-right"><div className="text-4xl font-semibold tabular-nums text-[var(--success)]">{t.best.likelihood}%</div><div className="text-xs text-[var(--text-muted)]">{t.best.onTime} of {t.students} likely on time</div>{t.best.atRisk ? <div className="text-xs font-medium text-[var(--warning)]">{t.best.atRisk} at risk &middot; extra support</div> : null}</div>
-            <button onClick={() => onUse(t.best.set, t.best.due)} className="inline-flex h-9 items-center rounded-[var(--radius-sm)] bg-[var(--accent)] px-3.5 text-sm font-medium text-[var(--accent-fg)] hover:brightness-95">Set it for {t.best.setLabel}</button>
+            <div className="text-right"><div className="figure text-[4rem] text-[var(--spark)]">{t.best.likelihood}%</div><div className="mt-2 text-xs text-white/65">{t.best.onTime} of {t.students} likely on time</div>{t.best.atRisk ? <div className="mt-0.5 text-xs font-medium text-[#f3c76f]">{t.best.atRisk} at risk &middot; extra support</div> : null}</div>
+            <button onClick={() => onUse(t.best.set, t.best.due)} className="group mt-1 inline-flex h-10 items-center gap-2 rounded-full bg-white px-5 text-sm font-medium text-[var(--deep)] transition-colors hover:bg-[var(--brand-light)] hover:text-white">Set it for {t.best.setLabel}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="nudge size-4" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg></button>
           </div>
         </div>
         <div className="flex items-start gap-2 border-t border-[var(--border)] px-5 py-2.5 text-xs text-[var(--text-muted)]"><TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-[var(--danger)]" /><span><span className="font-medium text-[var(--text)]">Avoid {t.avoid.setLabel} &rarr; {t.avoid.dueLabel}.</span> {t.avoid.reason}</span></div>
@@ -171,13 +177,13 @@ export function HomeworkTiming({ t, minutes, onMinutes, onUse }: { t: any; minut
             </select>
           </label>}>
           <table className="w-full border-separate" style={{ borderSpacing: 6 }}>
-            <thead><tr><th className="text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Set on</th>{t.heatmap.dueOffsets.map((k: number) => <th key={k} className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Due +{k} school day{k > 1 ? 's' : ''}</th>)}</tr></thead>
+            <thead><tr><th className="text-left text-xs font-medium text-[var(--text-muted)]">Set on</th>{t.heatmap.dueOffsets.map((k: number) => <th key={k} className="text-xs font-medium text-[var(--text-muted)]">Due +{k} school day{k > 1 ? 's' : ''}</th>)}</tr></thead>
             <tbody>
               {t.heatmap.setDays.map((sd: any) => (
                 <tr key={sd.date}>
                   <td className="whitespace-nowrap pr-1 text-sm font-medium">{sd.label}</td>
                   {cells.filter((c) => c.set === sd.date).map((c) => (
-                    <td key={c.due} className={cn('rounded-[var(--radius-sm)] border px-2 py-1.5 text-center', c.best && 'ring-2 ring-[var(--success)]')} style={cellStyle(c.likelihood)}>
+                    <td key={c.due} className={cn('rounded-[var(--radius-sm)] border px-2 py-1.5 text-center', c.best && 'ring-[1.5px] ring-[var(--success)]')} style={cellStyle(c.likelihood)}>
                       <div className="text-base font-semibold tabular-nums text-[var(--text)]">{c.likelihood}%</div>
                       <div className="whitespace-nowrap text-[11px] text-[color-mix(in_oklab,var(--text-muted)_55%,var(--text))]">due {c.dueLabel}{c.weekend ? ' \u00b7 wknd' : ''}</div>
                     </td>
@@ -229,10 +235,10 @@ export function WeeklyReports({ w, week, onWeek }: { w: any; week: 'current' | '
         </div>
       </div>
       <div className="grid grid-cols-4 gap-3">
-        <div className="card p-4"><div className="eyebrow">Reports in</div><div className="mt-1 text-2xl font-semibold tabular-nums">{r.submitted}/{r.students}</div></div>
-        <div className="card p-4"><div className="eyebrow">Work handed in (all subjects)</div><div className="mt-1 text-2xl font-semibold tabular-nums">{r.avgCompletion}%</div></div>
-        <div className="card p-4"><div className="eyebrow">Students with overdue work</div><div className="mt-1 text-2xl font-semibold tabular-nums">{r.withOverdue}</div></div>
-        <div className="card min-w-0 p-4"><div className="eyebrow">Coming up</div><div className="mt-1 space-y-0.5 text-xs">{r.pressure.map((p: any) => <div key={p.title} className="leading-snug"><span className="font-medium">{p.title}</span> <span className="text-[var(--text-muted)]">&middot; {p.students}</span></div>)}</div></div>
+        <div className="card p-6"><div className="eyebrow">Reports in</div><div className="figure mt-4 text-[2.25rem]">{r.submitted}/{r.students}</div></div>
+        <div className="card p-6"><div className="eyebrow">Work handed in (all subjects)</div><div className="figure mt-4 text-[2.25rem]">{r.avgCompletion}%</div></div>
+        <div className="card p-6"><div className="eyebrow">Students with overdue work</div><div className="figure mt-4 text-[2.25rem]">{r.withOverdue}</div></div>
+        <div className="card min-w-0 p-6"><div className="eyebrow">Coming up</div><div className="mt-4 space-y-1 text-xs">{r.pressure.map((p: any) => <div key={p.title} className="leading-snug"><span className="font-medium">{p.title}</span> <span className="text-[var(--text-muted)]">&middot; {p.students}</span></div>)}</div></div>
       </div>
       <Card pad={false} title="Student reports">
         <table className="tbl">

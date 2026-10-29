@@ -64,11 +64,11 @@ function View() {
           const on = a.id === act.id;
           return (
             <motion.button key={a.id} whileTap={{ scale: 0.97 }} onClick={() => { setSel(a.id); setView('time'); }}
-              className={cn('flex shrink-0 items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-start transition-colors', on ? 'border-transparent bg-surface shadow-lift ring-2 ring-[var(--accent)]' : 'border-border bg-surface hover:bg-surface-2')}>
-              <span className={cn('inline-flex size-9 items-center justify-center rounded-full', on ? 'bg-primary text-primary-foreground' : 'bg-surface-2')}><Icon className="size-4" /></span>
+              className={cn('flex shrink-0 items-center gap-3 rounded-full py-2 ps-2 pe-5 text-start transition-colors', on ? 'bg-[var(--deep)] text-white' : 'bg-surface hover:bg-[color-mix(in_oklab,var(--surface)_80%,var(--text)_6%)]')}>
+              <span className={cn('inline-flex size-9 items-center justify-center rounded-full', on ? 'bg-white text-[var(--deep)]' : 'bg-surface-2')}><Icon className="size-4" /></span>
               <span>
                 <span className="block text-sm font-medium">{a.name}</span>
-                <span className="block text-xs text-muted-foreground tabular">{Math.round(minutesSince(a, from28) / 6) / 10}h {tx('in 4 weeks', 'في ٤ أسابيع')}</span>
+                <span className={cn('block text-xs tabular', on ? 'text-white/65' : 'text-muted-foreground')}>{Math.round(minutesSince(a, from28) / 6) / 10}h {tx('in 4 weeks', 'في ٤ أسابيع')}</span>
               </span>
             </motion.button>
           );

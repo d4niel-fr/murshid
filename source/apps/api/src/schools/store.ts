@@ -2,7 +2,7 @@
  * Tenancy + school state: orgs (families and institutions), accounts, which tenant each app student belongs
  * to, the synthetic school roster, assignments teachers post, and the Microsoft 365 connection.
  */
-import { familyOrg, OOW, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
+import { familyOrg, DEMO_SCHOOL, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
 import type { School, WorkItem } from './engine';
 import { SimulatedMicrosoft365, type SchoolDirectoryConnector } from './microsoft';
 
@@ -60,7 +60,7 @@ export class SchoolStore {
 
   /** Tenant + licence of an app student. Students created in the school portal belong to the portal's school. */
   licenceOf(studentId: string): StudentLicence {
-    const orgId = this.tenant[studentId] ?? OOW;
+    const orgId = this.tenant[studentId] ?? DEMO_SCHOOL;
     const org = this.org(orgId)!;
     const lic = org.licence!;
     const parent = org.parentOrgId ? this.org(org.parentOrgId) : undefined;

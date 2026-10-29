@@ -30,8 +30,8 @@ import type { Activity, Dashboard, LinkKey, UpcomingItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const seeAll = (href: string, label: string) => (
-  <Link href={href} className="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-surface-2 hover:text-foreground">
-    {label}<ArrowRight className="size-3 rtl:-scale-x-100" />
+  <Link href={href} className="group inline-flex h-8 items-center gap-1.5 rounded-full bg-surface-2 ps-3.5 pe-3 text-xs font-medium text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">
+    {label}<ArrowRight className="nudge size-3.5" />
   </Link>
 );
 
@@ -71,7 +71,7 @@ export function StreakWidget({ data }: { data: Dashboard }) {
             <div key={i} className="flex flex-col items-center gap-1.5">
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15 + i * 0.04, type: 'spring', stiffness: 520, damping: 30 }}
-                className={cn('size-7 rounded-full', filled ? 'bg-primary' : i === today ? 'border-2 border-dashed border-primary' : 'bg-surface-2')}
+                className={cn('size-7 rounded-full', filled ? 'bg-[var(--deep)]' : i === today ? 'border-2 border-primary' : 'bg-surface-2')}
               />
               <span className={cn('text-[11px]', i === today ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{d}</span>
             </div>
@@ -98,7 +98,7 @@ export function RingsWidget({ data }: { data: Dashboard }) {
       <div className="grid grid-cols-3 gap-2">
         {rings.map((r) => (
           <motion.button key={r.key} {...pressable} onClick={() => router.push(r.href)} className="rounded-lg py-1 hover:bg-surface-2" aria-label={`${r.label} ${data.progress[r.key]}%`}>
-            <ProgressRing value={data.progress[r.key]} size={size} stroke={band === 'g5-6' ? 10 : 9} color={areaColor[r.key]} label={r.label} locale={locale} />
+            <ProgressRing value={data.progress[r.key]} size={size} stroke={band === 'g5-6' ? 8 : 6} color={areaColor[r.key]} label={r.label} locale={locale} />
           </motion.button>
         ))}
       </div>
@@ -122,7 +122,7 @@ export function UpcomingWidget({ data }: { data: Dashboard }) {
           return (
             <li key={u.id} className="relative flex gap-3 pb-4 last:pb-0">
               {i < items.length - 1 && <span className="absolute start-[15px] top-8 bottom-0 w-0.5 bg-border" aria-hidden />}
-              <span className={cn('relative z-10 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface', d <= 2 && 'tint-warning border-[color-mix(in_oklab,var(--warning)_40%,transparent)]')}>
+              <span className={cn('relative z-10 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent bg-surface-2', d <= 2 && 'tint-warning border-[color-mix(in_oklab,var(--warning)_40%,transparent)]')}>
                 <Icon className="size-4" />
               </span>
               <div className="min-w-0 flex-1 pt-0.5">
@@ -195,7 +195,7 @@ export function ExtracurricularsWidget() {
             <li key={a.id}>
               <Link href={`/extracurriculars?a=${a.id}`} className="flex flex-col gap-2.5 rounded-[var(--radius)] bg-surface-2 p-3.5 transition-colors hover:bg-[color-mix(in_oklab,var(--surface-2)_70%,var(--border))]">
                 <div className="flex items-center gap-2.5">
-                  <span className="inline-flex size-8 items-center justify-center rounded-full bg-surface text-foreground shadow-soft"><Icon className="size-4" /></span>
+                  <span className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--deep)] text-white"><Icon className="size-4" /></span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{a.name}</span>
                 </div>
                 <div className="flex items-baseline justify-between">
@@ -248,16 +248,16 @@ export function AskWidget() {
     <Card className="col-span-12">
       <CardHeader title={t('dash.ask')} icon={<Sparkles />} />
       <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) go(q.trim()); else router.push('/chat'); }}>
-        <motion.div layoutId="composer" className="flex items-center gap-2 rounded-full bg-surface-2 py-1.5 ps-5 pe-1.5 ring-1 ring-inset ring-border focus-within:shadow-lift focus-within:ring-[color-mix(in_oklab,var(--accent)_45%,var(--border))]">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')} className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground" aria-label={t('dash.ask')} />
-          <button type="submit" aria-label={q ? t('chat.send') : t('chat.mic')} className="inline-flex size-10 items-center justify-center rounded-full bg-foreground text-background transition-transform active:scale-95">
-            {q ? <ArrowUp className="size-[18px]" /> : <Mic className="size-[18px]" />}
+        <motion.div layoutId="composer" className="flex items-center gap-2 rounded-full bg-surface-2 py-1.5 ps-5 pe-1.5 ring-1 ring-transparent transition-shadow focus-within:ring-[var(--brand-light)] focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--brand-light)_18%,transparent)]">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')} className="h-9 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground" aria-label={t('dash.ask')} />
+          <button type="submit" aria-label={q ? t('chat.send') : t('chat.mic')} className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)] text-white transition-transform active:scale-95">
+            {q ? <ArrowUp className="size-4" /> : <Mic className="size-4" />}
           </button>
         </motion.div>
       </form>
       <div className="mt-3 flex flex-wrap gap-2">
         {chips.map((c) => (
-          <motion.button key={c} {...pressable} onClick={() => go(c)} className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-sm text-foreground hover:bg-surface-2">{c}</motion.button>
+          <motion.button key={c} {...pressable} onClick={() => go(c)} className="rounded-full bg-surface-2 px-4 py-2 text-[13px] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">{c}</motion.button>
         ))}
       </div>
     </Card>

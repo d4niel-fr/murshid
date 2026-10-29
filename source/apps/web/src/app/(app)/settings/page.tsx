@@ -94,7 +94,7 @@ export default function SettingsPage() {
           <CardHeader title={tx('Demo student & grade band', 'الطالب التجريبي والمرحلة')} icon={<UserRound />} />
           <div className="grid gap-2">
             <button onClick={() => { const next = prefs.persona === 'demo-ideal' ? null : 'demo-ideal'; setPrefs({ persona: next, ...(next ? { band: 'g11-12' as BandId } : {}) }); router.refresh(); toast({ title: next ? tx('Now viewing Ahamed (full demo profile)', 'تعرض الآن أحمد (الشخصية الرئيسية)') : tx('Back to the band demo student', 'العودة إلى طالب المرحلة'), tone: 'info' }); }}
-              className={prefs.persona === 'demo-ideal' ? 'flex items-center gap-3 rounded-[var(--radius)] bg-surface-2 p-3 text-start ring-2 ring-[var(--accent)]' : 'flex items-center gap-3 rounded-[var(--radius)] p-3 text-start hover:bg-surface-2'}>
+              className={prefs.persona === 'demo-ideal' ? 'flex min-w-0 items-center gap-3 rounded-[var(--radius)] bg-[var(--accent-soft)] p-3 text-start ring-1 ring-[color-mix(in_oklab,var(--accent)_45%,transparent)]' : 'flex min-w-0 items-center gap-3 rounded-[var(--radius)] p-3 text-start hover:bg-surface-2'}>
               <span className="inline-flex size-9 items-center justify-center rounded-full bg-[var(--warning)] text-sm font-semibold text-white">A</span>
               <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{tx('Ahamed Mehta · full demo profile', 'أحمد ميهتا · الملف التجريبي الكامل')}</span><span className="block truncate text-xs text-muted-foreground">{tx('Grade 11 · school licence (demo) · football + swimming · uses the live demo server', 'الصف 11 · ترخيص مدرسي · كرة القدم والسباحة · يتطلب الواجهة الحية')}</span></span>
               {prefs.persona === 'demo-ideal' && <Badge tone="brand">{tx('Active', 'نشط')}</Badge>}
@@ -104,7 +104,7 @@ export default function SettingsPage() {
               const on = b === band && !prefs.persona;
               return (
                 <button key={b} onClick={() => { setPrefs({ band: b, persona: null }); router.refresh(); toast({ title: tx(`Now viewing ${s.firstName}`, `تعرض الآن ${s.nameAr}`), tone: 'info' }); }} data-band={b}
-                  className={on ? 'flex items-center gap-3 rounded-[var(--radius)] bg-surface-2 p-3 text-start ring-2 ring-[var(--accent)]' : 'flex items-center gap-3 rounded-[var(--radius)] p-3 text-start hover:bg-surface-2'}>
+                  className={on ? 'flex min-w-0 items-center gap-3 rounded-[var(--radius)] bg-[var(--accent-soft)] p-3 text-start ring-1 ring-[color-mix(in_oklab,var(--accent)_45%,transparent)]' : 'flex min-w-0 items-center gap-3 rounded-[var(--radius)] p-3 text-start hover:bg-surface-2'}>
                   <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{s.firstName[0]}</span>
                   <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{locale === 'ar' ? s.nameAr : `${s.firstName} ${s.lastName}`}</span><span className="block truncate text-xs text-muted-foreground">{BANDS[b].label[locale]} · {s.classLabel} · {s.school}</span></span>
                   {on && <Badge tone="brand">{tx('Active', 'نشط')}</Badge>}
@@ -209,7 +209,7 @@ function BuddyCard() {
         <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (code.trim()) void flip(askCode, code.trim()); }}>
           <span className="w-full text-xs text-muted-foreground">{tx('On the public demo, only a guardian or the school can change this. Enter the demo passcode.', 'في العرض التجريبي العام، يمكن لوليّ الأمر أو المدرسة فقط تغيير هذا. أدخل رمز المرور التجريبي.')}</span>
           <input type="password" value={code} onChange={(e) => setCode(e.target.value)} autoFocus aria-label={tx('Demo passcode', 'رمز المرور التجريبي')} placeholder={tx('Passcode', 'رمز المرور')}
-            className="h-9 min-w-0 flex-1 rounded-[var(--radius)] border border-border bg-surface px-3 text-sm outline-none focus:border-[var(--accent)]" />
+            className="h-10 min-w-0 flex-1 rounded-full border border-border bg-field px-4 text-sm outline-none focus:border-[var(--brand-light)]" />
           <Button type="submit" size="sm" disabled={!code.trim() || busy}>{tx('Confirm', 'تأكيد')}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => { setAskCode(null); setCode(''); }}>{tx('Cancel', 'إلغاء')}</Button>
         </form>

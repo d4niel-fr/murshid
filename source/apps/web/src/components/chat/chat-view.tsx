@@ -170,7 +170,7 @@ const tools = { by_name: { render_chart: RenderChartTool, show_tasks: ShowTasksT
 function UserMessage() {
   return (
     <MessagePrimitive.Root className="flex justify-end">
-      <motion.div {...messageIn} className="max-w-[80%] rounded-[var(--radius-lg)] bg-surface-2 px-4 py-2.5 text-base">
+      <motion.div {...messageIn} className="max-w-[80%] rounded-[22px] rounded-ee-[8px] bg-[var(--deep)] px-4 py-2.5 text-[15px] text-white">
         <MessagePrimitive.Parts components={{ Text: TextPart }} />
       </motion.div>
     </MessagePrimitive.Root>
@@ -238,8 +238,7 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
       <ComposerPrimitive.Root
         data-empty={empty} data-running={running}
         className={cn(
-          'flex w-full items-end gap-2 bg-surface-2 py-2 ps-5 pe-2 ring-1 ring-inset ring-border transition-[box-shadow,border-radius] focus-within:shadow-lift focus-within:ring-[color-mix(in_oklab,var(--accent)_45%,var(--border))]',
-          text.includes('\n') || text.length > 80 ? 'rounded-[28px]' : 'rounded-[32px]',
+          'flex w-full items-end gap-2 rounded-[28px] bg-surface py-2 ps-5 pe-2 ring-1 ring-transparent transition-[box-shadow] focus-within:ring-[var(--brand-light)] focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--brand-light)_18%,transparent)]',
           band === 'g5-6' ? 'min-h-[60px]' : 'min-h-[56px]',
         )}
       >
@@ -248,7 +247,7 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
           rows={1}
           maxRows={8}
           placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')}
-          className="min-h-10 flex-1 resize-none self-center bg-transparent py-2 text-base outline-none placeholder:text-muted-foreground"
+          className="min-h-10 flex-1 resize-none self-center bg-transparent py-2 text-[15px] outline-none placeholder:text-muted-foreground"
         />
         {dict.listening && <span className="mb-3.5 size-2 animate-pulse rounded-full bg-[var(--danger)]" aria-label="Listening" />}
         <div className="relative size-10 shrink-0">
@@ -262,14 +261,14 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
             ) : mode === 'send' ? (
               <motion.span key="send" {...iconSwap} className="absolute inset-0">
                 <ComposerPrimitive.Send asChild>
-                  <button aria-label={t('chat.send')} className="inline-flex size-10 items-center justify-center rounded-full bg-foreground text-background"><ArrowUp className="size-[18px]" /></button>
+                  <button aria-label={t('chat.send')} className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)] text-white"><ArrowUp className="size-4" /></button>
                 </ComposerPrimitive.Send>
               </motion.span>
             ) : (
               <motion.span key="mic" {...iconSwap} className="absolute inset-0">
                 <button type="button" onClick={dict.listening ? dict.stop : dict.start} aria-label={t('chat.mic')} aria-pressed={dict.listening}
-                  className={cn('inline-flex size-10 items-center justify-center rounded-full', dict.listening ? 'bg-[var(--danger)] text-white' : 'bg-foreground text-background')}>
-                  <Mic className="size-[18px]" />
+                  className={cn('inline-flex size-10 items-center justify-center rounded-full transition-colors', dict.listening ? 'bg-[var(--danger)] text-white' : 'bg-surface-2 text-muted-foreground hover:text-foreground')}>
+                  <Mic className="size-4" />
                 </button>
               </motion.span>
             )}
@@ -296,13 +295,13 @@ export function PersonaToggle({ onSwitch }: { onSwitch?: () => void }) {
   const set = (p: 'tutor' | 'buddy') => { if (p === persona || (p === 'buddy' && blocked)) return; setPrefs({ chatPersona: p }); onSwitch?.(); };
   return (
     <div className="flex flex-col items-center gap-1">
-      <div role="radiogroup" aria-label={tx('Who answers', 'من يجيب')} className="inline-flex rounded-full border border-border bg-surface p-0.5 text-sm">
+      <div role="radiogroup" aria-label={tx('Who answers', 'من يجيب')} className="inline-flex rounded-full bg-surface p-1 text-[13px]">
         {(['tutor', 'buddy'] as const).map((p) => {
           const on = p === persona;
           const dis = p === 'buddy' && blocked;
           return (
             <button key={p} role="radio" aria-checked={on} aria-disabled={dis || undefined} title={dis ? why ?? undefined : undefined} onClick={() => set(p)}
-              className={cn('h-8 rounded-full px-3 font-medium transition-colors pointer-coarse:h-10', on ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground', dis && 'cursor-not-allowed opacity-50')}>
+              className={cn('h-8 rounded-full px-4 font-medium transition-colors pointer-coarse:h-10', on ? 'bg-[var(--deep)] text-white' : 'text-muted-foreground hover:text-foreground', dis && 'cursor-not-allowed opacity-50')}>
               {p === 'tutor' ? tx('Tutor', 'المعلّم') : tx('Study buddy', 'رفيق الدراسة')}
             </button>
           );
@@ -324,7 +323,7 @@ function Chips({ runtime }: { runtime: AssistantRuntime }) {
     <motion.div initial="hidden" animate="show" variants={stagger} className="flex flex-wrap justify-center gap-2">
       {chips.map((c) => (
         <motion.button key={c} variants={fadeUp} {...pressable} onClick={() => runtime.thread.append(c)}
-          className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-foreground shadow-soft hover:bg-surface-2">
+          className="rounded-full bg-surface px-4 py-2 text-[13px] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">
           {c}
         </motion.button>
       ))}
@@ -361,9 +360,9 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
   const name = locale === 'ar' ? world.dashboard.student.nameAr.split(' ')[0] : world.dashboard.student.firstName;
 
   return (
-    <div className="relative flex h-[calc(100dvh-4rem)] flex-col">
+    <div className="fill-view relative flex flex-col">
       {count > 0 && (
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4 md:px-6">
+        <div className="flex h-14 shrink-0 items-center justify-between px-4 md:px-8">
           <span className="flex items-center gap-2 text-sm font-medium"><MurshidMark className="size-6" /><span className="hidden sm:inline">{t('chat.title')}</span></span>
           <PersonaToggle onSwitch={() => runtime.thread.reset()} />
           <Button variant="ghost" size="sm" onClick={() => runtime.thread.reset()}><SquarePen /><span className="hidden sm:inline">{t('chat.new')}</span><span className="sr-only sm:hidden">{t('chat.new')}</span></Button>
@@ -373,7 +372,7 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-[12vh]">
           <motion.div initial="hidden" animate="show" variants={fadeUp} className="flex flex-col items-center gap-4 text-center">
             <MurshidMark className="size-12" />
-            <h1 className="text-2xl font-semibold tracking-[-0.01em]">{tx(`What should we work on, ${name}?`, `على ماذا نعمل اليوم يا ${name}؟`)}</h1>
+            <h1 className="display text-[2rem] sm:text-[2.5rem]">{tx(`What should we work on, ${name}?`, `على ماذا نعمل اليوم يا ${name}؟`)}</h1>
             <p className="text-sm text-muted-foreground">{prefs.chatPersona === 'buddy' ? tx('Your AI study buddy: pep talks, study plans and bad puns.', 'رفيق دراستك بالذكاء الاصطناعي: تشجيع وخطط دراسة ونكات.') : t('chat.sub')}</p>
           </motion.div>
           <PersonaToggle />

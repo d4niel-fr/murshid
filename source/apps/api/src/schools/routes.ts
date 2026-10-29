@@ -20,7 +20,7 @@ import type { Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
 import { dubaiDate } from '../lib/time';
 import type { DemoStore, DemoView } from '../v1/store';
-import { OOW, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './catalog';
+import { DEMO_SCHOOL, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './catalog';
 import { classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
 import type { SchoolStore } from './store';
 import { replanForPost } from './automation';
@@ -33,8 +33,8 @@ export const SchoolSchemas = {
     z.object({ path: z.literal('school'), via: z.literal('microsoft'), code: z.string().min(4).max(120) }),
     z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12) }),
   ]),
-  MsAuthorize: z.object({ org: z.string().max(60).default(OOW), role: z.enum(['teacher', 'student', 'school_admin']).default('teacher'), adminConsent: z.enum(['true', 'false']).optional() }),
-  MsAccounts: z.object({ org: z.string().max(60).default(OOW), role: z.enum(['teacher', 'student', 'school_admin']).optional() }),
+  MsAuthorize: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).default('teacher'), adminConsent: z.enum(['true', 'false']).optional() }),
+  MsAccounts: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).optional() }),
   MsCallback: z.object({ code: z.string().min(4).max(120), state: z.string().max(120).optional() }),
   Timing: z.object({ minutes: z.coerce.number().int().min(10).max(240).optional() }),
   Weekly: z.object({ week: z.enum(['current', 'last']).default('current') }),
@@ -67,7 +67,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return { role: 'teacher', teacher: t, orgId: t.orgId, actor: t.id };
     }
     if (role === 'admin' || role === 'school_admin') {
-      const id = orgId ?? OOW;
+      const id = orgId ?? DEMO_SCHOOL;
       if (schools.org(id)?.licence?.type !== 'institution') throw new HTTPException(403, { message: 'not a licensed school' });
       return { role: 'school_admin', orgId: id, actor: userId ?? 'dev-admin' };
     }

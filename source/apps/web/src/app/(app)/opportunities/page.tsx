@@ -73,7 +73,7 @@ function View() {
         {tab === 'discover' && (
           <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
             {present.map((k) => (
-              <button key={k} onClick={() => setKind(k)} className={k === kind ? 'h-8 shrink-0 rounded-full bg-foreground px-3 text-xs font-medium text-background' : 'h-8 shrink-0 rounded-full border border-border bg-surface px-3 text-xs text-muted-foreground hover:text-foreground'}>
+              <button key={k} onClick={() => setKind(k)} className={k === kind ? 'h-8 shrink-0 rounded-full bg-[var(--deep)] px-3.5 text-xs font-medium text-white' : 'h-8 shrink-0 rounded-full bg-surface px-3.5 text-xs text-muted-foreground hover:text-foreground'}>
                 {tx(KIND_L[k]![0], KIND_L[k]![1])}
               </button>
             ))}

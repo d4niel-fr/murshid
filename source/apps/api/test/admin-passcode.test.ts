@@ -12,7 +12,7 @@ describe('admin passcode (public demo deployments)', () => {
     expect(await (await app.request('/admin/survey', { headers: admin })).json()).toMatchObject({ code: 'admin_passcode' });
     expect((await app.request('/admin/overview', { headers: { ...admin, 'x-admin-passcode': 'wrong' } })).status).toBe(401);
     expect((await app.request('/admin/overview', { headers: { ...admin, 'x-admin-passcode': 'test-pass' } })).status).toBe(200);
-    expect((await app.request('/orgs/gems-oow', { headers: { 'x-dev-role': 'teacher', 'x-dev-user-id': 't-thomas' } })).status).toBe(401);
+    expect((await app.request('/orgs/demo-school', { headers: { 'x-dev-role': 'teacher', 'x-dev-user-id': 't-thomas' } })).status).toBe(401);
     expect((await app.request('/teacher/me', { headers: { 'x-dev-role': 'teacher', 'x-dev-user-id': 't-thomas' } })).status).toBe(200);
     expect((await app.request('/dashboard', { headers: { 'x-dev-user-id': 'demo-ideal' } })).status).toBe(200);
     expect((await app.request('/health')).status).toBe(200);

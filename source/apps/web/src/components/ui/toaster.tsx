@@ -22,7 +22,7 @@ export function Toaster({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss:
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
               exit={{ opacity: 0, y: 6, transition: { duration: 0.15 } }}
-              className="pointer-events-auto flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5 shadow-lift"
+              className="pointer-events-auto flex items-start gap-3 rounded-[20px] bg-popover p-4 shadow-lift"
             >
               <Icon className={t.tone === 'danger' ? 'mt-0.5 size-4 text-danger' : t.tone === 'info' ? 'mt-0.5 size-4 text-info' : 'mt-0.5 size-4 text-success'} />
               <div className="min-w-0 flex-1">

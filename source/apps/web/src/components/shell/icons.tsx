@@ -20,12 +20,33 @@ export const InstagramIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden {...p}><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
 );
 
-export function MurshidMark({ className = '' }: { className?: string }) {
+/**
+ * Murshid's mark: an eight-point star (the outline of two squares, one turned 45°) with a solid centre.
+ * "Murshid" means guide; the star is the guide you navigate by. Line-drawn, currentColor.
+ */
+export function MurshidStar({ className = '', strokeWidth = 1.7 }: { className?: string; strokeWidth?: number }) {
   return (
-    <span className={`inline-flex items-center justify-center rounded-[10px] bg-primary text-primary-foreground ${className}`}>
-      <svg viewBox="0 0 24 24" className="size-[60%]" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M4 18V7l8 6 8-6v11" />
-      </svg>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" aria-hidden>
+      <path d="M12.00 1.80 L13.76 7.75 L19.21 4.79 L16.25 10.24 L22.20 12.00 L16.25 13.76 L19.21 19.21 L13.76 16.25 L12.00 22.20 L10.24 16.25 L4.79 19.21 L7.75 13.76 L1.80 12.00 L7.75 10.24 L4.79 4.79 L10.24 7.75Z" />
+    </svg>
+  );
+}
+
+/** App-icon version of the mark: a navy tile with a white star. `tone="light"` = white tile, navy star (for navy blocks). */
+export function MurshidMark({ className = '', tone = 'brand' }: { className?: string; tone?: 'brand' | 'light' }) {
+  return (
+    <span className={`inline-flex items-center justify-center rounded-[28%] ${tone === 'light' ? 'bg-white text-[var(--deep)]' : 'bg-[var(--deep)] text-white'} ${className}`}>
+      <MurshidStar className="size-[66%]" strokeWidth={1.9} />
+    </span>
+  );
+}
+
+/** Star + tracked wordmark, as one unit. */
+export function Wordmark({ className = '', tone = 'ink' }: { className?: string; tone?: 'ink' | 'light' }) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <MurshidStar className={`size-[1.2em] ${tone === 'light' ? 'text-white' : 'text-[var(--deep)]'}`} strokeWidth={1.8} />
+      <span className="text-[1em] font-medium uppercase leading-none tracking-[0.2em]">Murshid</span>
     </span>
   );
 }
