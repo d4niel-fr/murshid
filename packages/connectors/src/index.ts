@@ -1,0 +1,28 @@
+export * from './core/types';
+export * from './core/errors';
+export * from './core/connector';
+export * from './core/identity';
+export * from './core/vault';
+export * from './core/guard';
+export * from './core/oauth2';
+export * from './core/http';
+export { OAuthConnector } from './core/oauth-connector';
+export { classifyKind, htmlToText, taskFromMaterial, paginate } from './core/normalize';
+
+export * from './providers/google/classroom';
+export * from './providers/google/calendar';
+export * from './providers/microsoft/graph';
+export * from './providers/managebac';
+export * from './providers/ics/parse';
+export * from './providers/ics/export';
+export * from './providers/ics/connector';
+export * from './providers/email/mime';
+export * from './providers/email/dates';
+export * from './providers/email/rules';
+export * from './providers/email/inbox';
+export * from './providers/uaepass';
+export * from './providers/linkedin';
+export * from './providers/phoenix';
+export * from './providers/lti/lti13';
+export * from './providers/edlink';
+export * from './registry';

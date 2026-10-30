@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-band="g9-10">
+<head>
+<meta charset="utf-8">
+<title>Murshid — Clay theme preview</title>
+<link rel="stylesheet" href="../../packages/design/tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: var(--font-sans); background: var(--bg); color: var(--text); font-size: calc(15px * var(--scale)); }
+  .shell { display: grid; grid-template-columns: 248px 1fr 320px; min-height: 100vh; }
+  aside.nav { padding: 20px 14px; border-inline-end: 1px solid var(--border); }
+  .logo { font-weight: 600; font-size: 18px; padding: 6px 10px 22px; display:flex; gap:8px; align-items:center }
+  .dot { width: 22px; height: 22px; border-radius: 7px; background: var(--accent); }
+  .ni { padding: 9px 12px; border-radius: var(--radius-sm); color: var(--text-muted); font-weight: 500; margin-bottom: 2px }
+  .ni.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
+  main { padding: 32px; max-width: 1120px; }
+  h1 { font-size: calc(28px * var(--scale)); font-weight: 600; letter-spacing: -0.01em; }
+  .sub { color: var(--text-muted); margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; margin-top: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 20px; }
+  .eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 500; }
+  .c8 { grid-column: span 8 } .c4 { grid-column: span 4 } .c6 { grid-column: span 6 } .c12 { grid-column: span 12 }
+  .chip { display:inline-flex; gap:6px; align-items:center; background: var(--accent-soft); color: var(--accent); padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 13px }
+  .rings { display:flex; justify-content: space-around; margin-top: 14px }
+  .ring { text-align:center; font-size: 13px; color: var(--text-muted) }
+  .task { display:flex; gap:10px; align-items:center; padding: 10px 0; border-top: 1px solid var(--border) }
+  .task:first-of-type { border-top: 0 }
+  .cb { width:18px; height:18px; border-radius: 6px; border:1.5px solid var(--border) }
+  .pill { margin-top: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 28px; padding: 10px 10px 10px 18px; display:flex; align-items:center; gap:10px; color: var(--text-muted) }
+  .send { margin-inline-start:auto; width:36px; height:36px; border-radius:999px; background: var(--text); }
+  .rail { padding: 32px 20px; border-inline-start: 1px solid var(--border) }
+  .tl { border-inline-start: 2px solid var(--border); padding-inline-start: 14px; margin-top: 14px }
+  .tl div { margin-bottom: 16px } .tl small { color: var(--text-muted); display:block }
+  .bands { display:flex; gap: 12px; margin-top: 16px }
+  .band { flex:1; padding: 14px; border-radius: var(--radius); background: var(--surface); border:1px solid var(--border) }
+  .btn { display:inline-block; margin-top: 10px; background: var(--accent); color: var(--accent-fg); padding: 8px 14px; border-radius: var(--radius-sm); font-weight: 600 }
+  .bars { display:flex; align-items:flex-end; gap: 10px; height: 110px; margin-top: 14px; border-bottom: 1px dashed var(--border) }
+  .bars span { flex:1; border-radius: 6px 6px 6px 6px; background: var(--chart-1) }
+  .bars span:nth-child(even) { background: var(--chart-2) }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="nav">
+    <div class="logo"><span class="dot"></span>Murshid</div>
+    <div class="ni on">Home</div><div class="ni">Ask Murshid</div><div class="ni">Academics</div><div class="ni">Activities</div><div class="ni">Goals</div><div class="ni">Opportunities</div><div class="ni">Profile &amp; CV</div>
+  </aside>
+  <main>
+    <div class="eyebrow">Saturday, 10 October</div>
+    <h1>Good afternoon, Sam</h1>
+    <p class="sub">Two things today. You're ahead on Physics.</p>
+    <div class="grid">
+      <div class="card c8">
+        <div class="eyebrow">Today</div>
+        <div style="margin-top:10px">
+          <div class="task"><span class="cb"></span>Physics — finish kinematics worksheet<span style="margin-inline-start:auto;color:var(--text-muted)">4:00</span></div>
+          <div class="task"><span class="cb"></span>Hackathon — submit demo video<span style="margin-inline-start:auto;color:var(--warning)">Due 13 Oct</span></div>
+          <div class="task"><span class="cb"></span>Gym — 30 min<span style="margin-inline-start:auto;color:var(--text-muted)">6:30</span></div>
+        </div>
+      </div>
+      <div class="card c4">
+        <div class="eyebrow">Streak</div>
+        <div style="font-size:44px;font-weight:600;margin-top:8px" class="tabular">12<span style="font-size:16px;color:var(--text-muted);font-weight:500"> days</span></div>
+        <span class="chip">Best this term</span>
+      </div>
+      <div class="card c6">
+        <div class="eyebrow">Progress this term</div>
+        <div class="rings">
+          <div class="ring"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="36" fill="none" stroke="var(--surface-2)" stroke-width="9"/><circle cx="44" cy="44" r="36" fill="none" stroke="var(--chart-1)" stroke-width="9" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="50" transform="rotate(-90 44 44)"/></svg><br>Academics</div>
+          <div class="ring"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="36" fill="none" stroke="var(--surface-2)" stroke-width="9"/><circle cx="44" cy="44" r="36" fill="none" stroke="var(--chart-2)" stroke-width="9" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="100" transform="rotate(-90 44 44)"/></svg><br>Activities</div>
+          <div class="ring"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="36" fill="none" stroke="var(--surface-2)" stroke-width="9"/><circle cx="44" cy="44" r="36" fill="none" stroke="var(--chart-3)" stroke-width="9" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="140" transform="rotate(-90 44 44)"/></svg><br>Goals</div>
+        </div>
+      </div>
+      <div class="card c6">
+        <div class="eyebrow">Gym sessions · 6 weeks</div>
+        <div class="bars"><span style="height:40%"></span><span style="height:55%"></span><span style="height:48%"></span><span style="height:70%"></span><span style="height:66%"></span><span style="height:88%"></span></div>
+      </div>
+      <div class="card c12">
+        <div class="eyebrow">Ask Murshid</div>
+        <div class="pill">How did my gym attendance change this month?<span class="send"></span></div>
+      </div>
+    </div>
+    <div class="bands">
+      <div class="band" data-band="g5-6"><b>g5-6 Sunrise</b><br><span class="btn">Let's go</span></div>
+      <div class="band" data-band="g7-8"><b>g7-8 Coral</b><br><span class="btn">Continue</span></div>
+      <div class="band" data-band="g9-10"><b>g9-10 Clay</b><br><span class="btn">Continue</span></div>
+      <div class="band" data-band="g11-12"><b>g11-12 Ink</b><br><span class="btn">Continue</span></div>
+    </div>
+  </main>
+  <aside class="rail">
+    <div class="eyebrow">Upcoming</div>
+    <div class="tl"><div>Hackathon submission<small>Tue 13 Oct · 11:59 PM ET</small></div><div>Maths unit test<small>Thu 15 Oct</small></div><div>Debate club trials<small>Sun 18 Oct</small></div></div>
+    <div class="card" style="margin-top:20px"><div class="eyebrow">Profile &amp; CV</div><p style="margin-top:8px">3 of 5 links connected</p><span class="btn">Finish profile</span></div>
+  </aside>
+</div>
+</body>
+</html>

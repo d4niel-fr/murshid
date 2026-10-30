@@ -1,0 +1,1819 @@
+[
+  {
+    "id": "uae-eysc",
+    "name": "Emirates Young Scientist Competition (EYSC)",
+    "url": "https://challengeon.atrc.ae/en/challenges/eysc2026",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "UAE Ministry of Education + ATRC",
+    "tags": [
+      "science",
+      "research",
+      "stem"
+    ],
+    "notes": "Grades 5-12, UAE schools, teams of 2-3; URL is per-edition (eysc2026), update yearly.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-dff-tks",
+    "name": "Dubai Future Foundation x TKS Innovation Program",
+    "url": "https://www.dubaifuture.ae/tks-innovation-program/",
+    "type": "course",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Dubai Future Foundation",
+    "tags": [
+      "innovation",
+      "ai",
+      "emerging-tech"
+    ],
+    "notes": "Ages 13-17, Dubai schools.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-dff-programmes",
+    "name": "Dubai Future Foundation Programmes",
+    "url": "https://www.dubaifuture.ae/programmes",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Dubai Future Foundation",
+    "tags": [
+      "innovation",
+      "future"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-fya",
+    "name": "Federal Youth Authority",
+    "url": "https://fya.gov.ae/en",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Federal Youth Authority",
+    "tags": [
+      "youth",
+      "leadership"
+    ],
+    "notes": "Many programmes Emirati-only.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-volunteers",
+    "name": "volunteers.ae (National Volunteering Platform)",
+    "url": "https://www.volunteers.ae/",
+    "type": "volunteering",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "manual",
+    "organizer": "UAE Ministry of Community Empowerment",
+    "tags": [
+      "volunteering",
+      "community"
+    ],
+    "notes": "Listings need login/JS; manual review.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-space-olympiad",
+    "name": "UAE Space Olympiad",
+    "url": "https://www.uaespaceolympiad.com/about/",
+    "type": "olympiad",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "UAE Space Olympiad",
+    "tags": [
+      "space",
+      "astronomy",
+      "science"
+    ],
+    "notes": "Grades 5-12, all curricula.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-space-agency-st",
+    "name": "UAE Space Agency – Science & Technology initiatives",
+    "url": "https://space.gov.ae/en/projects-and-initiatives/science-and-technology",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "UAE Space Agency",
+    "tags": [
+      "space",
+      "stem"
+    ],
+    "notes": "Blocks some datacenter IPs (403 from sandbox proxy); verified via fallback fetch.",
+    "verification": {
+      "status": "ok",
+      "method": "fallback fetch (sandbox proxy returned 403)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-mbrsc-kibo",
+    "name": "MBRSC – Kibo Robot Programming Challenge",
+    "url": "https://www.mbrsc.ae/kibo-competition/",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Mohammed Bin Rashid Space Centre",
+    "tags": [
+      "space",
+      "robotics",
+      "coding"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-mbrsc",
+    "name": "Mohammed Bin Rashid Space Centre",
+    "url": "https://www.mbrsc.ae/",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Mohammed Bin Rashid Space Centre",
+    "tags": [
+      "space"
+    ],
+    "notes": "Space camps, REU, etc. announced as news.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-nyuad-hs",
+    "name": "NYU Abu Dhabi High School Summer Programs",
+    "url": "https://nyuad.nyu.edu/en/academics/community-programs/high-school-programs.html",
+    "type": "summer_program",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "NYU Abu Dhabi",
+    "tags": [
+      "university-prep",
+      "interactive-media",
+      "robotics",
+      "writing"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-nyuad-hs-portal",
+    "name": "NYUAD Programs for High School Students",
+    "url": "https://nyuad.nyu.edu/en/apply/undergraduate/why-nyu-abu-dhabi/nyuad-programs-for-high-school-students.html",
+    "type": "summer_program",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "NYU Abu Dhabi",
+    "tags": [
+      "university-prep"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-nyuad-summer-academy",
+    "name": "NYUAD Summer Academy (Sheikh Mohamed bin Zayed Scholarship)",
+    "url": "https://nyuad.nyu.edu/en/academics/community-programs/summer-academy.html",
+    "type": "scholarship",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "NYU Abu Dhabi",
+    "tags": [
+      "university-prep",
+      "scholarship"
+    ],
+    "notes": "Emirati nationals (or child of Emirati mother), school-nominated, Grade 10.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-nyuad-upp",
+    "name": "NYUAD University Prep Program (UPP)",
+    "url": "https://nyuad.nyu.edu/en/apply/undergraduate/connect-with-us/university-prep-program.html",
+    "type": "summer_program",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "NYU Abu Dhabi",
+    "tags": [
+      "university-prep",
+      "common-app"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-ku-outreach",
+    "name": "Khalifa University Outreach Programs",
+    "url": "https://www.ku.ac.ae/outreach/programs",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Khalifa University",
+    "tags": [
+      "stem",
+      "engineering"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-ku-ektashif",
+    "name": "Khalifa University Ektashif Camp",
+    "url": "https://www.ku.ac.ae/ektashif-camp-robotics-track",
+    "type": "summer_program",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Khalifa University",
+    "tags": [
+      "stem",
+      "coding",
+      "ai",
+      "earth-science"
+    ],
+    "notes": "Grades 10-12.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-ku-outreach-home",
+    "name": "Khalifa University Outreach (Estedad, Ro'ya, job shadowing)",
+    "url": "https://www.ku.ac.ae/outreach",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Khalifa University",
+    "tags": [
+      "stem",
+      "research"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-aus-cen-outreach",
+    "name": "American University of Sharjah – Engineering Outreach Hub (boot camps)",
+    "url": "https://www.aus.edu/cen/outreach/hub",
+    "type": "summer_program",
+    "region": "UAE",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "American University of Sharjah",
+    "tags": [
+      "engineering",
+      "robotics",
+      "stem"
+    ],
+    "notes": "Grades 10-12 boot camps.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    },
+    "rules": {
+      "container": "dl.mc-accordion div.mc-txt-cta",
+      "split": "hr",
+      "title": "strong",
+      "link": "a[href]",
+      "eventDateAsDeadline": true,
+      "requireText": "(open to grades|high school)"
+    }
+  },
+  {
+    "id": "uae-iof-math",
+    "name": "IOF Mathematics Olympiad Qualifier (IMO pathway, UAE)",
+    "url": "https://olympiads.org/mathematics-olympiad-uae",
+    "type": "olympiad",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "International Olympiad Foundation (UAE)",
+    "tags": [
+      "math",
+      "olympiad"
+    ],
+    "notes": "Official UAE representative for IMO selection.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-iof-informatics",
+    "name": "IOF Informatics Olympiad Qualifier (IOI pathway, UAE)",
+    "url": "https://olympiads.org/informatics-olympiad-uae/",
+    "type": "olympiad",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "International Olympiad Foundation (UAE)",
+    "tags": [
+      "coding",
+      "informatics",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-iof-science",
+    "name": "IOF Science Olympiad Qualifier (IJSO pathway, UAE)",
+    "url": "https://olympiads.org/science-olympiad-uae",
+    "type": "olympiad",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "International Olympiad Foundation (UAE)",
+    "tags": [
+      "science",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-imo-country",
+    "name": "IMO – United Arab Emirates country page",
+    "url": "https://www.imo-official.org/countries/UAE",
+    "type": "olympiad",
+    "region": "UAE",
+    "crawl_frequency": "manual",
+    "parser": "manual",
+    "organizer": "International Mathematical Olympiad",
+    "tags": [
+      "math",
+      "olympiad"
+    ],
+    "notes": "Reference: national contact for IMO team.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-ruya-satkit",
+    "name": "Ru'ya Careers – SatKit Space Race (National Space Academy)",
+    "url": "https://www.ruyacareers.ae/satkit-competition",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "National Space Academy / Ru'ya",
+    "tags": [
+      "space",
+      "engineering"
+    ],
+    "notes": "Ages 14-18; min 1 Emirati per team.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-arab-reading",
+    "name": "Arab Reading Challenge",
+    "url": "https://www.arabreadingchallenge.com/",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Mohammed bin Rashid Al Maktoum Global Initiatives",
+    "tags": [
+      "reading",
+      "arabic",
+      "literature"
+    ],
+    "notes": "403 to sandbox proxy; verified via fallback fetch.",
+    "verification": {
+      "status": "ok",
+      "method": "fallback fetch (sandbox proxy returned 403)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-zsp",
+    "name": "Zayed Sustainability Prize (Global High Schools)",
+    "url": "https://www.zayedsustainabilityprize.com/",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Zayed Sustainability Prize",
+    "tags": [
+      "sustainability",
+      "environment"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-injaz",
+    "name": "INJAZ UAE",
+    "url": "https://www.injazuae.org/",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "INJAZ UAE (JA Worldwide)",
+    "tags": [
+      "entrepreneurship",
+      "business"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-emirates-foundation",
+    "name": "Emirates Foundation (Sanid, youth volunteering)",
+    "url": "https://www.emiratesfoundation.ae/",
+    "type": "volunteering",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Emirates Foundation",
+    "tags": [
+      "volunteering",
+      "community"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-dubai-cares",
+    "name": "Dubai Cares",
+    "url": "https://www.dubaicares.ae/",
+    "type": "volunteering",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Dubai Cares",
+    "tags": [
+      "volunteering",
+      "education"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-adek",
+    "name": "ADEK (Abu Dhabi Department of Education and Knowledge)",
+    "url": "https://www.adek.gov.ae/",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "ADEK",
+    "tags": [
+      "scholarship",
+      "education"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-usembassy-edu",
+    "name": "U.S. Embassy UAE – Education & Culture (EducationUSA)",
+    "url": "https://ae.usembassy.gov/education-culture/",
+    "type": "mixed",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "U.S. Embassy Abu Dhabi",
+    "tags": [
+      "university-prep",
+      "exchange"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "uae-emirates-litfest",
+    "name": "Emirates Airline Festival of Literature (student competitions)",
+    "url": "https://www.emirateslitfest.com/",
+    "type": "competition",
+    "region": "UAE",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Emirates Literature Foundation",
+    "tags": [
+      "writing",
+      "literature"
+    ],
+    "notes": "Behind bot challenge (HTTP 202) for plain fetch.",
+    "verification": {
+      "status": "bot-challenge",
+      "method": "site resolves but serves a bot/JS challenge (HTTP 202); content not verified",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-imo",
+    "name": "International Mathematical Olympiad",
+    "url": "https://www.imo-official.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IMO",
+    "tags": [
+      "math",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ioi",
+    "name": "International Olympiad in Informatics",
+    "url": "https://ioinformatics.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IOI",
+    "tags": [
+      "coding",
+      "informatics",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ipho",
+    "name": "International Physics Olympiad",
+    "url": "https://www.ipho-new.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IPhO",
+    "tags": [
+      "physics",
+      "olympiad"
+    ],
+    "notes": "Bot challenge (HTTP 202) for plain fetch.",
+    "verification": {
+      "status": "bot-challenge",
+      "method": "site resolves but serves a bot/JS challenge (HTTP 202); content not verified",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-icho",
+    "name": "International Chemistry Olympiad",
+    "url": "https://www.icho-official.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IChO",
+    "tags": [
+      "chemistry",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ibo",
+    "name": "International Biology Olympiad",
+    "url": "https://www.ibo-info.org/en/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IBO",
+    "tags": [
+      "biology",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-iol",
+    "name": "International Linguistics Olympiad",
+    "url": "https://ioling.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IOL",
+    "tags": [
+      "linguistics",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ioai",
+    "name": "International Olympiad in Artificial Intelligence",
+    "url": "https://ioai-official.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IOAI",
+    "tags": [
+      "ai",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ukmt",
+    "name": "UK Mathematics Trust competitions",
+    "url": "https://www.ukmt.org.uk/competitions",
+    "type": "olympiad",
+    "region": "UK",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "UKMT",
+    "tags": [
+      "math",
+      "olympiad"
+    ],
+    "notes": "Many UAE British-curriculum schools enter; bot challenge (202).",
+    "verification": {
+      "status": "bot-challenge",
+      "method": "site resolves but serves a bot/JS challenge (HTTP 202); content not verified",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-bio",
+    "name": "British Informatics Olympiad",
+    "url": "https://www.olympiad.org.uk/",
+    "type": "olympiad",
+    "region": "UK",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "British Informatics Olympiad",
+    "tags": [
+      "coding",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-bpho",
+    "name": "British Physics Olympiad",
+    "url": "https://www.bpho.org.uk/",
+    "type": "olympiad",
+    "region": "UK",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "BPhO",
+    "tags": [
+      "physics",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ukcho",
+    "name": "UK Chemistry Olympiad",
+    "url": "https://edu.rsc.org/enrichment/uk-chemistry-olympiad",
+    "type": "olympiad",
+    "region": "UK",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Royal Society of Chemistry",
+    "tags": [
+      "chemistry",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-amc",
+    "name": "American Mathematics Competitions (AMC)",
+    "url": "https://maa.org/student-programs/amc/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Mathematical Association of America",
+    "tags": [
+      "math",
+      "olympiad"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-kangaroo",
+    "name": "Math Kangaroo",
+    "url": "https://mathkangaroo.org/mks/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Math Kangaroo",
+    "tags": [
+      "math"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-iymc",
+    "name": "International Youth Math Challenge",
+    "url": "https://iymc.info/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "IYMC",
+    "tags": [
+      "math"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-usaco",
+    "name": "USA Computing Olympiad",
+    "url": "https://usaco.org/",
+    "type": "olympiad",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "USACO",
+    "tags": [
+      "coding",
+      "olympiad"
+    ],
+    "notes": "Online contests open internationally.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-bebras",
+    "name": "Bebras Computational Thinking Challenge",
+    "url": "https://www.bebras.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Bebras",
+    "tags": [
+      "coding",
+      "computational-thinking"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-isef",
+    "name": "Regeneron ISEF",
+    "url": "https://www.societyforscience.org/isef/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Society for Science",
+    "tags": [
+      "science",
+      "research"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-breakthrough",
+    "name": "Breakthrough Junior Challenge",
+    "url": "https://breakthroughjuniorchallenge.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Breakthrough Prize Foundation",
+    "tags": [
+      "science",
+      "video",
+      "communication"
+    ],
+    "notes": "Ages 13-18.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-conrad",
+    "name": "Conrad Challenge",
+    "url": "https://conradfoundation.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Conrad Foundation",
+    "tags": [
+      "innovation",
+      "entrepreneurship",
+      "stem"
+    ],
+    "notes": "conradchallenge.org has a TLS error from sandbox; foundation site used.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-technovation",
+    "name": "Technovation Girls",
+    "url": "https://technovationchallenge.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Technovation",
+    "tags": [
+      "ai",
+      "apps",
+      "girls",
+      "entrepreneurship"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-earthprize",
+    "name": "The Earth Prize",
+    "url": "https://www.theearthprize.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "The Earth Foundation",
+    "tags": [
+      "sustainability",
+      "environment"
+    ],
+    "notes": "Ages 13-19.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-sjwp",
+    "name": "Stockholm Junior Water Prize",
+    "url": "https://stockholmwaterfoundation.org/stockholm-junior-water-prize/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Stockholm Water Foundation",
+    "tags": [
+      "water",
+      "science",
+      "environment"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-coolest",
+    "name": "Coolest Projects",
+    "url": "https://coolestprojects.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Raspberry Pi Foundation",
+    "tags": [
+      "coding",
+      "making"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-igem",
+    "name": "iGEM (High School track)",
+    "url": "https://igem.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "iGEM Foundation",
+    "tags": [
+      "biology",
+      "synthetic-biology"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-spaceapps",
+    "name": "NASA Space Apps Challenge",
+    "url": "https://www.spaceappschallenge.org/",
+    "type": "hackathon",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "NASA",
+    "tags": [
+      "space",
+      "hackathon",
+      "data"
+    ],
+    "notes": "MBRSC hosts UAE editions.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-mit-think",
+    "name": "MIT THINK Scholars",
+    "url": "https://think.mit.edu/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "MIT",
+    "tags": [
+      "research",
+      "stem"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-fll",
+    "name": "FIRST LEGO League",
+    "url": "https://firstlegoleague.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "FIRST",
+    "tags": [
+      "robotics"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-frc",
+    "name": "FIRST Robotics Competition",
+    "url": "https://www.firstinspires.org/programs/frc/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "FIRST",
+    "tags": [
+      "robotics",
+      "engineering"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-wro",
+    "name": "World Robot Olympiad",
+    "url": "https://wro-association.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "WRO Association",
+    "tags": [
+      "robotics"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-picoctf",
+    "name": "picoCTF",
+    "url": "https://picoctf.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Carnegie Mellon University",
+    "tags": [
+      "cybersecurity",
+      "coding"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-john-locke",
+    "name": "John Locke Institute Global Essay Prize",
+    "url": "https://www.johnlockeinstitute.com/essay-competition",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "John Locke Institute",
+    "tags": [
+      "writing",
+      "philosophy",
+      "economics"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-diamond",
+    "name": "Diamond Challenge",
+    "url": "https://diamondchallenge.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "University of Delaware Horn Entrepreneurship",
+    "tags": [
+      "entrepreneurship",
+      "business"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-blueocean",
+    "name": "Blue Ocean Student Entrepreneur Competition",
+    "url": "https://www.blueoceancompetition.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Blue Ocean",
+    "tags": [
+      "entrepreneurship",
+      "business"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-wharton",
+    "name": "Wharton Global Youth Program (Investment & Data Science competitions)",
+    "url": "https://globalyouth.wharton.upenn.edu/",
+    "type": "mixed",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Wharton School",
+    "tags": [
+      "business",
+      "finance",
+      "data-science"
+    ],
+    "notes": "403 to sandbox proxy; verified via fallback fetch.",
+    "verification": {
+      "status": "ok",
+      "method": "fallback fetch (sandbox proxy returned 403)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-wsc",
+    "name": "World Scholar's Cup",
+    "url": "https://scholarscup.org/",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "World Scholar's Cup",
+    "tags": [
+      "debate",
+      "writing",
+      "general-knowledge"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ted-ed",
+    "name": "TED-Ed Student Talks",
+    "url": "https://ed.ted.com/student_talks",
+    "type": "course",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "TED-Ed",
+    "tags": [
+      "public-speaking"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-thimun",
+    "name": "THIMUN Foundation",
+    "url": "https://www.thimun.org/",
+    "type": "mun",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "THIMUN Foundation",
+    "tags": [
+      "mun",
+      "debate"
+    ],
+    "notes": "Self-signed cert from sandbox proxy; verified via fallback fetch.",
+    "verification": {
+      "status": "ok",
+      "method": "fallback fetch (sandbox proxy returned 000)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-hmun",
+    "name": "Harvard Model United Nations",
+    "url": "https://www.harvardmun.org/",
+    "type": "mun",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Harvard IRO",
+    "tags": [
+      "mun",
+      "debate"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-mymun",
+    "name": "mymun – MUN conference directory",
+    "url": "https://mymun.com/conferences",
+    "type": "mun",
+    "region": "global",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "mymun",
+    "tags": [
+      "mun",
+      "debate"
+    ],
+    "rules": {
+      "item": ".conference, .card",
+      "title": "h2, h3, .title",
+      "link": "a"
+    },
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-devpost",
+    "name": "Devpost hackathons",
+    "url": "https://devpost.com/api/hackathons",
+    "type": "hackathon",
+    "region": "global",
+    "crawl_frequency": "daily",
+    "parser": "api",
+    "organizer": "Devpost",
+    "tags": [
+      "hackathon",
+      "coding"
+    ],
+    "notes": "JSON API (?status[]=upcoming&status[]=open). Human page: https://devpost.com/hackathons",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-mlh",
+    "name": "Major League Hacking – season events",
+    "url": "https://www.mlh.com/seasons/2026/events",
+    "type": "hackathon",
+    "region": "global",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "MLH",
+    "tags": [
+      "hackathon",
+      "coding"
+    ],
+    "notes": "Season URL changes yearly; HS events flagged on page.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-hackclub",
+    "name": "Hack Club",
+    "url": "https://hackclub.com/",
+    "type": "hackathon",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Hack Club",
+    "tags": [
+      "hackathon",
+      "coding",
+      "teens"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-codeforces",
+    "name": "Codeforces contests",
+    "url": "https://codeforces.com/api/contest.list?gym=false",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "daily",
+    "parser": "api",
+    "organizer": "Codeforces",
+    "tags": [
+      "coding",
+      "competitive-programming"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-codechef",
+    "name": "CodeChef contests",
+    "url": "https://www.codechef.com/contests",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "CodeChef",
+    "tags": [
+      "coding",
+      "competitive-programming"
+    ],
+    "notes": "Page is JS-rendered; prefer manual or future API.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-kaggle",
+    "name": "Kaggle competitions",
+    "url": "https://www.kaggle.com/competitions",
+    "type": "competition",
+    "region": "global",
+    "crawl_frequency": "manual",
+    "parser": "manual",
+    "organizer": "Kaggle",
+    "tags": [
+      "data-science",
+      "ai"
+    ],
+    "notes": "reCAPTCHA wall for crawlers; manual only. Kaggle requires 18+ for prizes in many comps.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-harvard-ss",
+    "name": "Harvard Summer School – High School Programs",
+    "url": "https://summer.harvard.edu/high-school-programs/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Harvard University",
+    "tags": [
+      "pre-college"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-stanford-spcs",
+    "name": "Stanford Pre-Collegiate Studies",
+    "url": "https://spcs.stanford.edu/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Stanford University",
+    "tags": [
+      "pre-college"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-stanford-summer",
+    "name": "Stanford Summer Session (High School)",
+    "url": "https://summer.stanford.edu/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Stanford University",
+    "tags": [
+      "pre-college"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-yygs",
+    "name": "Yale Young Global Scholars",
+    "url": "https://globalscholars.yale.edu/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Yale University",
+    "tags": [
+      "pre-college",
+      "leadership"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-rsi",
+    "name": "Research Science Institute (RSI)",
+    "url": "https://www.cee.org/programs/research-science-institute",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Center for Excellence in Education / MIT",
+    "tags": [
+      "research",
+      "stem"
+    ],
+    "notes": "Free; very selective; limited international places.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-mit-summer",
+    "name": "MIT Admissions – summer programs list",
+    "url": "https://mitadmissions.org/apply/prepare/summer/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "MIT Admissions",
+    "tags": [
+      "pre-college",
+      "stem"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-wharton-ss",
+    "name": "Wharton Global Youth – On-Campus Summer Programs",
+    "url": "https://globalyouth.wharton.upenn.edu/on-campus-programs/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Wharton School",
+    "tags": [
+      "business"
+    ],
+    "notes": "403 to sandbox proxy.",
+    "verification": {
+      "status": "ok",
+      "method": "fallback fetch (sandbox proxy returned 403)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-ssp",
+    "name": "Summer Science Program",
+    "url": "https://ssp.org/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "SSP International",
+    "tags": [
+      "astrophysics",
+      "biochemistry",
+      "research"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-tasp",
+    "name": "Telluride Association Summer Seminars",
+    "url": "https://www.tasp.org/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Telluride Association",
+    "tags": [
+      "humanities"
+    ],
+    "notes": "Free.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-mathcamp",
+    "name": "Canada/USA Mathcamp",
+    "url": "https://www.mathcamp.org/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Mathcamp",
+    "tags": [
+      "math"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-promys",
+    "name": "PROMYS",
+    "url": "https://promys.org/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "PROMYS (Boston University)",
+    "tags": [
+      "math"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-pioneer",
+    "name": "Pioneer Academics",
+    "url": "https://pioneeracademics.com/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Pioneer Academics",
+    "tags": [
+      "research"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-lumiere",
+    "name": "Lumiere Research Scholar Program",
+    "url": "https://www.lumiere-education.com/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Lumiere Education",
+    "tags": [
+      "research"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-immerse",
+    "name": "Immerse Education",
+    "url": "https://www.immerse.education/",
+    "type": "summer_program",
+    "region": "global",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "Immerse Education",
+    "tags": [
+      "pre-college"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-intaward",
+    "name": "Duke of Edinburgh's International Award",
+    "url": "https://intaward.org/",
+    "type": "volunteering",
+    "region": "global",
+    "crawl_frequency": "manual",
+    "parser": "manual",
+    "organizer": "The Award Foundation",
+    "tags": [
+      "volunteering",
+      "leadership"
+    ],
+    "notes": "Ages 14-24; ongoing.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "g-esa-edu",
+    "name": "ESA Education",
+    "url": "https://www.esa.int/Education",
+    "type": "mixed",
+    "region": "Europe",
+    "crawl_frequency": "monthly",
+    "parser": "html-rules",
+    "organizer": "European Space Agency",
+    "tags": [
+      "space"
+    ],
+    "notes": "Mostly ESA member-state students.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "agg-opportunitydesk",
+    "name": "Opportunity Desk (RSS)",
+    "url": "https://opportunitydesk.org/feed/",
+    "type": "mixed",
+    "region": "global",
+    "crawl_frequency": "daily",
+    "parser": "rss",
+    "organizer": "Opportunity Desk",
+    "tags": [
+      "aggregator"
+    ],
+    "notes": "Mixed audience; filter by grade/age heavily.",
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  },
+  {
+    "id": "agg-youthop",
+    "name": "Youth Opportunities",
+    "url": "https://www.youthop.com/",
+    "type": "mixed",
+    "region": "global",
+    "crawl_frequency": "weekly",
+    "parser": "html-rules",
+    "organizer": "Youth Opportunities",
+    "tags": [
+      "aggregator"
+    ],
+    "verification": {
+      "status": "ok",
+      "method": "http-200 (curl, sandbox)",
+      "checked_at": "2026-10-10"
+    }
+  }
+]

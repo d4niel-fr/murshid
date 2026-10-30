@@ -1,0 +1,19 @@
+{
+  "$comment": "Task -> model routing. 'primary' then 'fallbacks' in order (used on provider error or when filtered out by PII/capability rules). 'economy' is used once a student passes the economy threshold of their monthly budget; 'capped' once the cap is reached (null = no model, reply with a budget message or rule-based result).",
+  "budget": {
+    "default_monthly_cap_usd": 1.00,
+    "economy_threshold": 0.8,
+    "cap_threshold": 1.0,
+    "month_timezone": "Asia/Dubai"
+  },
+  "tasks": {
+    "router":        { "primary": "gpt-6-luna",            "fallbacks": ["claude-haiku-5.5", "gemini-3.1-flash-lite"], "economy": "gpt-6-luna",       "capped": null,               "contains_pii": false, "requires": ["chat", "json"],   "max_output_tokens": 200 },
+    "chat":          { "primary": "claude-haiku-5.5",      "fallbacks": ["gpt-6-luna", "gemini-3.1-flash-lite"],        "economy": "gpt-6-luna",       "capped": "falcon-h1-arabic", "contains_pii": true,  "requires": ["chat"],           "max_output_tokens": 800 },
+    "planning":      { "primary": "claude-sonnet-5.5",     "fallbacks": ["deepseek-v4-pro", "claude-haiku-5.5", "gpt-6-luna"], "economy": "claude-haiku-5.5", "capped": null,        "contains_pii": true,  "requires": ["chat", "json"],   "max_output_tokens": 2000 },
+    "notes_reading": { "primary": "gemini-3.1-flash-lite", "fallbacks": ["deepseek-v4.1-flash", "claude-haiku-5.5"],    "economy": "deepseek-v4.1-flash", "capped": null,             "contains_pii": false, "requires": ["chat"], "max_output_tokens": 1500 },
+    "ocr":           { "primary": "gemini-3.1-flash-lite", "fallbacks": ["gpt-6-luna", "claude-haiku-5.5"],             "economy": "gemini-3.1-flash-lite", "capped": null,           "contains_pii": true,  "requires": ["vision"],         "max_output_tokens": 2000 },
+    "cv_essay":      { "primary": "claude-sonnet-5.5",     "fallbacks": ["deepseek-v4-pro", "claude-haiku-5.5"],        "economy": "claude-haiku-5.5", "capped": null,               "contains_pii": true,  "requires": ["chat"],           "max_output_tokens": 2000 },
+    "arabic":        { "primary": "falcon-h1-arabic",      "fallbacks": ["claude-haiku-5.5", "gemini-3.1-flash-lite"],  "economy": "falcon-h1-arabic", "capped": "falcon-h1-arabic", "contains_pii": true,  "requires": ["chat"],           "max_output_tokens": 800 },
+    "embeddings":    { "primary": "murshid-embed",         "fallbacks": [],                                             "economy": "murshid-embed",    "capped": "murshid-embed",    "contains_pii": true,  "requires": ["embeddings"],     "max_output_tokens": 0 }
+  }
+}

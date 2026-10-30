@@ -1,0 +1,19 @@
+{
+  "$comment": "EXAMPLE OpenRouter mapping (not used in tests). OpenRouter is OpenAI-compatible: POST {base_url}/chat/completions with model=<slug>. Slugs are PLACEHOLDERS - confirm on openrouter.ai/models. Falcon (self-hosted) and the embedder are not routed via OpenRouter. Set provider.data_collection='deny' so providers that train on prompts are excluded.",
+  "base_url": "https://openrouter.ai/api/v1",
+  "api_key_env": "OPENROUTER_API_KEY",
+  "headers": { "HTTP-Referer": "https://murshid.example", "X-Title": "Murshid" },
+  "default_request_options": {
+    "provider": { "data_collection": "deny", "allow_fallbacks": true },
+    "usage": { "include": true }
+  },
+  "models": {
+    "gpt-6-luna": "openai/gpt-6-luna",
+    "deepseek-v4.1-flash": "deepseek/deepseek-v4.1-flash",
+    "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
+    "gemini-3.1-flash-lite": "google/gemini-3.1-flash-lite",
+    "claude-haiku-5.5": "anthropic/claude-haiku-5.5",
+    "claude-sonnet-5.5": "anthropic/claude-sonnet-5.5"
+  },
+  "not_routed": ["falcon-h1-arabic", "murshid-embed"]
+}

@@ -1,0 +1,1 @@
+{ "memberships": { "classes": [ { "id": 11001, "uniq_id": "MATH-AA-HL-1", "name": "Mathematics: Analysis & Approaches HL", "archived": false, "start_term_id": 1, "end_term_id": 2 }, { "id": 11002, "uniq_id": "OLD", "name": "Old class", "archived": true } ], "groups": [], "year_groups": [ { "id": 5, "name": "Grade 11", "program": "IB Diploma", "archived": false } ] } }

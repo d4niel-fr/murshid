@@ -1,0 +1,5 @@
+{ "kind": "calendar#events", "items": [
+  { "id": "evt1", "status": "confirmed", "summary": "Football practice", "start": { "dateTime": "2026-10-12T16:00:00+04:00", "timeZone": "Asia/Dubai" }, "end": { "dateTime": "2026-10-12T17:30:00+04:00", "timeZone": "Asia/Dubai" } },
+  { "id": "evt2", "status": "confirmed", "summary": "National Day holiday", "start": { "date": "2026-12-02" }, "end": { "date": "2026-12-03" } },
+  { "id": "evt3", "status": "cancelled", "start": { "dateTime": "2026-10-13T10:00:00Z" }, "end": { "dateTime": "2026-10-13T11:00:00Z" } }
+] }

@@ -1,0 +1,1 @@
+{ "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#education/me/classes", "value": [ { "id": "72a7baec-c3e9-4213-a850-f62de0adad5f", "displayName": "Grade 11 Chemistry", "description": null } ] }

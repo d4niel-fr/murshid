@@ -1,0 +1,22 @@
+{
+  "name": "murshid",
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @murshid/api --filter web --filter admin dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "sim": "pnpm --filter @murshid/api sim",
+    "build": "pnpm --filter web build && pnpm --filter admin build",
+    "check:links": "node scripts/check-links.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.18"
+    }
+  },
+  "description": "Murshid: the AI study planner for UAE students and schools",
+  "engines": {
+    "node": ">=22"
+  }
+}

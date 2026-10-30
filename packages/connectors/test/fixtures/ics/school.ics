@@ -1,0 +1,39 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//School//Timetable//EN
+X-WR-CALNAME:GEMS Test School Calendar
+BEGIN:VEVENT
+UID:term1-exams@school.example
+DTSTAMP:20261001T000000Z
+DTSTART;TZID=Asia/Dubai:20261102T080000
+DTEND;TZID=Asia/Dubai:20261102T100000
+SUMMARY:Mock exams\, Paper 1
+DESCRIPTION:Bring a calcu
+ lator\nand ID card
+END:VEVENT
+BEGIN:VEVENT
+UID:national-day@school.example
+DTSTART;VALUE=DATE:20261202
+DTEND;VALUE=DATE:20261204
+SUMMARY:UAE National Day holiday
+END:VEVENT
+BEGIN:VEVENT
+UID:club@school.example
+DTSTART:20261014T110000Z
+DURATION:PT1H30M
+RRULE:FREQ=WEEKLY;COUNT=10
+SUMMARY:Robotics club with a very long title that will definitely need folding at seventy-five octets
+END:VEVENT
+BEGIN:VEVENT
+UID:cancelled@school.example
+DTSTART:20261015T110000Z
+DTEND:20261015T120000Z
+STATUS:CANCELLED
+SUMMARY:Cancelled assembly
+END:VEVENT
+BEGIN:VTODO
+UID:todo-1@school.example
+SUMMARY:Return permission slip
+DUE;TZID=Asia/Dubai:20261019T150000
+END:VTODO
+END:VCALENDAR

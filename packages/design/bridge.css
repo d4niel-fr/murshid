@@ -1,0 +1,138 @@
+/*
+ * @murshid/design — bridge.css  (Tailwind v4 + shadcn/ui adapter; optional but recommended)
+ *
+ * apps/web/app/globals.css:
+ *   @import "tailwindcss";
+ *   @import "tw-animate-css";              // shadcn default
+ *   @import "@murshid/design/tokens.css";
+ *   @import "@murshid/design/bridge.css";
+ *   @custom-variant dark (&:is(.dark *));
+ *   → then DELETE shadcn's generated :root/.dark color blocks and its @theme inline block.
+ *
+ * Why `@theme inline`: utilities inline `var(--accent)` etc. so they resolve at the element,
+ * which is what makes [data-band] and .dark wrappers work anywhere in the tree.
+ *
+ * Naming note: shadcn's "accent" = subtle hover surface. Murshid's brand colour is `primary`
+ * (also exposed as `brand`). So: bg-primary / text-primary-foreground / bg-brand-soft.
+ *
+ * Note: tokens.css is unlayered, so it intentionally overrides Tailwind defaults for
+ * --font-sans, --radius-sm and --radius-lg (rounded-sm / rounded-lg follow the grade band).
+ */
+
+@theme inline {
+  /* shadcn color names */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-fg);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-field: var(--field);
+  --color-deep: var(--deep);
+  --color-royal: var(--brand);
+  --color-sky: var(--brand-light);
+  --color-spark: var(--spark);
+  --color-ghost: var(--ghost);
+  --color-ring: var(--accent);
+
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--canvas);
+  --color-sidebar-foreground: var(--text);
+  --color-sidebar-primary: var(--accent);
+  --color-sidebar-primary-foreground: var(--accent-fg);
+  --color-sidebar-accent: var(--surface-2);
+  --color-sidebar-accent-foreground: var(--text);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--accent);
+
+  /* Murshid names */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-brand: var(--accent);
+  --color-brand-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+
+  --radius-md: var(--radius);
+  --radius-xl: var(--radius-lg);
+  --radius-2xl: var(--radius-band);
+  --radius-pill: 9999px;
+
+  --shadow-soft: var(--shadow-1);
+  --shadow-lift: var(--shadow-2);
+
+  /* Type scale (rem × band scale). Names follow Tailwind so text-sm etc. just work. */
+  --text-2xs: calc(0.6875rem * var(--scale));   /* 11  caption/eyebrow */
+  --text-2xs--line-height: 1.4;
+  --text-xs: calc(0.75rem * var(--scale));      /* 12  meta */
+  --text-xs--line-height: 1.45;
+  --text-sm: calc(0.875rem * var(--scale));     /* 14  UI, body-dense */
+  --text-sm--line-height: 1.5;
+  --text-base: calc(1rem * var(--scale));       /* 16  body, chat */
+  --text-base--line-height: 1.6;
+  --text-lg: calc(1.125rem * var(--scale));     /* 18  card title */
+  --text-lg--line-height: 1.45;
+  --text-xl: calc(1.375rem * var(--scale));     /* 22  section title */
+  --text-xl--line-height: 1.3;
+  --text-2xl: calc(1.75rem * var(--scale));     /* 28  page title / greeting */
+  --text-2xl--line-height: 1.2;
+  --text-3xl: calc(2.25rem * var(--scale));     /* 36  stat numerals */
+  --text-3xl--line-height: 1.1;
+  --text-4xl: calc(3rem * var(--scale));        /* 48  hero numerals, empty-state */
+  --text-4xl--line-height: 1.05;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-feature-settings: normal;
+    letter-spacing: -0.005em;
+  }
+  [dir="rtl"] body { font-feature-settings: normal; letter-spacing: 0; }
+  * { border-color: var(--border); }
+  ::selection { background: var(--accent-soft); color: var(--text); }
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--accent) 75%, transparent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

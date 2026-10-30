@@ -1,0 +1,180 @@
+/*
+ * @murshid/design — tokens.css
+ * Contract: docs/V1-WEB-CONTRACT.md ("Design tokens contract"). Full spec: packages/design/SYSTEM.md.
+ * Theme name: "Navy" — white page, deep-navy brand blocks, soft grey cards, royal-blue actions, Onest type.
+ * One system for the landing site, the student app and the teacher portal.
+ *
+ * Usage:
+ *   <html lang="en" dir="ltr" class="dark?" data-band="g11-12">
+ *   import "@murshid/design/tokens.css";   // then optionally "@murshid/design/bridge.css"
+ *
+ * data-band may sit on <html> (together with .dark) or on any wrapper inside it.
+ * Default (no data-band) === g9-10.
+ */
+
+/* ───────────────────────── Light (default) ───────────────────────── */
+:root {
+  /* Surfaces: a white page, soft grey cards, white wells and fields inside them */
+  --canvas: #ffffff;      /* the page frame behind everything */
+  --bg: #ffffff;          /* page */
+  --surface: #f4f5f7;     /* cards (no border, no shadow) */
+  --surface-2: #ffffff;   /* wells, chips and hovers inside a card */
+  --field: #ffffff;       /* inputs */
+  --popover: #ffffff;     /* menus, dialogs, toasts */
+  --border: #e6e8ec;      /* hairlines */
+
+  /* Text */
+  --text: #0a0a0a;        /* ink */
+  --text-muted: #666c79;  /* 5.3:1 on white, 4.8:1 on cards */
+  --ghost: #d7dae1;       /* oversized ghost type */
+
+  /* Accent (default band g9-10 = teal) */
+  --accent: #0b6e97;
+  --accent-fg: #ffffff;
+  --accent-soft: #e4f1f6;
+
+  /* Brand constants (the same in every band) */
+  --deep: #0f2f63;        /* navy: sidebar, hero cards, stats bands, footer */
+  --deep-2: #163b78;
+  --brand: #2563c9;       /* royal blue */
+  --brand-light: #5790e6; /* light blue: accents on navy, focus ring */
+  --spark: #c2e029;       /* lime: tiny highlights only (dots, live marks) */
+  --teal: #0b6e97;
+
+  /* Status (reserved: never used as a chart series) */
+  --success: #1b7a50;   /* all three pass 4.5:1 on white and on cards */
+  --warning: #946207;
+  --danger: #b23a31;
+  --info: #2563c9;
+
+  /* Charts: validated with the dataviz validator (light, on #f4f5f7). chart-1 always = accent. */
+  --chart-1: var(--accent);
+  --chart-2: #eb6834;     /* orange */
+  --chart-3: #0e9f8a;     /* aqua */
+  --chart-4: #eda100;     /* yellow */
+  --chart-5: #d65a8f;     /* magenta */
+  --chart-6: #6250d6;     /* violet */
+
+  /* Shape: 12 inner / 16 controls / 24 cards / 32 bands (--radius-band) / pill */
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-band: 32px;  /* navy bands, hero cards, the sidebar */
+  --radius-pill: 999px;
+
+  /* Elevation: cards are flat; only floating things cast a shadow */
+  --shadow-1: none;
+  --shadow-2: 0 24px 60px -20px rgb(15 47 99 / 0.35), 0 0 0 1px rgb(15 47 99 / 0.06);
+
+  /* Type: Onest everywhere (400 body, 500 headings and labels) */
+  --font-sans: var(--font-onest, "Onest Variable"), "Onest", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-arabic: var(--font-plex-arabic, "IBM Plex Sans Arabic"), "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif;
+  --scale: 1;
+
+  color-scheme: light;
+}
+
+/* ───────────────────────── Dark (night navy) ───────────────────────── */
+.dark {
+  --canvas: #060d1a;
+  --bg: #060d1a;
+  --surface: #0e1b31;
+  --surface-2: #14243f;
+  --field: #0a1527;
+  --popover: #0f1d35;
+  --border: #1d2d4a;
+
+  --text: #eef2f8;
+  --text-muted: #94a1b8;
+  --ghost: #1b2a45;
+
+  --accent: #3fa7cf;
+  --accent-fg: #06101f;
+  --accent-soft: #0c2b3b;
+
+  --deep: #0f2f63;
+  --deep-2: #163b78;
+
+  --success: #5fb38a;
+  --warning: #e0a94a;
+  --danger: #e36b5e;
+  --info: #5790e6;
+
+  /* validated (dark, on #0e1b31) */
+  --chart-2: #d95926;
+  --chart-3: #199e8a;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #9085e9;
+
+  --shadow-1: none;
+  --shadow-2: 0 24px 60px -20px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  color-scheme: dark;
+}
+
+/* ───────────────────────── Arabic / RTL ───────────────────────── */
+[dir="rtl"],
+:lang(ar) {
+  --font-sans: var(--font-arabic);
+  --scale: calc(1.04 * var(--band-scale, 1));
+}
+
+/* ───────────────────────── Grade bands ─────────────────────────
+ * Each band sets: accent trio, radii, --band-scale (and --scale). The navy frame never changes.
+ * g5-6 "Sunrise" (orange), g7-8 "Coral", g9-10 "Teal" (default), g11-12 "Royal" (brand blue).
+ */
+[data-band="g5-6"] {
+  --accent: #e8833a; --accent-fg: #0a0a0a; --accent-soft: #fdefe2;
+  --chart-2: #2563c9;
+  --radius-sm: 14px; --radius: 18px; --radius-lg: 28px;
+  --band-scale: 1.0625; --scale: 1.0625;
+}
+[data-band="g7-8"] {
+  --accent: #c4533a; --accent-fg: #ffffff; --accent-soft: #fbece7;
+  --chart-2: #2563c9;
+  --radius-sm: 13px; --radius: 17px; --radius-lg: 26px;
+  --band-scale: 1.03; --scale: 1.03;
+}
+[data-band="g9-10"] {
+  --accent: #0b6e97; --accent-fg: #ffffff; --accent-soft: #e4f1f6;
+  --chart-3: #2563c9;
+  --radius-sm: 12px; --radius: 16px; --radius-lg: 24px;
+  --band-scale: 1; --scale: 1;
+}
+[data-band="g11-12"] {
+  --accent: #2563c9; --accent-fg: #ffffff; --accent-soft: #e9f0fb;
+  --radius-sm: 12px; --radius: 16px; --radius-lg: 24px;
+  --band-scale: 0.985; --scale: 0.985;
+}
+
+.dark[data-band="g5-6"],  .dark [data-band="g5-6"]  { --accent: #ee8e4e; --accent-fg: #0a0a0a; --accent-soft: #33220f; --chart-2: #4a86e0; }
+.dark[data-band="g7-8"],  .dark [data-band="g7-8"]  { --accent: #e36f57; --accent-fg: #0a0a0a; --accent-soft: #331c16; --chart-2: #4a86e0; }
+.dark[data-band="g9-10"], .dark [data-band="g9-10"] { --accent: #3fa7cf; --accent-fg: #06101f; --accent-soft: #0c2b3b; --chart-3: #4a86e0; }
+.dark[data-band="g11-12"], .dark [data-band="g11-12"] { --accent: #5790e6; --accent-fg: #06101f; --accent-soft: #13284d; }
+
+[dir="rtl"] [data-band], [dir="rtl"][data-band], [data-band] [dir="rtl"] {
+  --scale: calc(1.04 * var(--band-scale, 1));
+}
+
+/* Custom properties resolve where declared: re-bind chart-1 wherever the accent changes. */
+.dark, [data-band] { --chart-1: var(--accent); }
+
+/* Inside a navy block (sidebar, hero, stats band, footer): every token flips to "on navy". */
+.on-deep {
+  --bg: var(--deep);
+  --surface: rgb(255 255 255 / 0.08);
+  --surface-2: rgb(255 255 255 / 0.12);
+  --field: rgb(255 255 255 / 0.08);
+  --border: rgb(255 255 255 / 0.15);
+  --text: #ffffff;
+  --text-muted: rgb(255 255 255 / 0.68);
+  --ghost: rgb(255 255 255 / 0.14);
+  --accent: #ffffff;
+  --accent-fg: var(--deep);
+  --accent-soft: rgb(255 255 255 / 0.14);
+  background: var(--deep);
+  color: #ffffff;
+}

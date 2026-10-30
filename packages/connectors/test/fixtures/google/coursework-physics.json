@@ -1,0 +1,5 @@
+{ "courseWork": [
+  { "courseId": "601111111111", "id": "701", "title": "Lab Report 2: Projectile Motion", "description": "Write up the projectile lab using the template.", "state": "PUBLISHED", "alternateLink": "https://classroom.google.com/c/NjAx/a/NzAx/details", "dueDate": { "year": 2026, "month": 10, "day": 15 }, "dueTime": { "hours": 19, "minutes": 59 }, "workType": "ASSIGNMENT", "materials": [ { "driveFile": { "driveFile": { "id": "d1", "title": "Lab template", "alternateLink": "https://drive.google.com/file/d/d1/view" } } } ] },
+  { "courseId": "601111111111", "id": "702", "title": "Unit 3 Test - Kinematics", "state": "PUBLISHED", "alternateLink": "https://classroom.google.com/c/NjAx/a/NzAy/details", "dueDate": { "year": 2026, "month": 10, "day": 22 }, "workType": "ASSIGNMENT" },
+  { "courseId": "601111111111", "id": "703", "title": "Reflection question", "state": "PUBLISHED", "workType": "SHORT_ANSWER_QUESTION" }
+] }
