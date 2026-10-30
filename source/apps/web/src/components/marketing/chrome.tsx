@@ -223,7 +223,7 @@ function MenuSheet({ onClose }: { onClose: () => void }) {
           </nav>
           <div className="flex flex-col gap-[1.25rem] border-t border-white/15 pt-[2rem] sm:flex-row sm:items-center sm:justify-between">
             <Pill variant="light" onClick={() => { onClose(); setTimeout(() => open('demo'), 60); }}>Open the demo</Pill>
-            <button type="button" onClick={() => { onClose(); setTimeout(() => open('video'), 60); }} className="mk-link w-max text-[0.875rem] uppercase tracking-[0.14em] text-white/70 hover:text-white">Watch the demo · 01:52</button>
+            <button type="button" onClick={() => { onClose(); setTimeout(() => open('video'), 60); }} className="mk-link w-max text-[0.875rem] uppercase tracking-[0.14em] text-white/70 hover:text-white">Watch the demo · 01:53</button>
           </div>
         </div>
       </motion.div>
@@ -286,7 +286,7 @@ function VideoSheet({ onClose }: { onClose: () => void }) {
       <motion.button type="button" aria-label="Close video" onClick={onClose} className="absolute inset-0 bg-[rgb(15_47_99/0.85)] backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={spring(240, 30)} />
       <motion.div className="relative w-full max-w-[80rem]" initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring(240, 26)}>
         <div className="mb-[0.75rem] flex items-center justify-between text-white">
-          <Eyebrow tone="light">Murshid · demo walkthrough · 01:52</Eyebrow>
+          <Eyebrow tone="light">Murshid · demo walkthrough · 01:53</Eyebrow>
           <CloseButton onClick={onClose} tone="light" />
         </div>
         <video src="/media/murshid-demo.mp4" poster="/media/murshid-demo-poster.jpg" controls autoPlay playsInline className="aspect-video w-full rounded-[2rem] bg-[var(--deep)]" />

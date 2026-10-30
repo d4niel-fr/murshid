@@ -89,7 +89,7 @@ export function Hero() {
           <p className="mk-title text-[2.4rem] leading-[0.95] text-white/85"><Lines lines={['Ask once,', 'plan the week']} delay={350} stagger={110} gate={ready} from="115%" margin="0px" /></p>
           <Rise gate={ready} delay={560} y={16} margin="0px" className="mt-[1.5rem] flex flex-wrap items-center gap-[0.75rem]">
             <Pill variant="light" onClick={() => open('demo')} testid="hero-demo">Open the demo</Pill>
-            <Pill variant="glass" arrow={false} onClick={() => open('video')} icon={<PlayMark tone="light" className="-ms-[0.75rem] size-[1.75rem]" />}>Watch · 01:52</Pill>
+            <Pill variant="glass" arrow={false} onClick={() => open('video')} icon={<PlayMark tone="light" className="-ms-[0.75rem] size-[1.75rem]" />}>Watch · 01:53</Pill>
           </Rise>
         </div>
         <div className="flex items-end gap-[1rem]">

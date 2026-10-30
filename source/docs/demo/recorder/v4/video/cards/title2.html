@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="card2.css"><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script><style>
+h1 { position: absolute; left: 48px; top: 214px; font-size: 60px; }
+.stats { position: absolute; left: 48px; top: 410px; display: flex; gap: 10px; }
+.stat { width: 214px; padding: 16px 18px; }
+.stat b { display: block; font-size: 34px; font-weight: 500; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.stat b em { font-style: normal; color: #c2e029; }
+.stat span { display: block; margin-top: 6px; font-size: 12px; color: rgb(255 255 255 / .65); }
+.star { right: 40px; top: 150px; width: 360px; height: 360px; }
+</style></head><body><div class="band"><div class="week"><div><span>Mon</span></div><div><span>Tue</span></div><div><span>Wed</span></div><div><span>Thu</span></div><div><span>Fri</span></div><div><span>Sat</span></div><div><span>Sun</span></div></div>
+<div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 1.8 L13.76 7.75 L19.21 4.79 L16.25 10.24 L22.2 12 L16.25 13.76 L19.21 19.21 L13.76 16.25 L12 22.2 L10.24 16.25 L4.79 19.21 L7.75 13.76 L1.8 12 L7.75 10.24 L4.79 4.79 L10.24 7.75Z"/></svg> Murshid</div>
+<div class="star" id="star"></div>
+<div style="position:absolute;left:48px;top:178px" class="fade eyebrow" >The problem</div>
+<h1><span class="line"><span style="animation-delay:.25s">Students fall behind</span></span><span class="line"><span class="dim" style="animation-delay:.39s">before anyone notices.</span></span></h1>
+<div class="stats"><div class="stat glass fade" style="animation-delay:3.2s"><b>6+</b><span>subjects, tests and sport a week</span></div><div class="stat glass fade" style="animation-delay:8.600000000000001s"><b><em>~</em>4,660</b><span>students at one Dubai school</span></div><div class="stat glass fade" style="animation-delay:11.0s"><b>1 : 930</b><span>counsellors to students</span></div></div>
+<div class="foot fade" style="animation-delay:11.9s"><span>Figures from one Dubai secondary school’s public profile, Oct 2026</span><span>Murshid · مرشد · means guide</span></div>
+</div><script type="module">import { mountStar } from './star2.js';
+const manual = location.search.includes('manual');
+const star = mountStar(document.getElementById('star'), { start: 0.35, manual });
+// frame-by-frame capture: pause every CSS animation at time t and draw the star at t
+window.renderAt = (t) => { document.getAnimations().forEach((a) => { a.pause(); a.currentTime = t * 1000; }); const ease = (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2); const k = (t - 17.93) / 1.5; star.renderAt(t, ease(k) * Math.PI * 2); };
+window.cardReady = true;
+</script></body></html>

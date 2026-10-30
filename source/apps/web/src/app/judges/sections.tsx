@@ -176,25 +176,23 @@ export function Film() {
           <Eyebrow>Watch the demo</Eyebrow>
           <h2 className="mk-h2 mt-[1rem] text-[3rem]"><Lines lines={['Two minutes,', 'start to finish']} /></h2>
         </div>
-        <p className="max-w-[24rem] text-[0.875rem] leading-relaxed text-[var(--text-muted)] sm:text-right">A student plans his week, a teacher posts work, the best day to set homework, weekly reports and the guardrails. Narrated, 01:52.</p>
+        <p className="max-w-[24rem] text-[0.875rem] leading-relaxed text-[var(--text-muted)] sm:text-right">A student plans his week, a teacher posts work, the best day to set homework, weekly reports and the guardrails. Narrated, 01:53.</p>
       </div>
       <Rise y={40} config={spring(170, 26)} className="relative mt-[3rem] overflow-hidden rounded-[2rem] bg-[var(--deep)]">
         <video ref={video} src="/media/murshid-demo.mp4" poster="/media/murshid-demo-poster.jpg" muted loop={!live} autoPlay={!reduce} playsInline preload="metadata" className="aspect-video w-full" aria-label="Murshid demo walkthrough" />
-        {!live && (
-          <>
-            <button type="button" onClick={play} className="group absolute inset-0 flex items-end justify-start p-[1.5rem] sm:p-[2rem]" aria-label="Watch the demo with sound">
-              <span className="mk-glass inline-flex items-center gap-[0.875rem] py-[0.625rem] pe-[1.5rem] ps-[0.625rem] text-[0.875rem] font-medium uppercase tracking-[0.06em] text-white transition-colors group-hover:bg-white/20">
-                <PlayMark tone="light" className="size-[2.75rem]" />Watch with sound · 01:52
-              </span>
-            </button>
-            {!reduce && (
-              <button type="button" onClick={togglePreview} className="mk-glass absolute end-[1.5rem] top-[1.5rem] px-[1rem] py-[0.5rem] text-[0.75rem] font-medium uppercase tracking-[0.12em] text-white hover:bg-white/20 sm:end-[2rem] sm:top-[2rem]">
-                {paused ? 'Play preview' : 'Pause preview'}
-              </button>
-            )}
-          </>
-        )}
+        {/* the whole preview starts the film with sound; the controls sit below so they never cover the picture */}
+        {!live && <button type="button" onClick={play} className="absolute inset-0 cursor-pointer" aria-label="Watch the demo with sound" tabIndex={-1} />}
       </Rise>
+      {!live && (
+        <div className="mt-[1.25rem] flex flex-wrap items-center justify-between gap-[1rem]">
+          <Pill variant="solid" arrow={false} onClick={play} className="!py-[0.5rem] !ps-[0.5rem]" icon={<PlayMark tone="light" className="size-[2.25rem]" />}>Watch with sound · 01:53</Pill>
+          {!reduce && (
+            <button type="button" onClick={togglePreview} className="rounded-full border border-[var(--border)] px-[1.25rem] py-[0.75rem] text-[0.75rem] font-medium uppercase tracking-[0.12em] text-[var(--text-muted)] transition-colors hover:border-[var(--text)] hover:text-[var(--text)]">
+              {paused ? 'Play preview' : 'Pause preview'}
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
