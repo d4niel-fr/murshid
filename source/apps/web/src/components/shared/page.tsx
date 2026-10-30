@@ -31,7 +31,7 @@ export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: Re
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
         <h1 className="display text-[2.25rem] sm:text-[2.75rem]">{typeof title === 'string' ? <RevealTitle text={title} /> : title}</h1>
-        {subtitle && <p className="mt-3 max-w-[68ch] text-[15px] leading-relaxed text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="mt-3 max-w-[68ch] text-[0.9375rem] leading-relaxed text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

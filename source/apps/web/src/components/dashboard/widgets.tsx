@@ -73,7 +73,7 @@ export function StreakWidget({ data }: { data: Dashboard }) {
                 initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15 + i * 0.04, type: 'spring', stiffness: 520, damping: 30 }}
                 className={cn('size-7 rounded-full', filled ? 'bg-[var(--deep)]' : i === today ? 'border-2 border-primary' : 'bg-surface-2')}
               />
-              <span className={cn('text-[11px]', i === today ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{d}</span>
+              <span className={cn('text-[0.6875rem]', i === today ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{d}</span>
             </div>
           );
         })}
@@ -88,13 +88,13 @@ export function RingsWidget({ data }: { data: Dashboard }) {
   const router = useRouter();
   const size = band === 'g5-6' ? 96 : band === 'g11-12' ? 80 : 88;
   const rings: { key: keyof Dashboard['progress']; label: string; href: string }[] = [
-    { key: 'academics', label: t('dash.academics'), href: '/insights?area=academics' },
-    { key: 'extracurriculars', label: t('dash.extracurriculars'), href: '/insights?area=extracurriculars' },
-    { key: 'goals', label: t('dash.goals'), href: '/goals' },
+    { key: 'academics', label: t('dash.academics'), href: '/app/insights?area=academics' },
+    { key: 'extracurriculars', label: t('dash.extracurriculars'), href: '/app/insights?area=extracurriculars' },
+    { key: 'goals', label: t('dash.goals'), href: '/app/goals' },
   ];
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.progress')} action={seeAll('/insights', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.progress')} action={seeAll('/app/insights', t('dash.viewAll'))} />
       <div className="grid grid-cols-3 gap-2">
         {rings.map((r) => (
           <motion.button key={r.key} {...pressable} onClick={() => router.push(r.href)} className="rounded-lg py-1 hover:bg-surface-2" aria-label={`${r.label} ${data.progress[r.key]}%`}>
@@ -114,7 +114,7 @@ export function UpcomingWidget({ data }: { data: Dashboard }) {
   const items = data.upcoming.filter((u) => u.date >= world.today).slice(0, 5);
   return (
     <Card className="col-span-12">
-      <CardHeader title={bt('upcoming.title') !== 'upcoming.title' ? bt('upcoming.title') : t('dash.upcoming')} action={seeAll('/planner', t('dash.viewAll'))} />
+      <CardHeader title={bt('upcoming.title') !== 'upcoming.title' ? bt('upcoming.title') : t('dash.upcoming')} action={seeAll('/app/planner', t('dash.viewAll'))} />
       <ol className="relative">
         {items.map((u, i) => {
           const d = diffDays(u.date, world.today);
@@ -143,7 +143,7 @@ export function AcademicsWidget() {
   const subs = world.academics.subjects.slice(0, 5);
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.academicsCard')} icon={<BookOpen />} action={seeAll('/academics', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.academicsCard')} icon={<BookOpen />} action={seeAll('/app/academics', t('dash.viewAll'))} />
       <div className="mb-3 flex items-baseline gap-2">
         <span className="text-3xl font-semibold tabular">{fmtScore(world.academics.average, world.academics.scale)}</span>
         <span className="text-sm text-muted-foreground">{t('dash.avg')} · {tx(world.academics.term, 'الفصل الأول')}</span>
@@ -153,7 +153,7 @@ export function AcademicsWidget() {
           const delta = Math.round((s.current - s.trend[0]!) * 10) / 10;
           return (
             <li key={s.id}>
-              <Link href={`/academics?subject=${s.id}`} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-2">
+              <Link href={`/app/academics?subject=${s.id}`} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-2">
                 <span className="min-w-0 flex-1 truncate text-sm">{s.name}</span>
                 <Sparkline values={s.trend} color={delta >= 0 ? 'var(--chart-1)' : 'var(--danger)'} />
                 <span className={cn('inline-flex w-12 items-center justify-end gap-0.5 text-xs tabular', delta >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]')}>
@@ -183,7 +183,7 @@ export function ExtracurricularsWidget() {
       <CardHeader title={t('dash.ec')} icon={<ActivityIcon />} action={
         <div className="flex items-center gap-1">
           <LogSessionDialog trigger={<Button size="sm" variant="secondary"><Plus />{tx('Log', 'تسجيل')}</Button>} />
-          {seeAll('/extracurriculars', t('dash.viewAll'))}
+          {seeAll('/app/extracurriculars', t('dash.viewAll'))}
         </div>
       } />
       <ul className="grid gap-3 sm:grid-cols-2">
@@ -193,7 +193,7 @@ export function ExtracurricularsWidget() {
           const pct = Math.round((mins / (a.weeklyTargetMinutes * 4)) * 100);
           return (
             <li key={a.id}>
-              <Link href={`/extracurriculars?a=${a.id}`} className="flex flex-col gap-2.5 rounded-[var(--radius)] bg-surface-2 p-3.5 transition-colors hover:bg-[color-mix(in_oklab,var(--surface-2)_70%,var(--border))]">
+              <Link href={`/app/extracurriculars?a=${a.id}`} className="flex flex-col gap-2.5 rounded-[var(--radius)] bg-surface-2 p-3.5 transition-colors hover:bg-[color-mix(in_oklab,var(--surface-2)_70%,var(--border))]">
                 <div className="flex items-center gap-2.5">
                   <span className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--deep)] text-white"><Icon className="size-4" /></span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{a.name}</span>
@@ -242,14 +242,14 @@ export function AskWidget() {
   const router = useRouter();
   const [q, setQ] = useState('');
   const chips = useMemo(() => suggestionChips(world, tx, prefs.persona), [world, tx, prefs.persona]);
-  const go = (text: string) => router.push(`/chat?q=${encodeURIComponent(text)}`);
+  const go = (text: string) => router.push(`/app/chat?q=${encodeURIComponent(text)}`);
   const ph = bt('chat.placeholder');
   return (
     <Card className="col-span-12">
       <CardHeader title={t('dash.ask')} icon={<Sparkles />} />
-      <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) go(q.trim()); else router.push('/chat'); }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) go(q.trim()); else router.push('/app/chat'); }}>
         <motion.div layoutId="composer" className="flex items-center gap-2 rounded-full bg-surface-2 py-1.5 ps-5 pe-1.5 ring-1 ring-transparent transition-shadow focus-within:ring-[var(--brand-light)] focus-within:shadow-[0_0_0_4px_color-mix(in_oklab,var(--brand-light)_18%,transparent)]">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')} className="h-9 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground" aria-label={t('dash.ask')} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')} className="h-9 min-w-0 flex-1 bg-transparent text-[0.9375rem] outline-none placeholder:text-muted-foreground" aria-label={t('dash.ask')} />
           <button type="submit" aria-label={q ? t('chat.send') : t('chat.mic')} className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)] text-white transition-transform active:scale-95">
             {q ? <ArrowUp className="size-4" /> : <Mic className="size-4" />}
           </button>
@@ -257,7 +257,7 @@ export function AskWidget() {
       </form>
       <div className="mt-3 flex flex-wrap gap-2">
         {chips.map((c) => (
-          <motion.button key={c} {...pressable} onClick={() => go(c)} className="rounded-full bg-surface-2 px-4 py-2 text-[13px] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">{c}</motion.button>
+          <motion.button key={c} {...pressable} onClick={() => go(c)} className="rounded-full bg-surface-2 px-4 py-2 text-[0.8125rem] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">{c}</motion.button>
         ))}
       </div>
     </Card>
@@ -279,17 +279,17 @@ export function ProfileLinksWidget({ cv }: { cv?: boolean }) {
   const n = items.filter((i) => i.on).length;
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.links')} icon={<FileText />} action={seeAll('/profile', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.links')} icon={<FileText />} action={seeAll('/app/profile', t('dash.viewAll'))} />
       <p className="text-sm"><span className="font-semibold tabular">{n} {tx('of', 'من')} {items.length}</span> <span className="text-muted-foreground">{tx('connected', 'مرتبطة')}</span></p>
       <ProgressBar value={(n / items.length) * 100} className="mt-2" />
       <div className="mt-4 flex flex-wrap gap-2">
         {items.map(({ key, label, on, Icon }) => (
-          <button key={key} onClick={() => router.push(`/profile#${key}`)} className={cn('inline-flex h-9 items-center gap-2 rounded-full border px-3 text-sm transition-colors', on ? 'border-border bg-surface text-foreground' : 'border-dashed border-border text-muted-foreground hover:text-foreground')}>
+          <button key={key} onClick={() => router.push(`/app/profile#${key}`)} className={cn('inline-flex h-9 items-center gap-2 rounded-full border px-3 text-sm transition-colors', on ? 'border-border bg-surface text-foreground' : 'border-dashed border-border text-muted-foreground hover:text-foreground')}>
             <Icon className="size-4" />{label}{on && <span className="size-1.5 rounded-full bg-[var(--success)]" />}
           </button>
         ))}
       </div>
-      <Button className="mt-4 self-start" onClick={() => router.push('/profile')}>{cv ? tx('Review CV & links', 'مراجعة السيرة والروابط') : tx('Finish profile', 'أكمل ملفك')}</Button>
+      <Button className="mt-4 self-start" onClick={() => router.push('/app/profile')}>{cv ? tx('Review CV & links', 'مراجعة السيرة والروابط') : tx('Finish profile', 'أكمل ملفك')}</Button>
     </Card>
   );
 }
@@ -299,7 +299,7 @@ export function OpportunitiesWidget() {
   const { t, world } = useApp();
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.opps')} icon={<Sparkles />} action={seeAll('/opportunities', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.opps')} icon={<Sparkles />} action={seeAll('/app/opportunities', t('dash.viewAll'))} />
       <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
         {world.opportunities.slice(0, 2).map((o) => <OpportunityCard key={o.id} o={o} compact />)}
       </div>
@@ -313,13 +313,13 @@ export function ApplicationsWidget() {
   const STATUS = { saved: tx('Saved', 'محفوظ'), 'in-progress': tx('In progress', 'قيد التنفيذ'), submitted: tx('Submitted', 'مُرسل'), accepted: tx('Accepted', 'مقبول') };
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.apps')} icon={<Send />} action={seeAll('/opportunities?tab=applications', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.apps')} icon={<Send />} action={seeAll('/app/opportunities?tab=applications', t('dash.viewAll'))} />
       <ul className="flex flex-col gap-3">
         {world.applications.slice(0, 3).map((a) => {
           const pct = Math.round((a.checklist.filter((c) => c.done).length / Math.max(1, a.checklist.length)) * 100);
           return (
             <li key={a.id}>
-              <Link href="/opportunities?tab=applications" className="-mx-2 block rounded-lg px-2 py-1.5 hover:bg-surface-2">
+              <Link href="/app/opportunities?tab=applications" className="-mx-2 block rounded-lg px-2 py-1.5 hover:bg-surface-2">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
                   <span className="truncate text-sm font-medium">{a.title}</span>
                   <Badge tone={a.status === 'submitted' || a.status === 'accepted' ? 'success' : a.status === 'in-progress' ? 'brand' : 'neutral'}>{STATUS[a.status]}</Badge>
@@ -343,11 +343,11 @@ export function GoalsWidget() {
   const title = bt('goals.title');
   return (
     <Card className="col-span-12">
-      <CardHeader title={title !== 'goals.title' ? title : t('dash.goalsCard')} icon={<Target />} action={seeAll('/goals', t('dash.viewAll'))} />
+      <CardHeader title={title !== 'goals.title' ? title : t('dash.goalsCard')} icon={<Target />} action={seeAll('/app/goals', t('dash.viewAll'))} />
       <ul className="flex flex-col gap-3.5">
         {world.goals.slice(0, 3).map((g) => (
           <li key={g.id}>
-            <Link href={`/goals#${g.id}`} className="-mx-2 block rounded-lg px-2 py-1 hover:bg-surface-2">
+            <Link href={`/app/goals#${g.id}`} className="-mx-2 block rounded-lg px-2 py-1 hover:bg-surface-2">
               <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                 <span className="truncate">{g.title}</span>
                 <span className="tabular font-semibold">{Math.round(g.progress * 100)}%</span>
@@ -369,11 +369,11 @@ export function BadgesWidget() {
   const pretty = (b: string) => b.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   return (
     <Card className="col-span-12">
-      <CardHeader title={t('dash.badges')} icon={<Award />} action={seeAll('/goals#badges', t('dash.viewAll'))} />
+      <CardHeader title={t('dash.badges')} icon={<Award />} action={seeAll('/app/goals#badges', t('dash.viewAll'))} />
       {badges.length ? (
         <div className="flex flex-wrap gap-2">
           {badges.map((b, i) => (
-            <motion.button key={b} onClick={() => router.push('/goals#badges')} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 400, damping: 22 }}
+            <motion.button key={b} onClick={() => router.push('/app/goals#badges')} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1 + i * 0.05, type: 'spring', stiffness: 400, damping: 22 }}
               className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1.5 text-sm font-medium text-primary">
               <Award className="size-4" />{pretty(b)}
             </motion.button>
@@ -391,7 +391,7 @@ export function BriefingWidget() {
   const top = world.dashboard.highlights[0];
   return (
     <Card className="col-span-12">
-      <CardHeader title={tx('Weekly briefing', 'الملخص الأسبوعي')} icon={<CalendarClock />} action={seeAll('/insights?area=extracurriculars', tx('Open', 'فتح'))} />
+      <CardHeader title={tx('Weekly briefing', 'الملخص الأسبوعي')} icon={<CalendarClock />} action={seeAll('/app/insights?area=extracurriculars', tx('Open', 'فتح'))} />
       <p className="text-base font-semibold leading-snug">{top ?? spec.insight}</p>
       <p className="mt-1 text-xs text-muted-foreground">{spec.insight}</p>
       <div className="mt-3"><ChartView spec={spec} height={150} compact rtl={dir === 'rtl'} /></div>

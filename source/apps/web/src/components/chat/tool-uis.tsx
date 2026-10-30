@@ -39,7 +39,7 @@ export function RenderChartTool({ args, status }: ToolProps) {
   }, [initial, range, world, locale]);
   if (!spec) return status?.type === 'running' ? <ToolSkeleton label={tx('Building your chart…', 'جارٍ إعداد الرسم…')} /> : null;
   const q = initial?.query;
-  const href = q ? `/insights?area=${encodeURIComponent(q.compare?.length ? 'compare' : q.area)}&range=${range ?? q.range}${q.type ? `&type=${q.type}` : ''}${q.compare?.length ? `&compare=${q.compare.join(',')}` : ''}` : '/insights';
+  const href = q ? `/app/insights?area=${encodeURIComponent(q.compare?.length ? 'compare' : q.area)}&range=${range ?? q.range}${q.type ? `&type=${q.type}` : ''}${q.compare?.length ? `&compare=${q.compare.join(',')}` : ''}` : '/app/insights';
   return (
     <ChartCard
       inline
@@ -103,7 +103,7 @@ export function ShowPlanTool({ args }: ToolProps) {
             <ul className="space-y-1 text-xs">
               {d.items.slice(0, 7).map((it, i) => (
                 <li key={i} className={it.new ? 'font-medium text-foreground' : 'text-muted-foreground'}>
-                  <span className="tabular-nums">{it.time}</span> · {it.title}{it.new && <span className="ms-1 rounded bg-brand-soft px-1 text-[10px] text-brand">new</span>}
+                  <span className="tabular-nums">{it.time}</span> · {it.title}{it.new && <span className="ms-1 rounded bg-brand-soft px-1 text-[0.625rem] text-brand">new</span>}
                 </li>
               ))}
             </ul>

@@ -46,7 +46,14 @@ export interface WorkItem {
   /** posted by a teacher in this session (not generated) */
   posted: boolean;
   createdAt?: string;
+  /** how the work is handed in: a written task (default), a short form built in Murshid, or a Google / Microsoft form */
+  format?: AssignmentFormat;
+  formUrl?: string | null;
+  questions?: FormQuestion[];
 }
+export type AssignmentFormat = 'task' | 'form' | 'google_form' | 'microsoft_form';
+export interface FormQuestion { id: string; type: 'short' | 'long' | 'choice'; prompt: string; options?: string[]; required: boolean }
+export interface FormResponse { answers: Record<string, string>; submittedAt: string; updatedAt: string }
 export type SubStatus = 'on_time' | 'late' | 'missing' | 'submitted' | 'pending' | 'not_set';
 export interface Submission { status: SubStatus; grade: number | null; submittedOn: string | null }
 

@@ -12,21 +12,17 @@ const nextConfig: NextConfig = {
   },
   // Aliases so nav hrefs from @murshid/grade-bands (NAV_CATALOG) never dead-end.
   async redirects() {
+    const app = ['chat', 'planner', 'academics', 'extracurriculars', 'goals', 'opportunities', 'profile', 'settings', 'insights', 'school', 'study', 'saved'];
     return [
-      { source: '/activities', destination: '/extracurriculars', permanent: false },
-      { source: '/clubs', destination: '/extracurriculars', permanent: false },
-      { source: '/today', destination: '/planner', permanent: false },
-      { source: '/profile/links', destination: '/profile', permanent: false },
-      { source: '/cv', destination: '/profile', permanent: false },
-      { source: '/portfolio', destination: '/profile', permanent: false },
-      { source: '/applications', destination: '/opportunities?tab=applications', permanent: false },
-      { source: '/university', destination: '/opportunities?tab=applications', permanent: false },
-      { source: '/competitions', destination: '/opportunities', permanent: false },
-      { source: '/careers', destination: '/opportunities', permanent: false },
-      { source: '/subjects', destination: '/academics', permanent: false },
-      { source: '/schoolwork', destination: '/academics', permanent: false },
-      { source: '/badges', destination: '/goals', permanent: false },
-      { source: '/charts', destination: '/insights', permanent: false },
+      // the landing page moved from /judges to /, the student app from / to /app
+      { source: '/judges', destination: '/', permanent: true },
+      { source: '/dashboard', destination: '/app', permanent: true },
+      ...app.map((r) => ({ source: `/${r}/:path*`, destination: `/app/${r}/:path*`, permanent: true })),
+      // nav hrefs from @murshid/grade-bands (NAV_CATALOG) never dead-end
+      ...[['activities', 'extracurriculars'], ['clubs', 'extracurriculars'], ['today', 'planner'], ['profile/links', 'profile'], ['cv', 'profile'], ['portfolio', 'profile'],
+        ['applications', 'opportunities?tab=applications'], ['university', 'opportunities?tab=applications'], ['competitions', 'opportunities'], ['careers', 'opportunities'],
+        ['subjects', 'academics'], ['schoolwork', 'academics'], ['badges', 'goals'], ['charts', 'insights']]
+        .flatMap(([from, to]) => [{ source: `/${from}`, destination: `/app/${to}`, permanent: false }, { source: `/app/${from}`, destination: `/app/${to}`, permanent: false }]),
     ];
   },
 };

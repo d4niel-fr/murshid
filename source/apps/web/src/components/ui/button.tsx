@@ -22,9 +22,9 @@ export const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline px-0',
       },
       size: {
-        sm: 'h-8 px-3.5 text-[13px]',
+        sm: 'h-8 px-3.5 text-[0.8125rem]',
         md: 'h-10 px-5',
-        lg: 'h-12 px-6 text-[15px]',
+        lg: 'h-12 px-6 text-[0.9375rem]',
         icon: 'size-10',
         'icon-sm': 'size-8',
       },

@@ -75,14 +75,14 @@ export function createClient(opts: ClientOptions) {
     getDashboard: () => call('/dashboard', (x) => toDashboard(x, locale), () => world().dashboard),
     getProgress: (area: string, range: ChartRange, type?: ChartType) =>
       call(`/progress?area=${encodeURIComponent(area)}&range=${range}${type ? `&type=${type}` : ''}`, toChartSpec, () => buildChartSpec(world(), { area, range, type, locale })),
-    getAcademics: () => call('/academics', toAcademics, () => world().academics),
+    getAcademics: () => call('/app/academics', toAcademics, () => world().academics),
     /** Live payload is only used to confirm availability; the web keeps the richer session-level mock for charts. */
-    getExtracurriculars: () => call('/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
-    getProfileLinks: () => call('/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
+    getExtracurriculars: () => call('/app/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
+    getProfileLinks: () => call('/app/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
     putProfileLinks: (links: ProfileLinks) => {
       linkOverrides.set(band, links);
       const body = { linkedin: links.linkedin, github: links.github, instagram: links.instagram, portfolio: links.portfolio };
-      return call('/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
+      return call('/app/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
     },
     /** LinkedIn pack + PDF (student API); null when the API is down. */
     async getLinkedIn(): Promise<Record<string, unknown> | null> {

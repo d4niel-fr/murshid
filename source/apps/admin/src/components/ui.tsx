@@ -1,8 +1,8 @@
 'use client';
 
 import { clsx } from 'clsx';
-import { X } from 'lucide-react';
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, EyeOff, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 
 export const cn = clsx;
 
@@ -139,6 +139,53 @@ export function MiniBars({ values, labels, height = 64 }: { values: number[]; la
           {labels && <span className="text-[9px] text-[var(--text-muted)]">{labels[i]}</span>}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Password field with a show/hide button (the value never leaves the field; the toggle only changes its type). */
+export function PasswordInput({ className, ...p }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className={cn('relative min-w-0', className)}>
+      <input {...p} type={shown ? 'text' : 'password'} className="input w-full pe-12 text-sm" />
+      <button type="button" onClick={() => setShown((v) => !v)} aria-label={shown ? 'Hide passcode' : 'Show passcode'} aria-pressed={shown}
+        className="absolute inset-y-0 end-1 my-auto grid size-9 place-items-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]">
+        {shown ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
+    </div>
+  );
+}
+
+/** Table header button that sorts by its column; announces the order to screen readers. */
+export function SortHeader({ label, active, dir, onSort, className }: { label: string; active: boolean; dir: 'asc' | 'desc'; onSort: () => void; className?: string }) {
+  const Icon = !active ? ArrowUpDown : dir === 'asc' ? ArrowUp : ArrowDown;
+  return (
+    <th aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={className}>
+      <button type="button" onClick={onSort} className={cn('inline-flex items-center gap-1 uppercase tracking-[inherit] transition-colors hover:text-[var(--text)]', active && 'text-[var(--text)]')}>
+        {label}<Icon className={cn('size-3', !active && 'opacity-50')} aria-hidden />
+      </button>
+    </th>
+  );
+}
+
+/** Friendly empty state with an optional action. */
+export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      {icon && <div className="grid size-12 place-items-center rounded-full bg-[var(--surface)] text-[var(--accent)] [&_svg]:size-5">{icon}</div>}
+      <div className="mt-4 text-[15px] font-medium">{title}</div>
+      {children && <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">{children}</p>}
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+/** Shimmering placeholder rows while a table loads. */
+export function SkeletonRows({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="space-y-3 p-6" aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }, (_, i) => <div key={i} className="skeleton h-10 rounded-[var(--radius-sm)]" style={{ opacity: 1 - i * 0.18 }} />)}
     </div>
   );
 }

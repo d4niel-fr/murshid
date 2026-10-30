@@ -30,7 +30,11 @@
 
 @layer base {
   html, body { background: var(--bg); color: var(--text); min-height: 100dvh; }
-  html { scrollbar-gutter: stable; }
+  html { scrollbar-gutter: stable; font-size: calc(100% * var(--ts, 1)); }
+  /* reading comfort (Settings, or the A-/A+ control): scales every rem on the page */
+  html[data-text-size='sm'] { --ts: 0.9375; }
+  html[data-text-size='lg'] { --ts: 1.125; }
+  html[data-text-size='xl'] { --ts: 1.25; }
   * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--text-muted) 30%, transparent) transparent; }
   [dir="rtl"] body { line-height: 1.6; }
   button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }

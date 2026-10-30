@@ -20,6 +20,8 @@ import { SchoolStore } from './schools/store';
 import { DemoStore } from './v1/store';
 import { createChatEngine, type ChatEngine } from './v1/chat';
 import type { ChatProvider } from '@murshid/agent-gateway';
+import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
+import { BillingStore, registerBilling } from './billing/routes';
 
 export interface CreateAppOptions {
   repo?: Repository;
@@ -33,6 +35,12 @@ export interface CreateAppOptions {
   chatProvider?: ChatProvider;
   /** where survey responses go (default: Supabase when configured, else memory) */
   surveySink?: SurveySink;
+  /** Single-plan subscriptions (default: fresh, in memory) */
+  billing?: BillingStore;
+  /** per-IP rate limits; false turns them off (default: on, except under the test runner unless passed) */
+  rateLimit?: Partial<Limits> | false;
+  /** request timeout in ms for non-streaming routes (default 15 s) */
+  timeoutMs?: number;
 }
 
 export function buildApi(opts: CreateAppOptions = {}) {
@@ -50,10 +58,17 @@ export function buildApi(opts: CreateAppOptions = {}) {
   ]);
   app.use('*', cors({
     origin: (origin) => (origin && allowed.has(origin) ? origin : '*'),
-    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode'],
+    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    exposeHeaders: ['x-request-id', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset', 'idempotent-replayed'],
     maxAge: 600,
   }));
+  // request ids first, so every later response (and error) can be traced
+  app.use('*', requestId());
+  const limitsOn = opts.rateLimit !== false && (opts.rateLimit !== undefined || (env.NODE_ENV !== 'test' && env.RATE_LIMIT !== 'off'));
+  if (limitsOn) app.use('*', rateLimit({ ...DEFAULT_LIMITS, ...(opts.rateLimit || {}) }));
+  app.use('*', idempotency());
+  app.use('*', timeout(opts.timeoutMs ?? Number(env.REQUEST_TIMEOUT_MS ?? 15_000)));
   app.use('*', async (c, next) => { c.set('deps', deps); await next(); });
   // Public demo deployments: when ADMIN_PASSCODE is set, admin data (platform admin, school admin, survey results,
   // AI status) and the study buddy guardian/school switch need the passcode in x-admin-passcode, so random visitors
@@ -74,14 +89,20 @@ export function buildApi(opts: CreateAppOptions = {}) {
     });
   }
 
+  // one error shape everywhere: { error (plain words), code, details?, requestId }
+  const CODES: Record<number, string> = { 400: 'bad_request', 401: 'unauthorized', 403: 'forbidden', 404: 'not_found', 409: 'conflict', 413: 'too_large', 422: 'unprocessable', 429: 'rate_limited' };
   app.onError((err, c) => {
+    const requestId = c.get('requestId');
     if (err instanceof HTTPException) {
-      return c.json({ error: err.message, ...(err.cause ? { details: err.cause } : {}) }, err.status);
+      const cause = err.cause as { code?: string } | unknown[] | undefined;
+      const code = cause && !Array.isArray(cause) && typeof cause === 'object' && 'code' in cause ? String(cause.code) : CODES[err.status] ?? 'error';
+      return c.json({ error: err.message, code, ...(cause ? { details: cause } : {}), requestId }, err.status);
     }
-    console.error(err);
-    return c.json({ error: 'internal error' }, 500);
+    if (err instanceof SyntaxError) return c.json({ error: 'request body must be JSON', code: 'bad_request', requestId }, 400);
+    console.error(`[${requestId}]`, err);
+    return c.json({ error: 'Something went wrong on our side. Please try again.', code: 'internal', requestId }, 500);
   });
-  app.notFound((c) => c.json({ error: 'route not found' }, 404));
+  app.notFound((c) => c.json({ error: 'route not found', code: 'not_found', requestId: c.get('requestId') }, 404));
 
   const api = new Api(app);
   const store = opts.store ?? new DemoStore();
@@ -116,9 +137,11 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerAdmin(api, store, (id) => schools.licenceOf(id));
   registerSchools(api, schools, store, (c) => demoView(c, store));
   registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);
+  const billing = opts.billing ?? new BillingStore();
+  registerBilling(api, billing, deps.now);
   api.route({ method: 'get', path: '/openapi.json', tag: 'meta', summary: 'This OpenAPI document', auth: 'none' }, (c) => c.json(api.openapi()));
 
-  return { app, api, deps, store, schools };
+  return { app, api, deps, store, schools, billing };
 }
 
 export function createApp(opts: CreateAppOptions = {}) {

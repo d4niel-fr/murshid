@@ -12,7 +12,7 @@
  */
 
 export type LicenceType = 'family' | 'institution';
-export type PlanId = 'family-plus' | 'family-pro' | 'school' | 'school-pilot';
+export type PlanId = 'single' | 'school' | 'school-pilot';
 export type BoughtBy = 'parent' | 'student' | 'school';
 
 export interface Plan {
@@ -31,14 +31,9 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: 'family-plus', audience: 'families', name: 'Plus', priceAed: 29, per: 'month', yearlyAed: 249, featured: false,
-    blurb: 'For a parent buying for their child, or a student buying for themselves.',
-    features: ['Weekly plan around classes, sport and exams', 'All homework and tests in one list', 'Progress charts for every subject', 'Opportunities matched to the student', 'Parent summary every week'],
-  },
-  {
-    id: 'family-pro', audience: 'families', name: 'Pro', priceAed: 79, per: 'month', yearlyAed: 699, featured: false,
-    blurb: 'Application season: CV, portfolio and university applications.',
-    features: ['Everything in Plus', 'LinkedIn-ready CV and portfolio (PDF)', 'Application tracker with deadlines', 'One human review per term'],
+    id: 'single', audience: 'families', name: 'Single', priceAed: 29, per: 'month', yearlyAed: 249, featured: false,
+    blurb: 'For one student: a parent buying for their child, or a student buying for themselves. The only plan sold online.',
+    features: ['A weekly plan around classes, tests, homework and sport', 'Ask Murshid, with how it worked this out under every reply', 'Flashcards, notes, focus timer, quizzes and topic tracker', 'Opportunities, applications and CV', 'Weekly summary for a parent (opt-in)'],
   },
   {
     id: 'school', audience: 'schools', name: 'Murshid for Schools', priceAed: 150, per: 'student-year', rangeAed: [120, 180], featured: true,
@@ -110,13 +105,13 @@ export function seedOrgs(): Org[] {
       joinCode: 'DBS-TRIAL',
       microsoft: { connected: false, tenantId: 'sim-tenant-dbs', domain: 'dbs-demo.example', connectedAt: null, connectedBy: null, lastSyncAt: null, synced: null },
     },
-    familyOrg('fam-haddad', 'Haddad family', 'parent', 'family-plus'),
-    familyOrg('fam-siddiqui', 'Siddiqui family', 'parent', 'family-plus'),
-    familyOrg('fam-menon', 'Priya Menon (self)', 'student', 'family-plus'),
+    familyOrg('fam-haddad', 'Haddad family', 'parent', 'single'),
+    familyOrg('fam-siddiqui', 'Siddiqui family', 'parent', 'single'),
+    familyOrg('fam-menon', 'Priya Menon (self)', 'student', 'single'),
   ];
 }
 
-export function familyOrg(id: string, name: string, boughtBy: 'parent' | 'student', plan: 'family-plus' | 'family-pro', startDate = '2026-09-01'): Org {
+export function familyOrg(id: string, name: string, boughtBy: 'parent' | 'student', plan: 'single', startDate = '2026-09-01'): Org {
   const p = PLANS.find((x) => x.id === plan)!;
   return {
     id, name, shortName: name, kind: 'family', parentOrgId: null, emirate: 'dubai',

@@ -6,7 +6,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "sim": "pnpm --filter @murshid/api sim",
-    "build": "pnpm --filter web build && pnpm --filter admin build"
+    "build": "pnpm --filter web build && pnpm --filter admin build",
+    "check:links": "node scripts/check-links.mjs"
   },
   "pnpm": {
     "overrides": {

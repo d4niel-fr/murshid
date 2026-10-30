@@ -11,7 +11,7 @@ const icons = { success: CheckCircle2, info: Info, danger: TriangleAlert };
 
 export function Toaster({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: string) => void }) {
   return (
-    <div aria-live="polite" className="pointer-events-none fixed bottom-5 end-5 z-[60] flex w-[min(92vw,360px)] flex-col gap-2">
+    <div aria-live="polite" data-toaster className="pointer-events-none fixed bottom-[4.5rem] end-5 z-[60] flex w-[min(92vw,360px)] flex-col gap-2">
       <AnimatePresence initial={false}>
         {toasts.map((t) => {
           const Icon = icons[t.tone ?? 'success'];

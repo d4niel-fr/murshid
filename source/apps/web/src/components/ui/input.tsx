@@ -23,5 +23,5 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 Select.displayName = 'Select';
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn('mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal', className)} {...props} />;
+  return <label className={cn('mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal', className)} {...props} />;
 }

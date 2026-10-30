@@ -3,6 +3,8 @@
 import { Footer, MarketingShell, Panel, Shot } from '@/components/marketing/chrome';
 import { Rise, spring } from '@/components/marketing/motion';
 import { PageHero, SectionHead } from '@/components/marketing/page-hero';
+import { PrintButton, ShareButton } from '@/components/shared/actions';
+import { ReadingTime, useReadingTime } from '@/components/shared/page-aids';
 
 const LOOP: { title: string; body: string }[] = [
   { title: 'Safety check first', body: 'Messages with crisis language (self-harm, abuse, danger) never reach a model. Murshid replies with a fixed, supportive message and UAE helplines (800-HOPE).' },
@@ -49,17 +51,26 @@ const ROUTING: [string, string][] = [
 ];
 
 export function HowItWorks() {
+  const minutes = useReadingTime('.mk-main main');
   return (
     <MarketingShell>
       <main>
         <PageHero
-          eyebrow="For judges and the curious"
+          eyebrow="For schools, families and the curious"
           lines={['How Murshid', 'works']}
           intro={<>Murshid understands what a student or teacher wants, plans the steps, uses tools on the student’s real timetable and work, acts in their plan, and explains what it did. <b className="font-medium text-white">Everything here describes what the code in this demo actually does.</b></>}
+          aside={<div className="flex flex-wrap items-center gap-[0.5rem] lg:justify-end">{minutes && <span className="me-[0.5rem] [&_*]:!text-white/70"><ReadingTime minutes={minutes} /></span>}<ShareButton tone="glass" /><PrintButton tone="glass" /></div>}
         />
+        {/* on this page */}
+        <nav aria-label="On this page" className="no-print flex flex-wrap items-center gap-[0.5rem] px-[1.5rem] pt-[2rem] sm:px-[2.5rem]">
+          <span className="mk-eyebrow me-[0.5rem]">On this page</span>
+          {[['loop', 'The agent loop'], ['teacher-posts', 'When a teacher posts'], ['tools', 'The tools'], ['guards', 'Guardrails'], ['routing', 'Model routing']].map(([id, label]) => (
+            <a key={id} href={`#${id}`} className="rounded-full bg-[var(--surface)] px-[1rem] py-[0.5rem] text-[0.8125rem] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--deep)] hover:text-white">{label}</a>
+          ))}
+        </nav>
 
         {/* the loop */}
-        <section id="loop" aria-labelledby="loop-title" className="px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
+        <section id="loop" aria-labelledby="loop-title" className="scroll-mt-[5rem] px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
           <SectionHead eyebrow="Every request" lines={['The agent', 'loop']} note="Seven steps, in this order, for every message. The trace under each reply shows which ones ran." />
           <ol className="mt-[3.5rem] grid gap-x-[2.5rem] md:grid-cols-2">
             {LOOP.map((s, i) => (
@@ -75,7 +86,7 @@ export function HowItWorks() {
         </section>
 
         {/* teacher posts */}
-        <section aria-labelledby="auto" className="mk-band bg-[var(--surface)] px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
+        <section id="teacher-posts" aria-labelledby="auto" className="mk-band scroll-mt-[5rem] bg-[var(--surface)] px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
           <SectionHead eyebrow="Acting on its own" lines={['When a teacher', 'posts work']} note="No model involved: fixed rules a teacher can read and check." />
           <div className="mt-[3.5rem] grid gap-[3rem] lg:grid-cols-12">
             <ol className="border-b border-[var(--border)] lg:col-span-6">
@@ -94,7 +105,7 @@ export function HowItWorks() {
         </section>
 
         {/* tools */}
-        <section aria-labelledby="tools" className="px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
+        <section id="tools" aria-labelledby="tools" className="scroll-mt-[5rem] px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
           <SectionHead eyebrow="The tools" lines={['What it may', 'touch']} note="Reads ground the plan. Writes only ever change the student’s own planner and records." />
           <div className="mt-[3rem] border-b border-[var(--border)]">
             {TOOLS.map(([t, d, k], i) => (
@@ -108,7 +119,7 @@ export function HowItWorks() {
         </section>
 
         {/* guardrails */}
-        <section id="guards" aria-labelledby="guards-title" className="mk-band relative isolate overflow-hidden bg-[var(--deep)] px-[1.5rem] py-[6rem] text-white sm:px-[2.5rem]">
+        <section id="guards" aria-labelledby="guards-title" className="scroll-mt-[5rem] mk-band relative isolate overflow-hidden bg-[var(--deep)] px-[1.5rem] py-[6rem] text-white sm:px-[2.5rem]">
           <SectionHead tone="dark" eyebrow="Safe by design" lines={['Six', 'guardrails']} note="In the code, not in a policy document." />
           <div className="mt-[3.5rem] grid gap-[1.25rem] md:grid-cols-2 lg:grid-cols-3">
             {GUARDRAILS.map(([t, d], i) => (
@@ -124,7 +135,7 @@ export function HowItWorks() {
         </section>
 
         {/* routing */}
-        <section aria-labelledby="routing" className="px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
+        <section id="routing" aria-labelledby="routing" className="scroll-mt-[5rem] px-[1.5rem] py-[6rem] sm:px-[2.5rem]">
           <SectionHead eyebrow="Models" lines={['Routing and', 'its budget']} />
           <div className="mt-[3.5rem] grid gap-[1.25rem] md:grid-cols-2">
             {ROUTING.map(([t, d], i) => (

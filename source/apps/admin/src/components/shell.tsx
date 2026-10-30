@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { BarChart3, Building2, ClipboardList, KeyRound, LogIn, LogOut, Megaphone, ScrollText, Users } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { api, checkAdminPasscode, getAdminPasscode, getSession, setAdminPasscode, setSession, type StaffSession } from '@/lib/api';
-import { cn } from './ui';
+import { cn, PasswordInput } from './ui';
 
 const NAV: { section: string; items: { href: string; label: string; icon: typeof Users }[] }[] = [
   { section: 'Teaching', items: [{ href: '/teacher', label: 'My classes', icon: ClipboardList }] },
@@ -85,8 +85,7 @@ export function PasscodeGate({ compact = false }: { compact?: boolean }) {
       <div className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="size-4 text-[var(--accent)]" />Admin passcode</div>
       <p className="mt-1 text-sm text-[var(--text-muted)]">School admin data and survey results are protected on this public demo. Enter the admin passcode to continue. Teachers can use the teacher demo without it.</p>
       <form onSubmit={submit} className="mt-4 flex gap-2">
-        <input type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Passcode" aria-label="Admin passcode"
-          className="input min-w-0 flex-1 text-sm" />
+        <PasswordInput autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Passcode" aria-label="Admin passcode" className="flex-1" />
         <button disabled={busy || !code.trim()} className="h-11 rounded-full bg-[var(--text)] px-5 text-sm font-medium text-[var(--bg)] hover:bg-[var(--deep)] disabled:opacity-60">Unlock</button>
       </form>
       {err && <p className="mt-2 text-xs text-[var(--danger,#b42318)]">{err}</p>}

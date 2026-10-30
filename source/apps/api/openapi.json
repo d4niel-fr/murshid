@@ -40,6 +40,41 @@
         "security": []
       }
     },
+    "/admin/ai-status": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "AI engine status: models vs rules, today's model requests vs the daily budget, demo replay cache",
+        "operationId": "get_admin_ai-status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
     "/me": {
       "get": {
         "tags": [
@@ -6220,7 +6255,8 @@
                         {
                           "type": "string",
                           "enum": [
-                            "crisis"
+                            "crisis",
+                            "guardrail"
                           ]
                         },
                         {
@@ -6230,6 +6266,66 @@
                     },
                     "ms": {
                       "type": "number"
+                    },
+                    "persona": {
+                      "type": "string",
+                      "enum": [
+                        "tutor",
+                        "buddy"
+                      ]
+                    },
+                    "buddy": {
+                      "description": "study buddy turn: which guardrail fired (flags), what produced the reply, limits",
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string"
+                        },
+                        "flags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "model": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "nudge": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "limit": {
+                          "type": "string"
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "band": {
+                          "type": "string"
+                        },
+                        "turnsToday": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "action",
+                        "flags",
+                        "model",
+                        "nudge",
+                        "limit",
+                        "available",
+                        "reason",
+                        "band",
+                        "turnsToday"
+                      ]
                     }
                   },
                   "required": [
@@ -6360,8 +6456,131 @@
                   "threadId": {
                     "type": "string",
                     "maxLength": 200
+                  },
+                  "persona": {
+                    "description": "tutor (default) or the optional study buddy persona (guardrailed; school/guardian can switch it off)",
+                    "type": "string",
+                    "enum": [
+                      "tutor",
+                      "buddy"
+                    ]
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/buddy": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Study buddy mode: whether it is available for this student (school / guardian switches, under-13 default), band tone, turns today",
+        "operationId": "get_buddy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "demoUser": []
+          },
+          {}
+        ]
+      }
+    },
+    "/buddy/controls": {
+      "put": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Guardian or school switches study buddy mode on/off for a student (audit-logged). Guardian: x-dev-role: guardian. School: x-dev-role: admin. Both need the admin passcode (x-admin-passcode) when ADMIN_PASSCODE is set (public demo).",
+        "operationId": "put_buddy_controls",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "demoUser": []
+          },
+          {}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "guardian",
+                      "school"
+                    ],
+                    "description": "guardian (x-dev-role: guardian) or school (x-dev-role: admin + admin passcode)"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "by",
+                  "enabled"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -12520,9 +12739,10 @@
                         "maximum": 12
                       },
                       "plan": {
-                        "default": "family-plus",
+                        "default": "single",
                         "type": "string",
                         "enum": [
+                          "single",
                           "family-plus",
                           "family-pro"
                         ]
@@ -12559,9 +12779,10 @@
                         "maximum": 12
                       },
                       "plan": {
-                        "default": "family-plus",
+                        "default": "single",
                         "type": "string",
                         "enum": [
+                          "single",
                           "family-plus",
                           "family-pro"
                         ]
@@ -13178,6 +13399,73 @@
                     "type": "integer",
                     "minimum": 10,
                     "maximum": 240
+                  },
+                  "format": {
+                    "default": "task",
+                    "type": "string",
+                    "enum": [
+                      "task",
+                      "form",
+                      "google_form",
+                      "microsoft_form"
+                    ]
+                  },
+                  "formUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 500,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "questions": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9_-]{1,24}$"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "short",
+                            "long",
+                            "choice"
+                          ]
+                        },
+                        "prompt": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 300
+                        },
+                        "options": {
+                          "minItems": 2,
+                          "maxItems": 6,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          }
+                        },
+                        "required": {
+                          "default": true,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "prompt"
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -13436,6 +13724,129 @@
         "security": []
       }
     },
+    "/student/assignments/{id}/responses": {
+      "post": {
+        "tags": [
+          "schools"
+        ],
+        "summary": "Answer a built-in form assignment (one response per student: sending again updates it)",
+        "operationId": "post_student_assignments_id_responses",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "answers": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9_-]{1,24}$"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  }
+                },
+                "required": [
+                  "answers"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teacher/classes/{id}/assignments/{itemId}/responses": {
+      "get": {
+        "tags": [
+          "schools"
+        ],
+        "summary": "Answers to a built-in form assignment, one row per student",
+        "operationId": "get_teacher_classes_id_assignments_itemId_responses",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
     "/student/weekly-report": {
       "get": {
         "tags": [
@@ -13469,6 +13880,247 @@
           }
         },
         "security": []
+      }
+    },
+    "/survey/questions": {
+      "get": {
+        "tags": [
+          "survey"
+        ],
+        "summary": "Validation survey questions (student and teacher versions)",
+        "operationId": "get_survey_questions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/survey": {
+      "post": {
+        "tags": [
+          "survey"
+        ],
+        "summary": "Submit one anonymous survey response (consent required; no personal data)",
+        "operationId": "post_survey",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/admin/survey": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Survey results: responses per version, counts per option, scale means, free text",
+        "operationId": "get_admin_survey",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Buy the Single plan (demo: no card is charged). Send an Idempotency-Key so retries are safe.",
+        "operationId": "post_billing_checkout",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "plan": {
+                    "type": "string",
+                    "enum": [
+                      "single",
+                      "school"
+                    ]
+                  },
+                  "billing": {
+                    "default": "yearly",
+                    "type": "string",
+                    "enum": [
+                      "monthly",
+                      "yearly"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 160,
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "who": {
+                    "default": "parent",
+                    "type": "string",
+                    "enum": [
+                      "parent",
+                      "student"
+                    ]
+                  },
+                  "studentName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "grade": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 12
+                  }
+                },
+                "required": [
+                  "plan",
+                  "name",
+                  "email",
+                  "grade"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Cancel a Single plan (keeps access until the renewal date)",
+        "operationId": "post_billing_cancel",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "orderId": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 40
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                },
+                "required": [
+                  "orderId",
+                  "email"
+                ]
+              }
+            }
+          }
+        }
       }
     },
     "/openapi.json": {

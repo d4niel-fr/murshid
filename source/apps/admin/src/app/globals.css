@@ -48,4 +48,12 @@
   .tint-danger { background: color-mix(in oklab, var(--danger) 11%, transparent); color: color-mix(in oklab, var(--danger) 80%, var(--text)); }
   .tint-info { background: color-mix(in oklab, var(--info) 11%, transparent); color: color-mix(in oklab, var(--info) 82%, var(--text)); }
   .tint-accent { background: var(--accent-soft); color: var(--accent); }
+  .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .seg { display: grid; gap: 8px; }
+  .seg-opt { position: relative; display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color 150ms, background-color 150ms; }
+  .seg-opt:hover { border-color: color-mix(in oklab, var(--text) 35%, var(--border)); }
+  .seg-opt:has(input:checked) { border-color: var(--deep); background: color-mix(in oklab, var(--brand-light) 7%, transparent); box-shadow: inset 0 0 0 1px var(--deep); }
+  .seg-opt:has(input:focus-visible) { outline: 2px solid var(--brand-light); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 }

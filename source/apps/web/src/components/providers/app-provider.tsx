@@ -80,6 +80,7 @@ export function AppProvider({ initialPrefs, children }: { initialPrefs: Prefs; c
       html.lang = next.locale;
       html.dir = next.locale === 'ar' ? 'rtl' : 'ltr';
       html.dataset.band = next.band;
+      html.dataset.textSize = next.textSize ?? 'md';
       html.classList.toggle('dark', next.theme === 'dark');
       return next;
     });

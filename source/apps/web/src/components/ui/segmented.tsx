@@ -20,7 +20,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o.value)}
-            className={cn('relative rounded-full font-medium transition-colors', size === 'sm' ? 'h-7 px-3 text-xs' : 'h-8 px-3.5 text-[13px]', active ? 'text-background' : 'text-muted-foreground hover:text-foreground')}
+            className={cn('relative rounded-full font-medium transition-colors', size === 'sm' ? 'h-7 px-3 text-xs' : 'h-8 px-3.5 text-[0.8125rem]', active ? 'text-background' : 'text-muted-foreground hover:text-foreground')}
           >
             {active && <motion.span layoutId={`seg-${id}`} transition={spring.layout} className="absolute inset-0 rounded-full bg-foreground" />}
             <span className="relative z-10 whitespace-nowrap">{o.label}</span>

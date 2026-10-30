@@ -3,10 +3,10 @@ import type { Locale } from '@/lib/i18n';
 
 /** Where each grade-bands NavId lives in this app (several catalog items share a page). */
 export const NAV_ROUTE: Record<NavId, string> = {
-  home: '/', today: '/planner', schoolwork: '/academics', activities: '/extracurriculars', goals: '/goals', badges: '/goals',
-  clubs: '/extracurriculars', competitions: '/opportunities', planner: '/planner', opportunities: '/opportunities',
-  subjects: '/academics', careers: '/opportunities', portfolio: '/profile', applications: '/opportunities?tab=applications',
-  university: '/opportunities?tab=applications', cv: '/profile', links: '/profile', chat: '/chat', settings: '/settings',
+  home: '/app', today: '/app/planner', schoolwork: '/app/academics', activities: '/app/extracurriculars', goals: '/app/goals', badges: '/app/goals',
+  clubs: '/app/extracurriculars', competitions: '/app/opportunities', planner: '/app/planner', opportunities: '/app/opportunities',
+  subjects: '/app/academics', careers: '/app/opportunities', portfolio: '/app/profile', applications: '/app/opportunities?tab=applications',
+  university: '/app/opportunities?tab=applications', cv: '/app/profile', links: '/app/profile', chat: '/app/chat', settings: '/app/settings',
 };
 
 export interface AppNavItem { key: string; href: string; icon: string; label: string; primary: boolean }
@@ -21,19 +21,24 @@ export function appNav(band: BandId, locale: Locale): AppNavItem[] {
     seen.add(href);
     out.push({ key: n.id, href, icon: n.icon, label: n.label[locale], primary: n.primary });
   }
-  const insights = { key: 'insights', href: '/insights', icon: 'ChartLine', label: locale === 'ar' ? 'الرؤى والرسوم' : 'Insights', primary: true };
+  const insights = { key: 'insights', href: '/app/insights', icon: 'ChartLine', label: locale === 'ar' ? 'الرؤى والرسوم' : 'Insights', primary: true };
   // School (licence, classes, work from teachers) sits right after Home
   const homeIdx = out.findIndex((i) => i.key === 'home');
-  out.splice(homeIdx >= 0 ? homeIdx + 1 : 0, 0, { key: 'school', href: '/school', icon: 'Building2', label: locale === 'ar' ? 'المدرسة' : 'School', primary: true });
+  out.splice(homeIdx >= 0 ? homeIdx + 1 : 0, 0, { key: 'school', href: '/app/school', icon: 'Building2', label: locale === 'ar' ? 'المدرسة' : 'School', primary: true });
   const chatIdx = out.findIndex((i) => i.key === 'chat');
   out.splice(chatIdx >= 0 ? chatIdx : out.length - 1, 0, insights);
+  // Study tools (flashcards, notes, focus timer) sit with the learning pages
+  const study = { key: 'study', href: '/app/study', icon: 'Layers', label: locale === 'ar' ? 'أدوات الدراسة' : 'Study', primary: true };
+  const learnIdx = out.findIndex((i) => i.key === 'schoolwork' || i.key === 'subjects');
+  out.splice(learnIdx >= 0 ? learnIdx + 1 : out.length, 0, study);
+  out.push({ key: 'saved', href: '/app/saved', icon: 'Bookmark', label: locale === 'ar' ? 'المحفوظات' : 'Saved', primary: false });
   // Profile & links is always reachable from Settings; surface it in nav when the band has no profile item.
   return out;
 }
 
 export function isActive(pathname: string, href: string): boolean {
   const path = href.split('?')[0]!;
-  if (path === '/') return pathname === '/';
+  if (path === '/' || path === '/app') return pathname === path;
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
@@ -41,7 +46,7 @@ export function isActive(pathname: string, href: string): boolean {
 export type NavSection = 'main' | 'learn' | 'grow';
 const SECTION: Record<string, NavSection> = {
   home: 'main', school: 'main', today: 'main', planner: 'main', chat: 'main',
-  schoolwork: 'learn', subjects: 'learn', insights: 'learn', goals: 'learn', badges: 'learn',
+  schoolwork: 'learn', subjects: 'learn', study: 'learn', insights: 'learn', goals: 'learn', badges: 'learn', saved: 'grow',
   activities: 'grow', clubs: 'grow', competitions: 'grow', opportunities: 'grow', careers: 'grow',
   applications: 'grow', university: 'grow', portfolio: 'grow', cv: 'grow', links: 'grow',
 };

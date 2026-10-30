@@ -23,7 +23,7 @@ describe('licensing: families vs institutions', () => {
     const r = await req('GET', '/plans');
     expect(r.status).toBe(200);
     expect(r.body.featured).toBe('school');
-    expect(r.body.families.map((p: any) => [p.id, p.priceAed])).toEqual([['family-plus', 29], ['family-pro', 79]]);
+    expect(r.body.families.map((p: any) => [p.id, p.priceAed])).toEqual([['single', 29]]);
     expect(r.body.schools[0]).toMatchObject({ id: 'school', per: 'student-year', rangeAed: [120, 180], featured: true });
   });
 
@@ -52,13 +52,13 @@ describe('licensing: families vs institutions', () => {
 
   it('onboards a parent, a student and a school student into separate tenants', async () => {
     const { req } = await setup();
-    const parent = await req('POST', '/onboarding', {}, { path: 'parent', parentName: 'Nadia Karim', email: 'nadia@example.com', childName: 'Sami Karim', childGrade: 8, plan: 'family-pro' });
+    const parent = await req('POST', '/onboarding', {}, { path: 'parent', parentName: 'Nadia Karim', email: 'nadia@example.com', childName: 'Sami Karim', childGrade: 8, plan: 'single' });
     expect(parent.status).toBe(201);
-    expect(parent.body.licence).toMatchObject({ type: 'family', boughtBy: 'parent', plan: 'family-pro' });
+    expect(parent.body.licence).toMatchObject({ type: 'family', boughtBy: 'parent', plan: 'single' });
     expect(parent.body.account).toMatchObject({ role: 'parent', studentIds: [parent.body.student.id] });
 
     const student = await req('POST', '/onboarding', {}, { path: 'student', name: 'Lea Haddad', email: 'lea@example.com', grade: 10 });
-    expect(student.body.licence).toMatchObject({ type: 'family', boughtBy: 'student', plan: 'family-plus' });
+    expect(student.body.licence).toMatchObject({ type: 'family', boughtBy: 'student', plan: 'single' });
     expect(student.body.org.id).not.toBe(parent.body.org.id);
 
     const school = await req('POST', '/onboarding', {}, { path: 'school', via: 'join_code', joinCode: 'dss-g11', name: 'New Student', email: 'new@example.com', grade: 11 });

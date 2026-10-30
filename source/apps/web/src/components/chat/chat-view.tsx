@@ -16,6 +16,7 @@ import { iconSwap, messageIn, pressable, spring, stagger, fadeUp } from '@/lib/m
 import { cn } from '@/lib/utils';
 import { RenderChartTool, ShowCvTool, ShowOpportunitiesTool, ShowPlanTool, ShowTasksTool } from './tool-uis';
 import { Workings } from '@/components/shared/workings';
+import { CompanionStage, CompanionToggles } from '@/components/mascot/companion';
 import type { WorkTrace } from '@/lib/types';
 import type { BuddyStatus, ChatProgress } from '@/lib/types';
 
@@ -170,7 +171,7 @@ const tools = { by_name: { render_chart: RenderChartTool, show_tasks: ShowTasksT
 function UserMessage() {
   return (
     <MessagePrimitive.Root className="flex justify-end">
-      <motion.div {...messageIn} className="max-w-[80%] rounded-[22px] rounded-ee-[8px] bg-[var(--deep)] px-4 py-2.5 text-[15px] text-white">
+      <motion.div {...messageIn} className="max-w-[80%] rounded-[22px] rounded-ee-[8px] bg-[var(--deep)] px-4 py-2.5 text-[0.9375rem] text-white">
         <MessagePrimitive.Parts components={{ Text: TextPart }} />
       </motion.div>
     </MessagePrimitive.Root>
@@ -247,7 +248,7 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
           rows={1}
           maxRows={8}
           placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')}
-          className="min-h-10 flex-1 resize-none self-center bg-transparent py-2 text-[15px] outline-none placeholder:text-muted-foreground"
+          className="min-h-10 flex-1 resize-none self-center bg-transparent py-2 text-[0.9375rem] outline-none placeholder:text-muted-foreground"
         />
         {dict.listening && <span className="mb-3.5 size-2 animate-pulse rounded-full bg-[var(--danger)]" aria-label="Listening" />}
         <div className="relative size-10 shrink-0">
@@ -295,7 +296,7 @@ export function PersonaToggle({ onSwitch }: { onSwitch?: () => void }) {
   const set = (p: 'tutor' | 'buddy') => { if (p === persona || (p === 'buddy' && blocked)) return; setPrefs({ chatPersona: p }); onSwitch?.(); };
   return (
     <div className="flex flex-col items-center gap-1">
-      <div role="radiogroup" aria-label={tx('Who answers', 'من يجيب')} className="inline-flex rounded-full bg-surface p-1 text-[13px]">
+      <div role="radiogroup" aria-label={tx('Who answers', 'من يجيب')} className="inline-flex rounded-full bg-surface p-1 text-[0.8125rem]">
         {(['tutor', 'buddy'] as const).map((p) => {
           const on = p === persona;
           const dis = p === 'buddy' && blocked;
@@ -323,7 +324,7 @@ function Chips({ runtime }: { runtime: AssistantRuntime }) {
     <motion.div initial="hidden" animate="show" variants={stagger} className="flex flex-wrap justify-center gap-2">
       {chips.map((c) => (
         <motion.button key={c} variants={fadeUp} {...pressable} onClick={() => runtime.thread.append(c)}
-          className="rounded-full bg-surface px-4 py-2 text-[13px] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">
+          className="rounded-full bg-surface px-4 py-2 text-[0.8125rem] text-foreground transition-colors hover:bg-[var(--deep)] hover:text-white">
           {c}
         </motion.button>
       ))}
@@ -348,7 +349,7 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
       try {
         runtime.thread.append(q);
         sentQ.current = true;
-        router.replace('/chat', { scroll: false });
+        router.replace('/app/chat', { scroll: false });
       } catch {
         if (tries++ < 40) setTimeout(send, 50);
       }
@@ -364,18 +365,23 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
       {count > 0 && (
         <div className="flex h-14 shrink-0 items-center justify-between px-4 md:px-8">
           <span className="flex items-center gap-2 text-sm font-medium"><MurshidMark className="size-6" /><span className="hidden sm:inline">{t('chat.title')}</span></span>
-          <PersonaToggle onSwitch={() => runtime.thread.reset()} />
+          <div className="flex items-center gap-2"><PersonaToggle onSwitch={() => runtime.thread.reset()} /><span className="hidden md:block"><CompanionToggles /></span></div>
           <Button variant="ghost" size="sm" onClick={() => runtime.thread.reset()}><SquarePen /><span className="hidden sm:inline">{t('chat.new')}</span><span className="sr-only sm:hidden">{t('chat.new')}</span></Button>
+        </div>
+      )}
+      {count > 0 && prefs.companion && (
+        <div className="no-print shrink-0 border-b border-border px-4 py-4 md:px-8">
+          <div className="mx-auto max-w-[760px]"><CompanionStage runtime={runtime} compact /></div>
         </div>
       )}
       {count === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-[12vh]">
           <motion.div initial="hidden" animate="show" variants={fadeUp} className="flex flex-col items-center gap-4 text-center">
-            <MurshidMark className="size-12" />
-            <h1 className="display text-[2rem] sm:text-[2.5rem]">{tx(`What should we work on, ${name}?`, `على ماذا نعمل اليوم يا ${name}؟`)}</h1>
-            <p className="text-sm text-muted-foreground">{prefs.chatPersona === 'buddy' ? tx('Your AI study buddy: pep talks, study plans and bad puns.', 'رفيق دراستك بالذكاء الاصطناعي: تشجيع وخطط دراسة ونكات.') : t('chat.sub')}</p>
+            {prefs.companion ? <CompanionStage runtime={runtime} /> : <MurshidMark className="size-12" />}
+            <h1 className={cn('display text-[2rem] sm:text-[2.5rem]', prefs.companion && 'sr-only')}>{tx(`What should we work on, ${name}?`, `على ماذا نعمل اليوم يا ${name}؟`)}</h1>
+            {!prefs.companion && <p className="text-sm text-muted-foreground">{prefs.chatPersona === 'buddy' ? tx('Your AI study buddy: pep talks, study plans and bad puns.', 'رفيق دراستك بالذكاء الاصطناعي: تشجيع وخطط دراسة ونكات.') : t('chat.sub')}</p>}
           </motion.div>
-          <PersonaToggle />
+          <div className="flex flex-wrap items-center justify-center gap-2"><PersonaToggle /><CompanionToggles /></div>
           <Composer runtime={runtime} docked={false} />
           <Chips runtime={runtime} />
         </div>

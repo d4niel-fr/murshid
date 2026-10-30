@@ -31,7 +31,7 @@ export interface Deps {
   now: () => Date;
 }
 
-export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps } };
+export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps; requestId: string } };
 export type Ctx = Context<AppEnv>;
 
 export function readConfig(env: Record<string, string | undefined>): Config {

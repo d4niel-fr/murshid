@@ -29,6 +29,10 @@ export class SchoolStore {
   readonly posted: WorkItem[] = [];
   /** automated follow-ups per posted item, per roster student (see automation.ts) */
   readonly automations: Record<string, Record<string, import('./automation').ReplanResult>> = {};
+  /** built-in form answers: assignment id -> roster student id -> response (one per student) */
+  readonly responses: Record<string, Record<string, import('./engine').FormResponse>> = {};
+  /** index: assignment id -> posted item (O(1) lookups instead of scanning every post) */
+  readonly postedById = new Map<string, WorkItem>();
   readonly microsoft: SchoolDirectoryConnector;
   private seq = 0;
 
@@ -73,7 +77,7 @@ export class SchoolStore {
 
   rosterByApp(appId: string): RosterStudent | undefined { return this.roster.find((r) => r.appId === appId); }
 
-  createFamily(name: string, boughtBy: 'parent' | 'student', plan: 'family-plus' | 'family-pro', today: string): Org {
+  createFamily(name: string, boughtBy: 'parent' | 'student', plan: 'single', today: string): Org {
     const org = familyOrg(this.nextId('fam'), name, boughtBy, plan, today);
     this.orgs.push(org);
     return org;

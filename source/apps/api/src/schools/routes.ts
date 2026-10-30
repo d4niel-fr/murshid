@@ -28,8 +28,8 @@ import { replanForPost } from './automation';
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
 export const SchoolSchemas = {
   Onboarding: z.union([
-    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['family-plus', 'family-pro']).default('family-plus') }),
-    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12), plan: z.enum(['family-plus', 'family-pro']).default('family-plus') }),
+    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
+    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
     z.object({ path: z.literal('school'), via: z.literal('microsoft'), code: z.string().min(4).max(120) }),
     z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12) }),
   ]),
@@ -42,7 +42,29 @@ export const SchoolSchemas = {
     title: z.string().trim().min(3).max(140), instructions: z.string().max(1000).nullable().default(null),
     setDate: isoDate.optional(), dueDate: isoDate, dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('08:00'),
     minutes: z.number().int().min(10).max(240).optional(),
+    format: z.enum(['task', 'form', 'google_form', 'microsoft_form']).default('task'),
+    formUrl: z.string().trim().url().max(500).nullable().optional(),
+    questions: z.array(z.object({
+      id: z.string().regex(/^[a-z0-9_-]{1,24}$/i), type: z.enum(['short', 'long', 'choice']), prompt: z.string().trim().min(2).max(300),
+      options: z.array(z.string().trim().min(1).max(120)).min(2).max(6).optional(), required: z.boolean().default(true),
+    })).max(20).optional(),
+  }).superRefine((b, ctx) => {
+    const url = b.formUrl ?? '';
+    if (b.format === 'google_form' && !FORM_HOSTS.google.test(url)) ctx.addIssue({ code: 'custom', path: ['formUrl'], message: 'Paste a Google Forms link (docs.google.com/forms/… or forms.gle/…)' });
+    if (b.format === 'microsoft_form' && !FORM_HOSTS.microsoft.test(url)) ctx.addIssue({ code: 'custom', path: ['formUrl'], message: 'Paste a Microsoft Forms link (forms.office.com/… or forms.microsoft.com/…)' });
+    if (b.format === 'form') {
+      if (!b.questions?.length) ctx.addIssue({ code: 'custom', path: ['questions'], message: 'Add at least one question' });
+      b.questions?.forEach((q, i) => { if (q.type === 'choice' && !q.options) ctx.addIssue({ code: 'custom', path: ['questions', i, 'options'], message: 'A choice question needs 2 to 6 options' }); });
+      if (new Set(b.questions?.map((q) => q.id)).size !== (b.questions?.length ?? 0)) ctx.addIssue({ code: 'custom', path: ['questions'], message: 'Question ids must be unique' });
+    }
   }),
+  Respond: z.object({ answers: z.record(z.string().regex(/^[a-z0-9_-]{1,24}$/i), z.string().max(4000)) }),
+};
+
+/** Only real form hosts are accepted for linked forms. */
+export const FORM_HOSTS = {
+  google: /^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)/,
+  microsoft: /^https:\/\/(forms\.office\.com\/|forms\.microsoft\.com\/|forms\.cloud\.microsoft\/)/,
 };
 
 type Staff = { role: 'teacher'; teacher: Teacher; orgId: string; actor: string } | { role: 'school_admin'; orgId: string; actor: string };
@@ -186,8 +208,9 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const school = schools.school(s.orgId);
       const members = (schools.members[st.id] ?? []).map((id) => school.roster.find((r) => r.id === id)!);
       const items = streamItems(school, st, day).filter((it) => it.setDate <= day || it.posted).reverse().map((it) => {
-        const subs = members.map((m) => submission(m, it, day).status);
-        return { ...it, setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, students: members.length };
+        const answered = schools.responses[it.id] ?? {};
+        const subs = members.map((m) => (answered[m.id] ? 'submitted' : submission(m, it, day).status));
+        return { ...it, format: it.format ?? 'task', setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, responses: Object.keys(answered).length, students: members.length };
       });
       return c.json({ class: classCard(st), items });
     });
@@ -202,8 +225,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const item: WorkItem = {
         id: schools.nextId(`${st.id}-post`), streamId: st.id, subject: st.subject, teacherId: st.teacherId, title: b.title, instructions: b.instructions,
         setDate, dueDate: b.dueDate, dueTime: b.dueTime, minutes: b.minutes ?? st.minutes, source: 'portal', posted: true, createdAt: now.toISOString(),
+        format: b.format, formUrl: b.format === 'google_form' || b.format === 'microsoft_form' ? b.formUrl ?? null : null,
+        questions: b.format === 'form' ? b.questions!.map((q) => ({ ...q, options: q.type === 'choice' ? q.options : undefined })) : undefined,
       };
-      schools.posted.push(item);
+      schools.posted.push(item); schools.postedById.set(item.id, item);
+      const how = b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '';
       const delivered: { studentId: string; appId: string; taskId: string }[] = [];
       for (const rid of schools.members[st.id] ?? []) {
         const r = schools.roster.find((x) => x.id === rid);
@@ -214,7 +240,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         rec.customTasks.push({
           id: taskId, title: `${SUBJECT_NAMES[st.subject]}: ${b.title} (due ${shortDay(b.dueDate)})`, kind: 'assignment', date: setDate, time: '16:30',
           durationMinutes: item.minutes, status: 'todo', overdue: false, subjectId: subj?.id ?? null, area: subj?.id ?? null, source: 'admin',
-          notes: `Set by ${teacher.name} in Murshid for Schools${b.instructions ? ` \u00b7 ${b.instructions}` : ''}`,
+          notes: `Set by ${teacher.name} in Murshid for Schools${b.instructions ? ` \u00b7 ${b.instructions}` : ''}${how}`,
         });
         delivered.push({ studentId: r.id, appId: r.appId, taskId });
         store.audit({ actor: s.actor, actorRole: 'admin', studentId: r.appId, action: 'create', resource: 'task', resourceId: taskId, summary: `${teacher.name} set "${b.title}" for ${st.name}`, at: now.toISOString() });
@@ -332,8 +358,48 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const classes = school.streams.filter((st) => schools.members[st.id]?.includes(r.id)).map(classCard);
       const assignments = w.items.filter((x) => x.sub.status === 'pending' || x.sub.status === 'missing' || (x.item.posted && x.sub.status !== 'not_set'))
         .sort((a, b) => Number(b.item.posted) - Number(a.item.posted) || a.item.dueDate.localeCompare(b.item.dueDate))
-        .map((x) => ({ id: x.item.id, title: x.item.title, subject: x.subjectName, teacher: x.teacherName, setDate: x.item.setDate, dueDate: x.item.dueDate, dueLabel: shortDay(x.item.dueDate), minutes: x.item.minutes, status: x.sub.status, source: x.item.source, posted: x.item.posted, instructions: x.item.instructions, trace: schools.automations[x.item.id]?.[r.id]?.trace ?? null }));
+        .map((x) => {
+          const mine = schools.responses[x.item.id]?.[r.id];
+          return { id: x.item.id, title: x.item.title, subject: x.subjectName, teacher: x.teacherName, setDate: x.item.setDate, dueDate: x.item.dueDate, dueLabel: shortDay(x.item.dueDate), minutes: x.item.minutes, status: mine ? 'submitted' : x.sub.status, source: x.item.source, posted: x.item.posted, instructions: x.item.instructions,
+            format: x.item.format ?? 'task', formUrl: x.item.formUrl ?? null, questions: x.item.questions ?? null, response: mine ?? null, trace: schools.automations[x.item.id]?.[r.id]?.trace ?? null };
+        });
       return c.json({ ...base, today: day, family: null, school: { org: orgCard(org.id), section: r.section, classes, assignments, weeklyReport: weeklyReport(school, r, day, nowMinutes(v.now)) } });
+    });
+
+  // ---------- built-in forms ----------
+  api.route({ method: 'post', path: '/student/assignments/:id/responses', tag: 'schools', auth: 'custom', body: SchoolSchemas.Respond, summary: 'Answer a built-in form assignment (one response per student: sending again updates it)' },
+    async (c, { body }) => {
+      const v = await view(c);
+      const r = schools.rosterByApp(v.profile.id);
+      if (!r) throw new HTTPException(404, { message: 'form assignments come with a school licence' });
+      const item = schools.postedById.get(c.req.param('id')!);
+      if (!item || !(schools.members[item.streamId] ?? []).includes(r.id)) throw new HTTPException(404, { message: 'assignment not found' });
+      if (item.format !== 'form' || !item.questions) throw new HTTPException(400, { message: 'this assignment is not a Murshid form', cause: { code: 'not_a_form' } });
+      const answers = (body as z.output<typeof SchoolSchemas.Respond>).answers;
+      const known = new Set(item.questions.map((q) => q.id));
+      const clean: Record<string, string> = {};
+      for (const [k, val] of Object.entries(answers)) if (known.has(k)) clean[k] = val.trim();
+      const missing = item.questions.filter((q) => q.required && !clean[q.id]).map((q) => q.id);
+      if (missing.length) throw new HTTPException(400, { message: 'answer every required question', cause: missing.map((id) => ({ path: `answers.${id}`, message: 'required' })) });
+      const bad = item.questions.filter((q) => q.type === 'choice' && clean[q.id] && !q.options!.includes(clean[q.id]!)).map((q) => q.id);
+      if (bad.length) throw new HTTPException(400, { message: 'pick one of the listed options', cause: bad.map((id) => ({ path: `answers.${id}`, message: 'not an option' })) });
+      const at = v.now.toISOString();
+      const prev = (schools.responses[item.id] ??= {})[r.id];
+      schools.responses[item.id]![r.id] = { answers: clean, submittedAt: prev?.submittedAt ?? at, updatedAt: at };
+      store.audit({ actor: v.profile.id, actorRole: 'student', studentId: v.profile.id, action: prev ? 'update' : 'create', resource: 'assignment_response', resourceId: item.id, summary: `${prev ? 'Updated' : 'Submitted'} the form "${item.title}"`, at });
+      return c.json({ assignmentId: item.id, status: 'submitted', updated: Boolean(prev), response: schools.responses[item.id]![r.id] }, prev ? 200 : 201);
+    });
+
+  api.route({ method: 'get', path: '/teacher/classes/:id/assignments/:itemId/responses', tag: 'schools', auth: 'custom', summary: 'Answers to a built-in form assignment, one row per student' },
+    async (c) => {
+      const s = await staff(c); const st = classOf(s, c.req.param('id')!);
+      const item = schools.postedById.get(c.req.param('itemId')!);
+      if (!item || item.streamId !== st.id) throw new HTTPException(404, { message: 'assignment not found' });
+      const school = schools.school(s.orgId);
+      const answered = schools.responses[item.id] ?? {};
+      const rows = (schools.members[st.id] ?? []).map((id) => school.roster.find((x) => x.id === id)!).filter(Boolean)
+        .map((m) => ({ studentId: m.id, name: m.name, section: m.section, response: answered[m.id] ?? null }));
+      return c.json({ assignment: { id: item.id, title: item.title, format: item.format ?? 'task', questions: item.questions ?? [] }, responded: rows.filter((x) => x.response).length, students: rows.length, rows });
     });
 
   api.route({ method: 'get', path: '/student/weekly-report', tag: 'schools', auth: 'custom', summary: "The student's automatic weekly report (submitted Fri 16:00 to their teachers)" },

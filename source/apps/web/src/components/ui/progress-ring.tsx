@@ -22,10 +22,10 @@ export function ProgressRing({ value, size = 88, stroke = 9, color = 'var(--char
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <NumberTicker value={Math.round(value)} suffix="%" locale={locale} className="text-[18px] font-medium tracking-[-0.03em]" />
+          <NumberTicker value={Math.round(value)} suffix="%" locale={locale} className="text-[1.125rem] font-medium tracking-[-0.03em]" />
         </div>
       </div>
-      {label && <span className="text-[13px] text-muted-foreground">{label}</span>}
+      {label && <span className="text-[0.8125rem] text-muted-foreground">{label}</span>}
     </div>
   );
 }

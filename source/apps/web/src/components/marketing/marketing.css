@@ -8,16 +8,16 @@
  */
 
 html:has(.mk) {
-  font-size: 16px;
+  font-size: calc(16px * var(--ts, 1));
   --g: 2.5rem;            /* section side padding (sm and up) */
   --mk-inset: 0.75rem;    /* the white frame around the rounded blocks */
   scrollbar-gutter: auto;
   background: var(--bg);
 }
-@media (max-width: 1920px) { html:has(.mk) { font-size: 0.833333vw; } }
-@media (max-width: 1440px) { html:has(.mk) { font-size: 1.111111vw; } }
-@media (max-width: 1024px) { html:has(.mk) { font-size: 1.5625vw; } }
-@media (max-width: 640px)  { html:has(.mk) { font-size: 4.444444vw; --g: 1.5rem; --mk-inset: 0.5rem; } }
+@media (max-width: 1920px) { html:has(.mk) { font-size: calc(0.833333vw * var(--ts, 1)); } }
+@media (max-width: 1440px) { html:has(.mk) { font-size: calc(1.111111vw * var(--ts, 1)); } }
+@media (max-width: 1024px) { html:has(.mk) { font-size: calc(1.5625vw * var(--ts, 1)); } }
+@media (max-width: 640px)  { html:has(.mk) { font-size: calc(4.444444vw * var(--ts, 1)); --g: 1.5rem; --mk-inset: 0.5rem; } }
 
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }

@@ -9,5 +9,5 @@ export const ADMIN_DEMO_URL = `${ADMIN_URL}/login?demo=admin`;
 export function openStudent() {
   const prefs = { ...DEFAULT_PREFS, band: 'g11-12' as const, sidebar: 'expanded' as const, persona: 'demo-ideal', showWorkings: true };
   document.cookie = `${PREFS_COOKIE}=${serializePrefs(prefs)}; path=/; max-age=31536000; samesite=lax`;
-  window.location.href = '/';
+  window.location.href = '/app';
 }

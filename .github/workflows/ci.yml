@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build, links
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: source/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: source/.nvmrc
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Start the API and the website
+        run: |
+          (cd apps/api && pnpm start > ../../api.log 2>&1 &)
+          (cd apps/web && npx next start -p 3000 > ../../web.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf -o /dev/null localhost:8787/health && curl -sf -o /dev/null localhost:3000/ && exit 0; sleep 1; done
+          cat api.log web.log; exit 1
+      - name: Check for broken links and 404s
+        run: node scripts/check-links.mjs http://localhost:3000

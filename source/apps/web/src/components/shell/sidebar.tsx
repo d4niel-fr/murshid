@@ -21,7 +21,7 @@ function useActive() {
     const [path, query] = item.href.split('?');
     if (!isActive(pathname, path!)) return false;
     const want = query ? new URLSearchParams(query).get('tab') : null;
-    return want ? tab === want : tab !== 'applications' || path !== '/opportunities';
+    return want ? tab === want : tab !== 'applications' || path !== '/app/opportunities';
   };
 }
 
@@ -46,7 +46,7 @@ export function NavList({ labels, onNavigate, layoutId = 'nav-active', tooltips 
         onClick={onNavigate}
         aria-current={on ? 'page' : undefined}
         className={cn(
-          'group/nav relative flex h-10 items-center gap-3 rounded-full px-3.5 text-[14px] outline-none transition-colors',
+          'group/nav relative flex h-10 items-center gap-3 rounded-full px-3.5 text-[0.875rem] outline-none transition-colors',
           on ? 'font-medium text-[var(--deep)]' : 'text-white/70 hover:bg-white/[0.08] hover:text-white',
         )}
       >
@@ -70,7 +70,7 @@ export function NavList({ labels, onNavigate, layoutId = 'nav-active', tooltips 
           <Fragment key={sec}>
             {gi > 0 && (
               <>
-                {label && <p className={cn('px-3.5 pb-2 pt-6 text-[10.5px] font-medium uppercase tracking-[0.2em] text-white/60 rtl:tracking-normal', responsive && 'nav-section')}>{label[locale]}</p>}
+                {label && <p className={cn('px-3.5 pb-2 pt-6 text-[0.6562rem] font-medium uppercase tracking-[0.2em] text-white/60 rtl:tracking-normal', responsive && 'nav-section')}>{label[locale]}</p>}
                 {responsive && <div className="nav-divider mx-3 my-3 h-px bg-white/15" aria-hidden />}
               </>
             )}
@@ -101,13 +101,13 @@ export function Sidebar({ overlayOpen, setOverlayOpen }: { overlayOpen: boolean;
     <aside className="sidebar on-deep fixed inset-y-0 start-0 z-40 hidden flex-col px-3 pb-3 pt-5 transition-[width,box-shadow] duration-200 ease-[cubic-bezier(.22,1,.36,1)] lg:flex">
       <div className="mb-6 flex h-10 items-center gap-2.5 px-2.5">
         <MurshidMark tone="light" className="size-8 shrink-0" />
-        <span className="nav-label text-[15px] font-medium uppercase tracking-[0.2em]">{t('app.name')}</span>
+        <span className="nav-label text-[0.9375rem] font-medium uppercase tracking-[0.2em]">{t('app.name')}</span>
       </div>
       <NavList labels="responsive" tooltips={rail} onNavigate={() => setOverlayOpen(false)} />
       <div className="mt-3 flex items-center gap-2.5 border-t border-white/15 px-1 pt-3">
-        <span className="nav-avatar size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-light)] text-[12px] font-medium text-white">{s.firstName[0]}{s.lastName[0]}</span>
+        <span className="nav-avatar size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-light)] text-[0.75rem] font-medium text-white">{s.firstName[0]}{s.lastName[0]}</span>
         <div className="nav-label min-w-0 flex-1 leading-tight">
-          <p className="truncate text-[13px] font-medium">{locale === 'ar' ? s.nameAr : `${s.firstName} ${s.lastName}`}</p>
+          <p className="truncate text-[0.8125rem] font-medium">{locale === 'ar' ? s.nameAr : `${s.firstName} ${s.lastName}`}</p>
           <p className="truncate text-xs text-white/60">{s.classLabel}</p>
         </div>
         <button onClick={toggle} aria-label={collapsedLabel} className="nav-toggle mx-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full text-white/60 transition-colors hover:bg-white/[0.1] hover:text-white">

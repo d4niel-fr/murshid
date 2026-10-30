@@ -269,24 +269,3 @@ export function WeeklyReports({ w, week, onWeek }: { w: any; week: 'current' | '
     </div>
   );
 }
-
-export function AssignmentsList({ items }: { items: any[] }) {
-  return (
-    <Card pad={false} title="Assignments">
-      <table className="tbl min-w-[760px]">
-        <thead><tr><th>Assignment</th><th>Set</th><th>Due</th><th>Source</th><th>Handed in</th></tr></thead>
-        <tbody>
-          {items.slice(0, 14).map((a) => (
-            <tr key={a.id} className={a.posted ? 'bg-[color-mix(in_oklab,var(--success)_7%,transparent)]' : ''}>
-              <td><span className="font-medium">{a.title}</span>{a.posted && <Badge tone="success" className="ml-2">New</Badge>}{a.instructions && <div className="text-xs text-[var(--text-muted)]">{a.instructions}</div>}</td>
-              <td className="whitespace-nowrap">{a.setLabel}</td>
-              <td className="whitespace-nowrap">{a.dueLabel}</td>
-              <td>{a.source === 'teams' ? <Badge tone="info">Teams</Badge> : <Badge>Murshid portal</Badge>}</td>
-              <td className="w-40"><div className="flex items-center gap-2"><Bar value={a.handedIn} max={a.students} /><span className="whitespace-nowrap text-xs tabular-nums">{a.handedIn}/{a.students}</span></div>{a.missing > 0 && <div className="text-[11px] text-[var(--danger)]">{a.missing} missing</div>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
-  );
-}

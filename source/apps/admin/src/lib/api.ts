@@ -3,8 +3,11 @@ export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBL
 const ADMIN_USER = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_ADMIN_USER) || 'dev-admin';
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public details?: unknown) { super(message); }
+  constructor(message: string, public status: number, public details?: unknown, public code?: string) { super(message); }
 }
+
+/** A fresh key for one logical write: retries of the same click reuse it, so the API never acts twice. */
+export const newIdempotencyKey = (prefix = 'adm') => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`}`;
 
 /** Staff session from "Sign in with Microsoft" (dev headers in the demo; a real Murshid session in production). */
 export interface StaffSession { role: 'teacher' | 'school_admin' | 'student'; name: string; email: string; orgId: string; orgName: string; headers: Record<string, string> }
@@ -38,28 +41,37 @@ export async function checkAdminPasscode(code: string): Promise<boolean> {
   } catch { return false; }
 }
 
-export async function api<T = any>(path: string, init: { method?: string; body?: unknown; as?: 'admin' | 'staff' | 'public' } = {}): Promise<T> {
+export async function api<T = any>(path: string, init: { method?: string; body?: unknown; as?: 'admin' | 'staff' | 'public'; headers?: Record<string, string>; timeoutMs?: number } = {}): Promise<T> {
   let res: Response;
   const auth: Record<string, string> = init.as === 'public' ? {}
     : init.as === 'staff' ? (getSession()?.headers ?? { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER })
     : { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), init.timeoutMs ?? 15_000);
   try {
     res = await fetch(`${API_BASE}${path}`, {
       method: init.method ?? 'GET',
-      headers: { 'content-type': 'application/json', ...auth, ...(init.as !== 'public' && getAdminPasscode() ? { 'x-admin-passcode': getAdminPasscode()! } : {}) },
+      headers: { 'content-type': 'application/json', ...auth, ...(init.as !== 'public' && getAdminPasscode() ? { 'x-admin-passcode': getAdminPasscode()! } : {}), ...init.headers },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       cache: 'no-store',
+      signal: ctrl.signal,
     });
-  } catch {
-    throw new ApiError(`Can't reach the Murshid API at ${API_BASE}. Start it with: cd apps/api && pnpm start`, 0);
-  }
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw new ApiError('The Murshid API took too long to answer. Please try again.', 0, undefined, 'timeout');
+    throw new ApiError(`Can't reach the Murshid API at ${API_BASE}. Start it with: cd apps/api && pnpm start`, 0, undefined, 'offline');
+  } finally { clearTimeout(timer); }
   const text = await res.text();
-  const body = text ? JSON.parse(text) : null;
+  let body: any = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = { error: text.slice(0, 200) }; }
+  if (res.status === 429) {
+    const wait = Number(res.headers.get('retry-after')) || body?.retryAfter || 30;
+    throw new ApiError(`Too many requests. Wait ${wait} second${wait === 1 ? '' : 's'} and try again.`, 429, undefined, 'rate_limited');
+  }
   if (res.status === 401 && body?.code === 'admin_passcode' && typeof window !== 'undefined') {
     setAdminPasscode(null);
     throw new ApiError('Admin passcode required: sign in again as school admin with the passcode.', 401);
   }
-  if (!res.ok) throw new ApiError(body?.error ?? `HTTP ${res.status}`, res.status, body?.details);
+  if (!res.ok) throw new ApiError(body?.error ?? `HTTP ${res.status}`, res.status, body?.details, body?.code);
   return body as T;
 }
 
