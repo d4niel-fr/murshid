@@ -138,7 +138,7 @@ Under 768 (phone, later): single column; not designed in v1.
 
 Header (not a card): eyebrow date (`text-2xs` muted, uppercase in Latin only) → H1 "Good afternoon, {firstName}" → one-line muted summary from `highlights[0]` ("Two things today. You're ahead on Physics.").
 
-Bento grid, 12 columns desktop, `stagger` parent + `fadeUp` children (first 8 staggered). Widget list and order come from `BANDS[band].dashboardWidgets`; slots below are the default (g9-10):
+Bento grid, 12 columns desktop, `stagger` parent + `fadeUp` children (the grid fades in as one, no cascade). Widget list and order come from `BANDS[band].dashboardWidgets`; slots below are the default (g9-10):
 
 | Row | Desktop span | iPad span | Widget id | Content |
 |---|---|---|---|---|
@@ -151,7 +151,7 @@ Bento grid, 12 columns desktop, `stagger` parent + `fadeUp` children (first 8 st
 | rail | rail | 6 | `cv` / `social-links` | "Profile & CV": "3 of 5 links connected", linear progress (4px, accent), logo chips for LinkedIn/GitHub/Instagram/Portfolio (gray until connected, then ink), primary button "Finish profile". |
 | opt | 6 | 6 | `opportunities` / `applications` / `badges` / `goals` | Band-dependent cards; same card anatomy. |
 
-**Card anatomy:** `rounded-[var(--radius-lg)] bg-surface border shadow-soft p-6` → eyebrow (`text-2xs` muted) + optional end-aligned action (ghost icon button / "See all" link) → body. Clickable cards use `cardHover` (y −2px + shadow-1 → shadow-2 via CSS `transition: box-shadow 200ms`). Non-clickable cards don't lift.
+**Card anatomy:** `rounded-[var(--radius-lg)] bg-surface border shadow-soft p-6` → eyebrow (`text-2xs` muted) + optional end-aligned action (ghost icon button / "See all" link) → body. Clickable cards use `cardHover` (a slight press) and `.lift` (a background tint on hover, 150ms). Cards never lift on hover.
 
 **Empty states:** muted line + one small primary action, never illustrations larger than 96px. **Loading:** shadcn `Skeleton` with `bg-surface-2`, same geometry as content; no shimmer sweep on more than one card at a time.
 
@@ -203,7 +203,7 @@ Use `ChartContainer`/`ChartTooltipContent` from shadcn chart and constants `char
 - **Radial:** `RadialBar` `cornerRadius 999`, background track `--surface-2`, inner 72%. Value centred in `text-3xl` tabular.
 - **Pie:** donut only (inner 62%), `paddingAngle 2`, `cornerRadius 6`, max 5 slices (+ "Other" in `--chart-6`).
 - Tooltip: `--surface`, 1px border, `--radius`, `--shadow-2`, label muted, values tabular. No tooltip animation (`isAnimationActive={false}` on Tooltip).
-- **Animated entry:** spread `chartAnimation` (700ms ease-out, begin 80ms) on series. Animate once on mount; when the range toggle changes, let Recharts tween (it interpolates data). Disable animation when `prefers-reduced-motion` (`isAnimationActive={!reduced}` via Motion's `useReducedMotion()`).
+- **No draw-in:** spread `chartAnimation` (animation off). People read these charts often, so they do not redraw from zero on every visit.
 - RTL: time keeps flowing left→right in both locales (matches UAE maths/science textbooks); do **not** set `reversed` on XAxis. Mirror only card chrome (title, legend, toggle positions). In RTL the Y axis moves to the right (`orientation="right"`).
 
 ---
@@ -218,27 +218,31 @@ Presets in `packages/design/motion.ts` (plain objects for `motion/react`):
 | `spring.gentle` | stiffness 210, damping 26 | Cards, panels, sheets, messages |
 | `spring.fill` | stiffness 70, damping 20 | Rings, progress bars |
 | `spring.layout` | stiffness 380, damping 36 | `layoutId` moves (nav pill, composer, toggle indicator) |
-| `fadeUp` | opacity 0→1, y 8→0 | Block entry |
-| `stagger` | 45ms children, 40ms delay | Bento grid, lists ≤ 8 |
-| `pressable` | hover y −1, tap scale 0.97 | Any button-like element |
+| `fadeUp` | opacity 0→1, 150ms ease-out, no slide | Block entry |
+| `stagger` | no per-item delay (the group fades as one) | Bento grid, lists |
+| `pressable` | tap scale 0.97, no hover lift | Any button-like element |
 | `cardHover`, `iconSwap`, `messageIn`, `overlay`, `chartAnimation`, `bandMotion` | see file | Specs above |
 
-Guidelines:
+Guidelines (after Emil Kowalski's design engineering rules):
 - Wrap app once: `<MotionConfig reducedMotion="user" transition={spring.gentle}>`.
-- Durations: micro 120–180ms, standard 280ms, large surfaces ≤ 480ms. Nothing over 700ms except chart draw.
-- Page transitions: content area only, `fadeUp` with y 8 (no slide of whole shell, sidebar never animates on route change).
+- **Ask how often it is seen.** Product screens open many times a day: no route transitions, no word-by-word titles, no hover lifts, no count-ups or fills on mount (numbers, rings and bars animate only when the value changes). Keyboard-opened UI (search, the shortcuts sheet) opens instantly (`DialogContent instant`).
+- **Easing:** CSS tokens `--ease-out` `cubic-bezier(0.23, 1, 0.32, 1)` for entering/exiting and presses, `--ease-in-out` for on-screen movement, plain `ease` for hover colour. Never `ease-in`. List exact properties; never `transition: all`.
+- **Durations:** press feedback 150ms, small UI 150–250ms, nothing in the product over 300ms. Buttons scale to 0.97 on `:active`. Never animate from `scale(0)`; start at 0.9 or more with opacity.
+- **Hover** only behind `@media (hover: hover) and (pointer: fine)` (Tailwind's `hover:` already is), so a tap on a phone never leaves a hover stuck on.
+- **Marketing pages** may reveal on scroll, softly: at most 16px of rise, scale no lower than 0.97, delay capped at 240ms, text revealed as a block, never word by word.
 - Celebration (task complete streak milestones): g5-6 and g7-8 only (`bandMotion[band].celebrate`) — Magic UI `Confetti`, max 1 burst, 80 particles, ≤1.2s. g9-12: a soft accent pulse on the streak numeral instead.
-- Loops allowed only for "thinking" shimmer and the recording dot on mic.
+- Loops allowed only while something is happening: the "thinking" dots, loading skeletons, spinners, the recording dot, and Nour while listening, thinking or talking. Nothing loops at rest (no pulsing status dots, no idle float).
 
 ### Performance rules (60fps on iPad)
 1. Animate **transform and opacity only.** Height changes via `layout` (FLIP) or `grid-template-rows: 0fr→1fr`; never animate `height`, `width`, `top`, `box-shadow` in JS. Shadow change on hover = CSS transition on one element at a time.
 2. **No `backdrop-filter` on anything that scrolls or sits over scrolling content** (lists, chat viewport, sticky composer). Overlays use solid `rgb(28 26 23 / 0.32)` scrim. Max one blurred element on screen, never animated.
 3. No `filter: blur()` entry animations (rules out Magic UI BlurFade, Aceternity blur reveals).
-4. Stagger ≤ 8 items; lists longer than ~30 rows are virtualised and do not animate entry.
+4. No stagger in the product; lists longer than ~30 rows are virtualised and do not animate entry.
 5. `will-change: transform` only during an animation (Motion does this); never in static CSS.
 6. Recharts: `ResponsiveContainer` debounce 100ms; ≤ 3 charts animating at once; dashboard charts ≤ 60 points.
 7. Inline SVG rings over canvas; no Lottie in v1.
-8. `prefers-reduced-motion`: Motion drops transforms (keeps opacity); bridge.css zeroes CSS animations; charts `isAnimationActive=false`; NumberTicker renders final value.
+8. `prefers-reduced-motion`: Motion drops transforms (keeps opacity); bridge.css zeroes CSS animations; NumberTicker renders the final value.
+9. Phones: inputs are at least 16px on touch screens (no iOS zoom), no tap highlight, `touch-action: manipulation` on controls.
 
 ---
 
