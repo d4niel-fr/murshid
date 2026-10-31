@@ -1,0 +1,17 @@
+node_modules
+dist
+.next
+.expo
+.vercel
+.turbo
+coverage
+*.log
+.DS_Store
+
+# secrets stay out of the repository (use .env.example as the template)
+.env*
+!.env.example
+
+# reports written by apps/api/scripts (sim.ts, eval-buddy.ts)
+docs/simulations/
+docs/evaluations/
