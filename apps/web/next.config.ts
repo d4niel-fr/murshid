@@ -1,8 +1,26 @@
 import type { NextConfig } from 'next';
 
+// One Vercel project serves all three apps on one domain (root vercel.json): this app at /, the teacher portal at
+// /admin, the API at /api. Locally (`pnpm dev`, no Vercel) the same paths are proxied to the other dev servers.
+const onVercel = Boolean(process.env.VERCEL);
+const API_DEV = process.env.MURSHID_API_DEV_ORIGIN ?? 'http://localhost:8787';
+const ADMIN_DEV = process.env.MURSHID_ADMIN_DEV_ORIGIN ?? 'http://localhost:3001';
+// canonical URLs: an explicit NEXT_PUBLIC_SITE_URL, else the project's production domain on Vercel
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '');
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@murshid/design', '@murshid/grade-bands', '@murshid/survey'],
+  ...(siteUrl ? { env: { NEXT_PUBLIC_SITE_URL: siteUrl } } : {}),
+  async rewrites() {
+    if (onVercel) return []; // Vercel routes /api and /admin to their own services before this app sees them
+    return [
+      { source: '/api', destination: `${API_DEV}/` },
+      { source: '/api/:path*', destination: `${API_DEV}/:path*` },
+      { source: '/admin', destination: `${ADMIN_DEV}/admin` },
+      { source: '/admin/:path*', destination: `${ADMIN_DEV}/admin/:path*` },
+    ];
+  },
   // Workspace packages use NodeNext-style `./x.js` specifiers for `.ts` files. Turbopack (Next 16) cannot alias
   // extensions yet, so the app builds with webpack (`next build --webpack`) and this alias.
   webpack: (config) => {

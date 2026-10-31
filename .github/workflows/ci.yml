@@ -25,11 +25,13 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - name: Start the API and the website
+      # same paths as on Vercel: the website at /, the portal at /admin and the API at /api (proxied by next.config)
+      - name: Start the API, the website and the portal
         run: |
           (cd apps/api && pnpm start > ../../api.log 2>&1 &)
           (cd apps/web && npx next start -p 3000 > ../../web.log 2>&1 &)
-          for i in $(seq 1 60); do curl -sf -o /dev/null localhost:8787/health && curl -sf -o /dev/null localhost:3000/ && exit 0; sleep 1; done
-          cat api.log web.log; exit 1
+          (cd apps/admin && npx next start -p 3001 > ../../admin.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf -o /dev/null localhost:8787/health && curl -sf -o /dev/null localhost:3000/ && curl -sf -o /dev/null localhost:3000/api/health && curl -sf -o /dev/null localhost:3000/admin/login && exit 0; sleep 1; done
+          cat api.log web.log admin.log; exit 1
       - name: Check for broken links and 404s
         run: node scripts/check-links.mjs http://localhost:3000

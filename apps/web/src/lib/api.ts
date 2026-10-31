@@ -13,7 +13,8 @@ import type { BuddyStatus, ChartRange, ChartType, ChatAgentRun, ChatProgress, Ch
 export type DataMode = 'auto' | 'mock';
 export type Source = 'api' | 'mock';
 
-export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_API) || 'http://localhost:8787';
+/** The API, on the same domain: the "api" service at /api on Vercel, proxied to localhost:8787 by next.config in local dev. */
+export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_API) || '/api';
 /** Dev auth: the v1 API picks the synthetic student from `x-dev-user-id: demo-g5|demo-g7|demo-g9|demo-g11`. */
 const DEV_USER_OVERRIDE = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MURSHID_DEV_USER : undefined;
 

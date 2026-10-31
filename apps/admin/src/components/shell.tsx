@@ -131,7 +131,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2.5 border-t border-white/15 px-1 pt-3">
               <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-[var(--brand-light)] text-[11.5px] font-medium text-white">{initials}<span className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-white"><MicrosoftMark className="size-2.5" /></span></span>
               <span className="min-w-0 flex-1 leading-tight"><span className="block truncate text-[13px] font-medium">{session.name}</span><span className="block truncate text-xs text-white/60">{session.orgName}</span></span>
-              <button onClick={() => { setSession(null); setAdminPasscode(null); window.location.href = '/login'; }} aria-label="Sign out" title="Sign out" className="grid size-9 shrink-0 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/[0.1] hover:text-white"><LogOut className="size-4" /></button>
+              <button onClick={() => { setSession(null); setAdminPasscode(null); window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/login`; }} aria-label="Sign out" title="Sign out" className="grid size-9 shrink-0 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/[0.1] hover:text-white"><LogOut className="size-4" /></button>
             </div>
           ) : (
             <Link href="/login" className="flex h-10 items-center gap-2.5 rounded-full bg-white px-4 text-[13px] font-medium text-[var(--deep)] hover:bg-[var(--brand-light)] hover:text-white"><LogIn className="size-4" />Staff sign-in</Link>

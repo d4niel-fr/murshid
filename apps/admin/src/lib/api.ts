@@ -1,5 +1,6 @@
 /** Admin API client: /admin/* on the Murshid API with dev auth (x-dev-role: admin). */
-export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_API) || 'http://localhost:8787';
+/** The API, on the same domain: the "api" service at /api on Vercel, proxied to localhost:8787 by next.config in local dev. */
+export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_API) || '/api';
 const ADMIN_USER = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_ADMIN_USER) || 'dev-admin';
 
 export class ApiError extends Error {

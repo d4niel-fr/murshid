@@ -1,7 +1,7 @@
 import { DEFAULT_PREFS, PREFS_COOKIE, serializePrefs } from '@/lib/prefs';
 
 /** Where the teacher and school portal lives (the admin app). */
-export const ADMIN_URL = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_ADMIN_URL) || 'http://localhost:3001';
+export const ADMIN_URL = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_ADMIN_URL) || '/admin';
 export const TEACHER_DEMO_URL = `${ADMIN_URL}/login?demo=teacher`;
 export const ADMIN_DEMO_URL = `${ADMIN_URL}/login?demo=admin`;
 

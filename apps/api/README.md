@@ -1,7 +1,7 @@
 # @murshid/api
 
 REST backend for Murshid (personal agent app for UAE high-school students). Built with **Hono** (TypeScript) so the
-same app runs on Node (`pnpm dev`) and Vercel Edge (`api/index.ts`). Runs with **zero external services**: an
+same app runs on Node (`pnpm dev`) and on Vercel as the `api` service at `/api` (`vercel/service.ts`, root `vercel.json`). Runs with **zero external services**: an
 in-memory repository is seeded with synthetic students on boot.
 
 No AI/LLM calls. Everything that will later use AI is rule-based today and marked `// AI-LATER`.
@@ -108,7 +108,7 @@ curl -H 'content-type: application/json' -d '{"message":"compare athletics and g
 ```
 src/app.ts            buildApi/createApp/createSeededApp (Hono app factory)
 src/node.ts           Node server (pnpm dev); loads .env if present
-api/index.ts          Vercel Edge entry (+ vercel.json rewrite)
+vercel/service.ts     Vercel entry for the "api" service (strips /api; bundled to server.mjs by scripts/build-service.mjs)
 src/domain.ts         contract types + zod schemas (local copy, see Integration notes)
 src/lib/              auth, context/config, router (zod validation + OpenAPI registry), Dubai time helpers
 src/repo/             Repository interface, in-memory implementation, synthetic seed

@@ -46,7 +46,8 @@ export function readConfig(env: Record<string, string | undefined>): Config {
     // dev default matches .env.example so the webhook works out of the box; never defaulted in jwt mode
     inboxSecret: env.INBOX_WEBHOOK_SECRET ?? (authMode === 'dev' ? 'change-me-dev-only' : ''),
     inboxDomain: env.INBOX_DOMAIN ?? 'inbox.murshid.local',
-    publicApiUrl: env.PUBLIC_API_URL ?? 'http://localhost:8787',
+    // on Vercel the API is the "api" service at /api on the project's production domain
+    publicApiUrl: env.PUBLIC_API_URL ?? (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}/api` : 'http://localhost:8787'),
   };
 }
 

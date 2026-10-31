@@ -15,3 +15,7 @@ coverage
 # reports written by apps/api/scripts (sim.ts, eval-buddy.ts)
 docs/simulations/
 docs/evaluations/
+
+# written by apps/api/scripts/build-service.mjs (the api service bundle for Vercel)
+apps/api/server.mjs
+apps/api/data/
