@@ -8,8 +8,8 @@ import { Page, PageHeader } from '@/components/shared/page';
 import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
-import { ago } from '@/lib/ago';
 import { library, useLibrary, type SavedKind } from '@/lib/library';
+import { Ago } from '@/components/shared/ago';
 
 const ICON: Record<SavedKind, typeof Bookmark> = { page: Bookmark, opportunity: Sparkles, note: FileText, deck: Layers, faq: HelpCircle };
 
@@ -41,7 +41,7 @@ export function SavedView() {
               {saved.map((s) => { const Icon = ICON[s.kind]; return (
                 <li key={s.id} className="flex items-center gap-3 px-3 py-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2"><Icon className="size-4" /></span>
-                  <Link href={s.href} className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem] font-medium hover:underline">{s.title}</span><span className="text-xs text-muted-foreground">{KIND[s.kind]} · {tx('saved', 'حُفظ')} {ago(s.savedAt, locale)}</span></Link>
+                  <Link href={s.href} className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem] font-medium hover:underline">{s.title}</span><span className="text-xs text-muted-foreground">{KIND[s.kind]} · {tx('saved', 'حُفظ')} <Ago ts={s.savedAt} locale={locale} /></span></Link>
                   <Button size="icon-sm" variant="ghost" aria-label={tx(`Remove ${s.title}`, `إزالة ${s.title}`)} onClick={() => { library.remove(s.id); toast({ title: tx('Removed', 'أُزيل'), tone: 'info', action: { label: tx('Undo', 'تراجع'), onClick: () => library.toggle(s) } }); }}><X /></Button>
                 </li>
               ); })}
@@ -58,7 +58,7 @@ export function SavedView() {
               <li key={r.href}><Link href={r.href} className="flex items-center gap-3 rounded-[16px] px-3 py-3 transition-colors hover:bg-[var(--bg)]">
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2"><Clock className="size-4" /></span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem]">{r.title}</span><span className="text-xs text-muted-foreground">{r.href}</span></span>
-                <span className="shrink-0 text-xs text-muted-foreground">{ago(r.at, locale)}</span>
+                <span className="shrink-0 text-xs text-muted-foreground"><Ago ts={r.at} locale={locale} /></span>
               </Link></li>
             ))}
           </ul>

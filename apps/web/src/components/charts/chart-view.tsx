@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import { useReducedMotion } from 'motion/react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, PolarAngleAxis, RadialBar, RadialBarChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -19,10 +18,9 @@ function fmt(v: unknown, unit?: string) {
   return `${n} ${unit}`;
 }
 
-/** Pure Recharts renderer for a ChartSpec. Memoized; animations off under reduced motion. */
+/** Pure Recharts renderer for a ChartSpec. Memoized; no draw-in animation (people read this data, often). */
 export const ChartView = memo(function ChartView({ spec, height = 220, rtl = false, compact = false }: { spec: ChartSpec; height?: number; rtl?: boolean; compact?: boolean }) {
-  const reduced = useReducedMotion();
-  const anim = { ...chartAnimation, isAnimationActive: !reduced };
+  const anim = { ...chartAnimation };
   const gid = (k: string) => `fill-${spec.id}-${k}`.replace(/[^a-zA-Z0-9-_]/g, '');
   const tooltip = (
     <Tooltip
@@ -109,7 +107,7 @@ export const ChartView = memo(function ChartView({ spec, height = 220, rtl = fal
         return <BarChart data={spec.data} />;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, reduced, rtl, compact]);
+  }, [spec, rtl, compact]);
 
   return (
     <div dir="ltr" className={categorical ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-4' : ''}>

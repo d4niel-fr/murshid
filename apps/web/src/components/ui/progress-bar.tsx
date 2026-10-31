@@ -10,7 +10,7 @@ export function ProgressBar({ value, color = 'var(--accent)', className = '' }: 
       <motion.div
         className="h-full w-full origin-left rounded-full rtl:origin-right"
         style={{ background: color }}
-        initial={{ scaleX: 0 }}
+        initial={false}
         animate={{ scaleX: Math.max(0, Math.min(1, value / 100)) }}
         transition={spring.fill}
       />

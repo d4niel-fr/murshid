@@ -266,7 +266,7 @@ function MascotCard() {
           <div>
             <p className="mb-2 text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal">{tx('Colour', 'اللون')}</p>
             <div role="radiogroup" aria-label={tx('Colour', 'اللون')} className="flex flex-wrap gap-2">
-              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={cn('size-9 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-transform hover:scale-110', m.color === c && 'ring-2 ring-[var(--text)]')} style={{ background: MASCOT_FILL[c].body }} />)}
+              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={cn('size-9 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-shadow duration-150 hover:ring-2 hover:ring-[var(--border)] active:scale-[0.95]', m.color === c && 'ring-2 ring-[var(--text)]')} style={{ background: MASCOT_FILL[c].body }} />)}
             </div>
           </div>
           <div>

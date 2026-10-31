@@ -73,7 +73,7 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
   ];
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={tx('Keyboard shortcuts', 'اختصارات لوحة المفاتيح')} className="sm:w-[640px]">
+      <DialogContent instant title={tx('Keyboard shortcuts', 'اختصارات لوحة المفاتيح')} className="sm:w-[640px]">
         <div className="grid gap-6 sm:grid-cols-2">
           {groups.map(([h, rows]) => (
             <section key={h} className={h.startsWith(tx('Go to', 'انتقل')) ? 'sm:row-span-2' : undefined}>

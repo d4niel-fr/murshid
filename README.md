@@ -61,8 +61,10 @@ Then in three terminals:
 ```bash
 cd apps/api && pnpm dev       # http://localhost:8787
 cd apps/web && pnpm dev       # http://localhost:3000
-cd apps/admin && pnpm dev     # http://localhost:3001
+cd apps/admin && pnpm dev     # http://localhost:3001/admin
 ```
+
+Open http://localhost:3000. As on Vercel, the portal is at `/admin` and the API at `/api`: the website's dev server proxies both paths to the other two dev servers. To run all three through Vercel's own router instead, use `vercel dev` at the repo root.
 
 No external services are needed: the API seeds synthetic students on boot and runs on rules only by default (`GATEWAY_MODE=openrouter` with `OPENROUTER_API_KEY` turns on models). Survey storage falls back to memory without Supabase.
 
@@ -79,11 +81,19 @@ CI (`.github/workflows/ci.yml`) runs all four on every push and pull request.
 
 ## Deploy
 
-- **Web** and **admin**: Vercel projects with Root Directory `apps/web` and `apps/admin`.
-- **API**: `cd apps/api && node scripts/build-vercel.mjs && vercel deploy --prebuilt --prod`.
-- **Database**: apply `supabase/migrations` in order (`supabase db push`).
+One Vercel project serves everything on one domain. The root `vercel.json` defines three services:
 
-API environment: `AUTH_MODE`, `GATEWAY_MODE`, `OPENROUTER_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SURVEY_ADMIN_CODE`, `ADMIN_PASSCODE`, `CORS_ORIGINS`. Web and admin: `NEXT_PUBLIC_MURSHID_API`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_MURSHID_ADMIN_URL`.
+| Service | Root | Public path |
+|---|---|---|
+| `web` | `apps/web` (Next.js) | `/` (everything not matched below) |
+| `admin` | `apps/admin` (Next.js, `basePath: '/admin'`) | `/admin` |
+| `api` | `apps/api` (Hono, bundled by `scripts/build-service.mjs`) | `/api` (the prefix is stripped, so API routes start at `/`) |
+
+The browser calls the API at `/api` on the same domain, so no CORS setup is needed. The website and portal don't call each other on the server, so no service bindings are needed.
+
+- **Database**: apply `supabase/migrations` in order (`supabase db push`).
+- **API environment**: `AUTH_MODE`, `GATEWAY_MODE`, `OPENROUTER_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SURVEY_ADMIN_CODE`, `ADMIN_PASSCODE`. `PUBLIC_API_URL` defaults to `https://<production domain>/api`.
+- **Optional overrides** for the web apps: `NEXT_PUBLIC_SITE_URL` (canonical URL; defaults to the project's production domain), `NEXT_PUBLIC_MURSHID_API` (defaults to `/api`), `NEXT_PUBLIC_MURSHID_ADMIN_URL` (defaults to `/admin`).
 
 Secrets (API keys, the Supabase service-role key, the database password) live only in the hosting and Supabase dashboards. Never commit them; `.env*` files are ignored.
 

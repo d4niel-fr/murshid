@@ -7,6 +7,9 @@
  *  - Wrap the app in <MotionConfig reducedMotion="user">. With reduced motion Motion drops
  *    transforms and keeps opacity, so every preset below still reads correctly.
  *  - Entry animations run once per mount; never on scroll-into-view inside long lists.
+ *  - Product screens are opened many times a day: entrances are a quick fade (no slide, no stagger), hover never lifts,
+ *    keyboard-opened UI never animates, numbers and fills animate only when the value changes (not on mount).
+ *    Marketing pages (components/marketing) keep their own, richer motion.
  */
 
 /* ── Springs ─────────────────────────────────────────────── */
@@ -37,44 +40,38 @@ export const duration = {
 
 /* ── Variants ───────────────────────────────────────────── */
 
-/** Card / block entry. Use with initial="hidden" animate="show". */
+/** Card / block entry: a quick fade only. These surfaces are seen many times a day, so they do not slide in. */
 export const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { ...spring.gentle, opacity: { duration: duration.base, ease: ease.outSoft } },
-  },
-  exit: { opacity: 0, y: -4, transition: { duration: duration.fast, ease: ease.outSoft } },
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.15, ease: ease.outSoft } },
+  exit: { opacity: 0, transition: { duration: duration.instant, ease: ease.outSoft } },
 } as const;
 
-/** Parent of fadeUp children (bento grid, list of tasks). Max ~8 children staggered; rest appear together. */
+/** Parent of fadeUp children (bento grid, list of tasks): the group fades in as one, no per-item cascade. */
 export const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.045, delayChildren: 0.04 } },
+  show: { transition: { staggerChildren: 0, delayChildren: 0 } },
 } as const;
 
-/** Spread onto any tappable motion element: <motion.button {...pressable} />. */
+/** Spread onto any tappable motion element: <motion.button {...pressable} />. Press feedback only, no hover lift. */
 export const pressable = {
-  whileHover: { y: -1 },
   whileTap: { scale: 0.97 },
   transition: spring.snappy,
 } as const;
 
 /* ── Extras used by the specs ───────────────────────────── */
 
-/** Lift for clickable bento cards (hover only; pair with shadow-1 → shadow-2 CSS transition). */
+/** Clickable bento cards: a slight press (hover is a colour change in CSS, .lift). */
 export const cardHover = {
-  whileHover: { y: -2 },
   whileTap: { scale: 0.99 },
-  transition: spring.gentle,
+  transition: spring.snappy,
 } as const;
 
 /** Composer trailing slot: Mic ⇄ Send ⇄ Stop. Use inside <AnimatePresence mode="popLayout" initial={false}>. */
 export const iconSwap = {
-  initial: { opacity: 0, scale: 0.6, rotate: -20 },
-  animate: { opacity: 1, scale: 1, rotate: 0, transition: spring.snappy },
-  exit: { opacity: 0, scale: 0.6, rotate: 20, transition: { duration: duration.instant } },
+  initial: { opacity: 0, scale: 0.9 },
+  animate: { opacity: 1, scale: 1, transition: spring.snappy },
+  exit: { opacity: 0, scale: 0.9, transition: { duration: duration.instant } },
 } as const;
 
 /** Chat message bubble / inline tool card appearing. */
@@ -98,10 +95,11 @@ export const overlay = {
 } as const;
 
 /** Recharts props: spread onto <Bar>/<Area>/<Line>/<RadialBar>. */
+/** Charts show data people read, so they do not redraw from zero on every mount. */
 export const chartAnimation = {
-  isAnimationActive: true,
-  animationBegin: 80,
-  animationDuration: 700,
+  isAnimationActive: false,
+  animationBegin: 0,
+  animationDuration: 250,
   animationEasing: "ease-out",
 } as const;
 

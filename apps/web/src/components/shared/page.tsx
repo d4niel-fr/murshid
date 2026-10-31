@@ -9,20 +9,9 @@ export function Page({ children, className, wide }: { children: ReactNode; class
   return <div className={cn('mx-auto w-full px-4 pb-10 pt-6 md:px-8 xl:pt-8', wide ? 'max-w-[1360px]' : 'max-w-[1200px]', className)}>{children}</div>;
 }
 
-/** Page title: each word slides up from behind its own edge (clip-mask reveal, easeOutExpo). */
+/** Page title. Plain text: product pages are opened many times a day, so the title does not animate in. */
 export function RevealTitle({ text, className }: { text: string; className?: string }) {
-  const words = text.split(' ');
-  return (
-    <span className={className} aria-label={text}>
-      {words.map((w, i) => (
-        <span key={i} aria-hidden className="clip-word">
-          <motion.span initial={{ y: '115%', opacity: 0 }} animate={{ y: '0%', opacity: 1 }} transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}>
-            {w}{i < words.length - 1 ? '\u00a0' : ''}
-          </motion.span>
-        </span>
-      ))}
-    </span>
-  );
+  return <span className={className}>{text}</span>;
 }
 
 export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {

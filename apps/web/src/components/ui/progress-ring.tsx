@@ -1,12 +1,11 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { spring } from '@/lib/motion';
 import { NumberTicker } from './number-ticker';
 
-/** SVG ring; fill animates strokeDashoffset-equivalent (pathLength) with spring.fill on mount. */
+/** SVG ring; the fill (pathLength) animates when the value changes, not on mount. */
 export function ProgressRing({ value, size = 88, stroke = 9, color = 'var(--chart-1)', label, locale = 'en' }: { value: number; size?: number; stroke?: number; color?: string; label?: string; locale?: 'en' | 'ar' }) {
-  const reduced = useReducedMotion();
   const r = (size - stroke) / 2;
   const v = Math.max(0, Math.min(100, value)) / 100;
   return (
@@ -16,7 +15,7 @@ export function ProgressRing({ value, size = 88, stroke = 9, color = 'var(--char
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
           <motion.circle
             cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-            initial={{ pathLength: reduced ? v : 0 }}
+            initial={false}
             animate={{ pathLength: v }}
             transition={spring.fill}
           />

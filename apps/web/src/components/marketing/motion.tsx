@@ -61,7 +61,7 @@ export function useShown<T extends Element>(margin = '0px 0px -12% 0px', gate = 
 type TextTag = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3';
 
 /**
- * Word-by-word reveal: each word rises 0.35em and fades in on its own spring.
+ * Text reveal: the text fades in and rises 6px as one block, once (a word-by-word cascade reads as generated).
  * No overflow clip — the 0.95 display leading would shave descenders. A plain copy stays for
  * assistive technology; the animated words are hidden from it.
  */
@@ -73,19 +73,14 @@ export function Words({
 }) {
   const [ref, on] = useShown<HTMLSpanElement>(margin, gate);
   const reduce = useReducedMotion();
-  const words = text.split(' ');
+  void stagger; void gap; void justify; // kept in the signature for callers; the text no longer reveals word by word
   return (
     <Tag className={className} style={style}>
-      <span className="sr-only">{text}</span>
-      <span ref={ref} aria-hidden style={{ display: 'flex', flexWrap: 'wrap', columnGap: gap, justifyContent: justify }}>
-        {words.map((w, i) => (
-          <motion.span key={`${w}-${i}`} className="inline-block" initial={reduce ? false : { opacity: 0, y: '0.35em' }}
-            animate={on || reduce ? { opacity: 1, y: '0em' } : { opacity: 0, y: '0.35em' }}
-            transition={{ ...config, delay: (delay + i * stagger) / 1000 }}>
-            {w}{i === words.length - 1 ? end : null}
-          </motion.span>
-        ))}
-      </span>
+      <motion.span ref={ref} className="block" initial={reduce ? false : { opacity: 0, y: 6 }}
+        animate={on || reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+        transition={{ ...config, delay: Math.min(delay, 240) / 1000 }}>
+        {text}{end}
+      </motion.span>
     </Tag>
   );
 }
@@ -117,7 +112,7 @@ export function Letters({
  * (easeOutExpo). Used for the giant wordmark and stacked statements.
  */
 export function Lines({
-  lines, className, lineClassName, stagger = 90, delay = 0, duration = 900, gate = true, margin, from = '110%',
+  lines, className, lineClassName, stagger = 70, delay = 0, duration = 650, gate = true, margin, from = '110%',
 }: { lines: ReactNode[]; className?: string; lineClassName?: string; stagger?: number; delay?: number; duration?: number; gate?: boolean; margin?: string; from?: string }) {
   const [ref, on] = useShown<HTMLSpanElement>(margin, gate);
   const reduce = useReducedMotion();
@@ -135,6 +130,13 @@ export function Lines({
   );
 }
 
+/** Rise distance in px, at most 16 (rem values are read at 16px). */
+function softY(y: string | number): number {
+  const px = typeof y === 'number' ? y : y.endsWith('rem') ? parseFloat(y) * 16 : parseFloat(y);
+  if (!Number.isFinite(px)) return 12;
+  return Math.max(-16, Math.min(16, px));
+}
+
 /** A block that rises into place the first time it is seen. */
 export function Rise({
   children, className, style, y = '0.75rem', delay = 0, config = SPRING.reveal, gate = true, margin, as = 'div', scale,
@@ -142,10 +144,12 @@ export function Rise({
   const [ref, on] = useShown<HTMLDivElement>(margin, gate);
   const reduce = useReducedMotion();
   const Comp = motion[as] as typeof motion.div;
-  const hidden = { opacity: 0, y, ...(scale ? { scale } : {}) };
+  // calm by design: rise at most 16px, never scale up from below 0.97, never wait more than 240ms
+  const dy = softY(y);
+  const hidden = { opacity: 0, y: dy, ...(scale ? { scale: Math.max(scale, 0.97) } : {}) };
   const shown = { opacity: 1, y: 0, ...(scale ? { scale: 1 } : {}) };
   return (
-    <Comp ref={ref} className={className} style={style} initial={reduce ? false : hidden} animate={on || reduce ? shown : hidden} transition={{ ...config, delay: delay / 1000 }}>
+    <Comp ref={ref} className={className} style={style} initial={reduce ? false : hidden} animate={on || reduce ? shown : hidden} transition={{ ...config, delay: Math.min(delay, 240) / 1000 }}>
       {children}
     </Comp>
   );

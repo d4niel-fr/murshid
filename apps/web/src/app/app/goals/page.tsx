@@ -17,6 +17,7 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { demoStudents } from '@/lib/bands';
 import { addDays, diffDays, formatDate } from '@/lib/dates';
 import type { Goal } from '@/lib/types';
+import { count } from '@/lib/plural';
 
 const AREA: Record<Goal['area'], { en: string; ar: string; color: string }> = {
   academics: { en: 'Academics', ar: 'الدراسة', color: 'var(--chart-1)' },
@@ -88,7 +89,7 @@ export default function GoalsPage() {
                 <div className="min-w-0 flex-1">
                   <Badge tone="outline" className="mb-1.5">{tx(AREA[g.area].en, AREA[g.area].ar)}</Badge>
                   <p className="font-semibold leading-snug">{g.title}</p>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(g.due, locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {days >= 0 ? tx(`${days} days left`, `متبقي ${days} يوماً`) : tx('Past due', 'متأخر')}</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(g.due, locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {days >= 0 ? tx(`${count(days, 'day')} left`, `متبقي ${days} يوماً`) : tx('Past due', 'متأخر')}</p>
                 </div>
               </div>
               <ul className="mt-4 flex flex-col gap-1 border-t border-border pt-3">

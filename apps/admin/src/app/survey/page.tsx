@@ -3,10 +3,10 @@
 import { PageHeader } from '@/components/shell';
 import { Badge, Card, Empty, ErrorBox, Stat, Tabs } from '@/components/ui';
 import { useData } from '@/lib/use-data';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const WEB = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_WEB) || 'http://localhost:3000';
+const WEB_ENV = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_MURSHID_WEB : undefined;
 
 function Bars({ q }: { q: any }) {
   const max = Math.max(1, ...q.counts.map((c: any) => c.n));
@@ -26,6 +26,9 @@ function Bars({ q }: { q: any }) {
 export default function SurveyResults() {
   const r = useData<any>('/admin/survey');
   const [tab, setTab] = useState<'student' | 'teacher'>('student');
+  // the student site shares this domain (it is at /), so the share link uses this page's origin
+  const [WEB, setWeb] = useState(WEB_ENV ?? '');
+  useEffect(() => { if (!WEB_ENV) setWeb(window.location.origin); }, []);
   const d = r.data;
   return (
     <>

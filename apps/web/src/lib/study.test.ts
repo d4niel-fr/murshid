@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cardsFromText, isDue, preview, readingMinutes, review, studyStreak, type Card, type StudyState } from './study';
 import { fuzzy, rank } from './fuzzy';
 import { headings, slug } from './markdown';
+import { ago } from './ago';
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 9, 30, 12);
@@ -68,5 +69,14 @@ describe('notes outline', () => {
       { id: 'worked-example', text: 'Worked example', level: 3 },
       { id: slug('مراجعة'), text: 'مراجعة', level: 2 },
     ]);
+  });
+});
+
+describe('relative times', () => {
+  it('says how long ago within a week, then gives a date', () => {
+    expect(ago(NOW - 20_000, 'en', NOW)).toBe('just now');
+    expect(ago(NOW - 3 * DAY, 'en', NOW)).toMatch(/3 days ago/);
+    expect(ago(NOW - 12 * DAY, 'en', NOW)).toBe('18 Oct');
+    expect(ago(NOW - 400 * DAY, 'en', NOW)).toBe('25 Sept 2025');
   });
 });

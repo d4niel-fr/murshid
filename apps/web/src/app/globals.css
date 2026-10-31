@@ -29,7 +29,12 @@
 }
 
 @layer base {
+  /* motion curves: strong ease-out for UI, ease-in-out for on-screen movement (never ease-in) */
+  :root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); }
   html, body { background: var(--bg); color: var(--text); min-height: 100dvh; }
+  /* phones: no grey tap flash, no font inflation in landscape, no double-tap delay on controls */
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  button, a, [role="button"], summary, label { touch-action: manipulation; }
   html { scrollbar-gutter: stable; font-size: calc(100% * var(--ts, 1)); }
   /* reading comfort (Settings, or the A-/A+ control): scales every rem on the page */
   html[data-text-size='sm'] { --ts: 0.9375; }
@@ -64,14 +69,17 @@
   .clip-line { display: block; overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.14em; }
   .clip-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.14em; margin-bottom: -0.14em; }
   .clip-word > span, .clip-line > span { display: inline-block; will-change: transform; }
-  /* Hover lift on interactive cards (transform via Motion) */
-  .lift { transition: background-color 200ms ease; }
-  .lift:hover { background: color-mix(in oklab, var(--surface) 88%, var(--text) 4%); }
+  /* Interactive cards: a colour change on hover, never a lift (seen tens of times a day) */
+  .lift { transition: background-color 150ms ease, border-color 150ms ease; }
   /* A trailing arrow that nudges on hover (pill buttons, rows) */
-  .nudge { transition: transform 260ms cubic-bezier(.3,1.5,.5,1); }
-  .group:hover .nudge, .group\/btn:hover .nudge, .group\/row:hover .nudge { transform: translateX(5px); }
-  [dir="rtl"] .group:hover .nudge, [dir="rtl"] .group\/btn:hover .nudge { transform: translateX(-5px) scaleX(-1); }
+  .nudge { transition: transform 150ms var(--ease-out); }
   [dir="rtl"] .nudge { transform: scaleX(-1); }
+  /* hover only where there is a real pointer: a tap on a phone would leave it stuck on */
+  @media (hover: hover) and (pointer: fine) {
+    .lift:hover { background: color-mix(in oklab, var(--surface) 88%, var(--text) 4%); }
+    .group:hover .nudge, .group\/btn:hover .nudge, .group\/row:hover .nudge { transform: translateX(3px); }
+    [dir="rtl"] .group:hover .nudge, [dir="rtl"] .group\/btn:hover .nudge { transform: translateX(-3px) scaleX(-1); }
+  }
   .tint-success { background: color-mix(in oklab, var(--success) 12%, transparent); color: color-mix(in oklab, var(--success) 78%, var(--text)); }
   .tint-warning { background: color-mix(in oklab, var(--warning) 14%, transparent); color: color-mix(in oklab, var(--warning) 62%, var(--text)); }
   .tint-danger { background: color-mix(in oklab, var(--danger) 11%, transparent); color: color-mix(in oklab, var(--danger) 80%, var(--text)); }
@@ -111,3 +119,8 @@
 .shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }
 /* full-height views (chat) fill what is left under the top bar */
 .fill-view { height: calc(100dvh - var(--topbar-h)); }
+
+/* Phones zoom into any field smaller than 16px; unlayered, so it wins over text-sm on inputs. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); }
+}
