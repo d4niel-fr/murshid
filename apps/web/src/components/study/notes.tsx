@@ -13,12 +13,12 @@ import { ReadingTime, Toc } from '@/components/shared/page-aids';
 import { Button } from '@/components/ui/button';
 import { Input, Select, Textarea } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
-import { ago } from '@/lib/ago';
 import { rank } from '@/lib/fuzzy';
 import { headings, Markdown } from '@/lib/markdown';
 import { fadeUp, stagger } from '@/lib/motion';
 import { cardsFromText, readingMinutes, study, SUBJECTS, useStudy, type Note } from '@/lib/study';
 import { cn } from '@/lib/utils';
+import { Ago } from '@/components/shared/ago';
 
 const excerpt = (md: string) => md.replace(/[#*>`|_-]/g, ' ').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim().slice(0, 140);
 
@@ -66,7 +66,7 @@ export function NotesView() {
                 <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium text-foreground">{n.subject}</span>
                   {n.tags.slice(0, 2).map((t) => <span key={t}>#{t}</span>)}
-                  <span className="ms-auto">{ago(n.updatedAt, locale)}</span>
+                  <span className="ms-auto"><Ago ts={n.updatedAt} locale={locale} /></span>
                   <button type="button" onClick={() => study.saveNote(n.id, { pinned: !n.pinned })} aria-label={n.pinned ? tx('Unpin', 'إلغاء التثبيت') : tx('Pin', 'تثبيت')} className="relative z-10 grid size-8 place-items-center rounded-full opacity-70 hover:bg-[var(--bg)] hover:opacity-100">{n.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}</button>
                   <button type="button" onClick={() => remove(n)} aria-label={tx('Delete note', 'حذف الملاحظة')} className="relative z-10 grid size-8 place-items-center rounded-full opacity-70 hover:bg-[var(--bg)] hover:opacity-100"><Trash2 className="size-3.5" /></button>
                 </div>
@@ -149,7 +149,7 @@ export function NoteEditor() {
     <Page wide>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <Link href="/app/study/notes" className="me-auto inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All notes', 'كل الملاحظات')}</Link>
-        <span className="text-xs text-muted-foreground" aria-live="polite">{status === 'saving' ? tx('Saving…', 'جارٍ الحفظ…') : tx(`Saved · ${ago(note.updatedAt, locale)}`, `محفوظة · ${ago(note.updatedAt, locale)}`)}</span>
+        <span className="text-xs text-muted-foreground" aria-live="polite">{status === 'saving' ? tx('Saving…', 'جارٍ الحفظ…') : tx(`Saved · $<Ago ts={note.updatedAt} locale={locale} />`, `محفوظة · $<Ago ts={note.updatedAt} locale={locale} />`)}</span>
         <button type="button" onClick={() => study.saveNote(note.id, { pinned: !note.pinned })} aria-pressed={Boolean(note.pinned)} aria-label={note.pinned ? tx('Unpin', 'إلغاء التثبيت') : tx('Pin', 'تثبيت')} className="grid size-9 place-items-center rounded-full bg-surface">{note.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}</button>
         <SaveButton id={`note:${note.id}`} kind="note" title={title || tx('Untitled note', 'ملاحظة بلا عنوان')} href={`/app/study/notes/${note.id}`} iconOnly />
         <CopyButton text={() => `# ${title}\n\n${body}`} label={tx('Copy note', 'نسخ الملاحظة')} iconOnly />

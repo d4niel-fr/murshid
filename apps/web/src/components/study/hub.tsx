@@ -7,10 +7,11 @@ import { useApp } from '@/components/providers/app-provider';
 import { MyMascot, useMascotName } from '@/components/mascot/my-mascot';
 import { Page, PageHeader } from '@/components/shared/page';
 import { Button } from '@/components/ui/button';
-import { ago } from '@/lib/ago';
 import { fadeUp, stagger } from '@/lib/motion';
 import { isDue, studyStreak, useStudy, weekFocusMinutes } from '@/lib/study';
 import { cn } from '@/lib/utils';
+import { count } from '@/lib/plural';
+import { Ago } from '@/components/shared/ago';
 
 export function StudyHub() {
   const { tx, locale, world } = useApp();
@@ -30,11 +31,11 @@ export function StudyHub() {
     [tx('Cards due', 'بطاقات مستحقة'), due, tx('ready to review', 'جاهزة للمراجعة')],
     [tx('Study streak', 'أيام متتالية'), streak, streak === 1 ? tx('day', 'يوم') : tx('days', 'أيام')],
     [tx('Focus this week', 'تركيز هذا الأسبوع'), week, tx('minutes', 'دقيقة')],
-    [tx('Topics confident', 'مواضيع متقنة'), `${confident}%`, tx(`of ${s.topics.length} topics`, `من ${s.topics.length} موضوعاً`)],
+    [tx('Topics confident', 'مواضيع متقنة'), `${confident}%`, tx(`of ${count(s.topics.length, 'topic')}`, `من ${s.topics.length} موضوعاً`)],
   ];
   const tools = [
-    { href: '/app/study/flashcards', icon: Layers, title: tx('Flashcards', 'البطاقات التعليمية'), body: tx('Spaced repetition: each card comes back just before you would forget it.', 'تكرار متباعد: تعود كل بطاقة قبل أن تنساها مباشرة.'), meta: tx(`${s.decks.length} decks · ${due} due`, `${s.decks.length} مجموعات · ${due} مستحقة`) },
-    { href: '/app/study/notes', icon: FileText, title: tx('Notes', 'الملاحظات'), body: tx('Headings, checklists and tables. Saves as you type; turns “term :: meaning” lines into cards.', 'عناوين وقوائم وجداول. تُحفظ أثناء الكتابة؛ وتحوّل سطور «مصطلح :: معنى» إلى بطاقات.'), meta: tx(`${s.notes.length} notes`, `${s.notes.length} ملاحظات`) },
+    { href: '/app/study/flashcards', icon: Layers, title: tx('Flashcards', 'البطاقات التعليمية'), body: tx('Spaced repetition: each card comes back just before you would forget it.', 'تكرار متباعد: تعود كل بطاقة قبل أن تنساها مباشرة.'), meta: tx(`${count(s.decks.length, 'deck')} · ${due} due`, `${s.decks.length} مجموعات · ${due} مستحقة`) },
+    { href: '/app/study/notes', icon: FileText, title: tx('Notes', 'الملاحظات'), body: tx('Headings, checklists and tables. Saves as you type; turns “term :: meaning” lines into cards.', 'عناوين وقوائم وجداول. تُحفظ أثناء الكتابة؛ وتحوّل سطور «مصطلح :: معنى» إلى بطاقات.'), meta: tx(count(s.notes.length, 'note'), `${s.notes.length} ملاحظات`) },
     { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${week} دقيقة هذا الأسبوع`) },
     { href: '/app/study/topics', icon: ListChecks, title: tx('Topic tracker', 'متتبع المواضيع'), body: tx('Rate each topic from “not started” to “confident” and revise the shaky ones first.', 'قيّم كل موضوع من «لم أبدأ» إلى «متقن» وراجع الضعيفة أولاً.'), meta: tx(`${shaky.length} to revise`, `${shaky.length} للمراجعة`) },
   ];
@@ -52,7 +53,7 @@ export function StudyHub() {
             <div>
               <p className="eyebrow">{name}</p>
               <p className="mt-1.5 text-[1.0625rem] leading-snug">
-                {due > 0 ? tx(`${due} cards are ready, ${first}. Ten minutes now saves an hour later.`, `${due} بطاقة جاهزة يا ${first}. عشر دقائق الآن توفّر ساعة لاحقاً.`) : tx(`All caught up, ${first}. Nice work.`, `أنهيت كل شيء يا ${first}. عمل رائع.`)}
+                {due > 0 ? tx(`${due === 1 ? '1 card is' : `${due} cards are`} ready, ${first}. Ten minutes now saves an hour later.`, `${due} بطاقة جاهزة يا ${first}. عشر دقائق الآن توفّر ساعة لاحقاً.`) : tx(`All caught up, ${first}. Nice work.`, `أنهيت كل شيء يا ${first}. عمل رائع.`)}
               </p>
             </div>
           </motion.div>
@@ -100,7 +101,7 @@ export function StudyHub() {
           <ul className="flex flex-col">
             {notes.map((n) => (
               <li key={n.id}><Link href={`/app/study/notes/${n.id}`} className="flex items-center gap-3 rounded-[14px] px-2 py-2.5 transition-colors hover:bg-[var(--bg)]">
-                <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem]">{n.title || tx('Untitled note', 'ملاحظة بلا عنوان')}</span><span className="text-xs text-muted-foreground">{n.subject} · {ago(n.updatedAt, locale)}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem]">{n.title || tx('Untitled note', 'ملاحظة بلا عنوان')}</span><span className="text-xs text-muted-foreground">{n.subject} · <Ago ts={n.updatedAt} locale={locale} /></span></span>
               </Link></li>
             ))}
           </ul>

@@ -60,7 +60,7 @@ export function ArrowButton({ dir = 'next', variant = 'outline', onClick, label 
     : 'border-[var(--border)] text-[var(--text)] hover:border-[var(--text)]';
   return (
     <button type="button" onClick={onClick} aria-label={label} className={`group grid size-12 place-items-center rounded-full border transition-colors sm:size-14 ${cls}`}>
-      <ArrowIcon flip={dir === 'prev'} className="size-5 transition-transform duration-300 group-hover:scale-[1.15]" />
+      <ArrowIcon flip={dir === 'prev'} className="size-5" />
     </button>
   );
 }
@@ -70,7 +70,7 @@ export function Dots({ count, active, onPick, tone = 'dark' }: { count: number; 
     <div className="flex items-center gap-2">
       {Array.from({ length: count }, (_, i) => (
         <button key={i} type="button" onClick={() => onPick?.(i)} aria-label={`Slide ${i + 1}`} aria-current={i === active || undefined} className="p-1.5">
-          <span className={`block h-1.5 rounded-full transition-all duration-500 ${i === active ? `w-5 ${tone === 'light' ? 'bg-white' : 'bg-[var(--text)]'}` : `w-1.5 ${tone === 'light' ? 'bg-white/40' : 'bg-[var(--ghost)]'}`}`} />
+          <span className={`block h-1.5 rounded-full transition-[width,background-color] duration-200 ease-[var(--ease-out)] ${i === active ? `w-5 ${tone === 'light' ? 'bg-white' : 'bg-[var(--text)]'}` : `w-1.5 ${tone === 'light' ? 'bg-white/40' : 'bg-[var(--ghost)]'}`}`} />
         </button>
       ))}
     </div>

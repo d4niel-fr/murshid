@@ -30,7 +30,7 @@ export function Check({ checked, onChange, label, className }: { checked: boolea
           className="pointer-events-none absolute inset-0 rounded-full border-2 border-primary"
           initial={{ scale: 1, opacity: 0.6 }}
           animate={{ scale: 1.9, opacity: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
         />
       )}
     </motion.button>

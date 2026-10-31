@@ -28,7 +28,7 @@ function Burst() {
           <motion.span key={i} className="absolute size-1.5 rounded-full bg-primary"
             initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
             animate={{ x: Math.cos(a) * 22, y: Math.sin(a) * 22, opacity: 0, scale: 0.4 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }} />
+            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }} />
         );
       })}
     </span>

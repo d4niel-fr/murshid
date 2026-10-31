@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useRef, useState } from 'react';
 import { MurshidStar } from '@/components/shell/icons';
 import { ArrowButton, ArrowIcon, Dots, Eyebrow, Pill, PlayMark, SEATS, Shot, usePage } from '@/components/marketing/chrome';
-import { EASE, Lines, Rise, Words, spring, useCanHover, useShown, useScrub } from '@/components/marketing/motion';
+import { EASE, Lines, Rise, Words, spring, useShown, useScrub } from '@/components/marketing/motion';
 import { useApp } from '@/components/providers/app-provider';
 
 type T = [en: string, ar: string];
@@ -143,7 +143,7 @@ export function Views() {
         <div className="flex items-end gap-[1.25rem]">
           {VIEWS.map((v, i) => (
             <Rise as="figure" key={v.id} delay={i * 140} y={48} config={spring(180, 26)} className={`group relative aspect-[3/4] flex-1 overflow-hidden rounded-[1.5rem] bg-[var(--surface)] ${i === 1 ? 'mb-[2rem]' : ''}`}>
-              <div className="size-full transition-transform duration-500 ease-[cubic-bezier(.2,0,0,1)] group-hover:scale-[1.03]">
+              <div className="size-full transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-[1.02]">
                 <Shot src={v.img} alt={tx(...v.alt)} focus={v.focus} className="size-full !rounded-none" />
               </div>
               <figcaption className={`absolute inset-x-[0.75rem] bottom-[0.75rem] rounded-[0.75rem] px-[1rem] py-[0.75rem] text-white backdrop-blur ${v.tone === 'teal' ? 'bg-[rgb(11_110_151/0.7)]' : 'bg-[rgb(15_47_99/0.65)]'}`}>
@@ -237,7 +237,6 @@ const GUARDS: { n: string; t: T; d: T; who: T }[] = [
 ];
 
 export function Guardrails() {
-  const canHover = useCanHover();
   const { tx } = useApp();
   return (
     <section id="guardrails" className="bg-[var(--bg)] px-[1.5rem] py-[5rem] sm:px-[2.5rem] sm:py-[6rem]">
@@ -246,14 +245,14 @@ export function Guardrails() {
       <ul className="mt-[3.5rem] grid gap-[1.25rem] md:grid-cols-3">
         {GUARDS.map((g, i) => (
           <Rise as="li" key={g.n} delay={i * 120} y={40} config={spring(180, 26)}>
-            <motion.figure whileHover={canHover ? { y: -8 } : undefined} transition={spring(300, 22)} className="flex h-full flex-col justify-between rounded-[1.5rem] bg-[var(--surface)] p-[1.75rem]">
+            <figure className="flex h-full flex-col justify-between rounded-[1.5rem] bg-[var(--surface)] p-[1.75rem]">
               <div>
                 <span className="grid size-[2.75rem] place-items-center rounded-full bg-[var(--deep)] text-[0.8125rem] font-medium text-white">{g.n}</span>
                 <blockquote className="mt-[1.5rem] text-[1.5rem] font-medium leading-tight tracking-[-0.02em]">{tx(...g.t)}</blockquote>
                 <p className="mt-[0.75rem] text-[0.9375rem] leading-relaxed text-[var(--text-muted)]">{tx(...g.d)}</p>
               </div>
               <figcaption className="mt-[1.5rem] border-t border-[var(--border)] pt-[1rem] text-[0.875rem] text-[var(--text-muted)]">{tx(...g.who)}</figcaption>
-            </motion.figure>
+            </figure>
           </Rise>
         ))}
       </ul>

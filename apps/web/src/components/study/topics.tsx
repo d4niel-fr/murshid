@@ -55,7 +55,7 @@ export function TopicsView() {
                       <div role="radiogroup" aria-label={tx(`How well do you know ${t.name}?`, `ما مدى معرفتك بـ ${t.name}؟`)} className="flex gap-1">
                         {LEVELS.map(([c, l, tone]) => (
                           <button key={c} type="button" role="radio" aria-checked={t.confidence === c} title={l} onClick={() => study.setConfidence(t.id, c)}
-                            className={cn('h-7 rounded-full px-2.5 text-[0.6875rem] font-medium transition-all', t.confidence === c ? tone : 'bg-transparent text-muted-foreground hover:bg-surface-2')}>
+                            className={cn('h-7 rounded-full px-2.5 text-[0.6875rem] font-medium transition-colors', t.confidence === c ? tone : 'bg-transparent text-muted-foreground hover:bg-surface-2')}>
                             {t.confidence === c ? l : <span className="sr-only">{l}</span>}<span aria-hidden className={cn(t.confidence === c && 'hidden')}>●</span>
                           </button>
                         ))}

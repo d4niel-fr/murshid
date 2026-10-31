@@ -135,7 +135,6 @@ export function TopBar({ onMenu, onSearch, onShortcuts }: { onMenu: () => void; 
         <Tip label={apiStatus === 'up' ? tx('Connected to the Murshid API', 'متصل بواجهة مرشد') : tx('Using bundled demo data (API offline or disabled)', 'بيانات تجريبية مدمجة (الواجهة غير متاحة)')} side="bottom">
           <button onClick={() => router.push('/app/settings#data')} className="me-0.5 hidden h-10 items-center gap-2 rounded-full bg-surface px-4 text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground md:inline-flex rtl:tracking-normal">
             <span className="relative flex size-2">
-              {apiStatus === 'up' && <span className="absolute inset-0 animate-ping rounded-full bg-[var(--spark)] opacity-70" />}
               <span className={cn('relative size-2 rounded-full', apiStatus === 'up' ? 'bg-[var(--spark)] ring-2 ring-[color-mix(in_oklab,var(--spark)_35%,transparent)]' : 'bg-[var(--text-muted)]')} />
             </span>
             {apiStatus === 'up' ? t('common.live') : t('common.demo')}

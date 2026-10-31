@@ -21,7 +21,7 @@ export function BackToTop({ className }: { className?: string }) {
         <motion.button type="button" initial={{ opacity: 0, y: 12, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.9 }}
           onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
           aria-label={tx('Back to top', 'العودة إلى الأعلى')}
-          className={cn('no-print fixed bottom-5 end-5 z-50 grid size-11 place-items-center rounded-full bg-[var(--deep)] text-white shadow-lift transition-transform hover:-translate-y-0.5', className)}>
+          className={cn('no-print fixed bottom-5 end-5 z-50 grid size-11 place-items-center rounded-full bg-[var(--deep)] text-white shadow-lift transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.97]', className)}>
           <ArrowUp className="size-4" />
         </motion.button>
       )}

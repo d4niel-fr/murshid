@@ -14,9 +14,10 @@ import { Button } from '@/components/ui/button';
 import { DialogContent } from '@/components/ui/dialog';
 import { Input, Label, Select } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
-import { ago } from '@/lib/ago';
 import { fadeUp, stagger } from '@/lib/motion';
 import { isDue, study, SUBJECTS, useStudy } from '@/lib/study';
+import { count } from '@/lib/plural';
+import { Ago } from '@/components/shared/ago';
 
 export function NewDeckDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { tx, toast } = useApp();
@@ -83,7 +84,7 @@ export function DecksView() {
                   <Link href={`/app/study/flashcards/${d.id}`} className="min-w-0"><h2 className="card-title truncate hover:underline">{d.title}</h2></Link>
                   <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[0.7188rem] font-medium">{d.subject}</span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{tx(`${total} cards`, `${total} بطاقة`)} · {tx('edited', 'عُدّلت')} {ago(d.updatedAt, locale)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{tx(count(total, 'card'), `${total} بطاقة`)} · {tx('edited', 'عُدّلت')} <Ago ts={d.updatedAt} locale={locale} /></p>
                 <div className="mt-4" aria-label={tx(`${known} of ${total} known`, `${known} من ${total} معروفة`)}>
                   <div className="flex justify-between text-xs text-muted-foreground"><span>{tx('Known', 'معروفة')}</span><span className="tabular">{total ? Math.round((known / total) * 100) : 0}%</span></div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]"><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${total ? (known / total) * 100 : 0}%` }} /></div>

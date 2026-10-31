@@ -101,7 +101,7 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
   let last: Group | null = null;
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
-      <DialogContent title={tx('Search', 'بحث')} className="top-[14%] translate-y-0 p-3 sm:w-[620px]">
+      <DialogContent instant title={tx('Search', 'بحث')} className="top-[14%] translate-y-0 p-3 sm:w-[620px]">
         <div className="flex items-center gap-2.5 rounded-full bg-surface px-4">
           <Search className="size-4 text-muted-foreground" />
           <input

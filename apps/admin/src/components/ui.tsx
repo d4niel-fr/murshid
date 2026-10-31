@@ -11,7 +11,7 @@ export function Button({ variant = 'primary', size = 'md', className, ...p }: Bu
     <button
       {...p}
       className={cn(
-        'group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-[background-color,color,border-color] duration-200 disabled:opacity-50 [&_svg]:size-4',
+        'group inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-[background-color,color,border-color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4',
         size === 'sm' ? 'h-8 px-3.5 text-[13px]' : 'h-10 px-5 text-sm',
         variant === 'primary' && 'bg-[var(--text)] text-[var(--bg)] hover:bg-[var(--deep)]',
         variant === 'outline' && 'border border-[var(--border)] bg-transparent hover:border-[var(--text)]',
@@ -69,7 +69,7 @@ export function Modal({ open, title, onClose, children, wide }: { open: boolean;
       <div role="dialog" aria-modal="true" aria-label={title} className={cn('w-full rounded-[28px] bg-[var(--popover)] shadow-[var(--shadow-2)]', wide ? 'max-w-3xl' : 'max-w-xl')} onMouseDown={(e) => e.stopPropagation()}>
         <header className="flex items-center justify-between px-7 pb-2 pt-6">
           <h2 className="display text-[1.75rem]">{title}</h2>
-          <button aria-label="Close" onClick={onClose} className="grid size-10 place-items-center rounded-full bg-[var(--surface)] text-[var(--text-muted)] transition-transform hover:rotate-90 hover:text-[var(--text)]"><X className="size-4" /></button>
+          <button aria-label="Close" onClick={onClose} className="grid size-10 place-items-center rounded-full bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"><X className="size-4" /></button>
         </header>
         <div className="px-7 pb-7 pt-4">{children}</div>
       </div>

@@ -15,10 +15,11 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
-import { ago } from '@/lib/ago';
+import { Ago } from '@/components/shared/ago';
 import { cardsFromText, isDue, preview, study, SUBJECTS, useStudy, type Card, type Grade } from '@/lib/study';
 import { useAutosave } from '@/lib/use-autosave';
 import { cn } from '@/lib/utils';
+import { count } from '@/lib/plural';
 
 /* ---------------------------------------------------------------- study session */
 function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean; onDone: () => void }) {
@@ -55,7 +56,7 @@ function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean;
       <div className="mx-auto flex max-w-lg flex-col items-center gap-4 py-10 text-center">
         <span className="text-[var(--deep)]"><MyMascot size={120} mood="happy" /></span>
         <h2 className="display text-[2rem]">{tx('Session done', 'انتهت الجلسة')}</h2>
-        <p className="text-muted-foreground">{tx(`You reviewed ${total} cards. Again ${again} · Hard ${hard} · Good ${good} · Easy ${easy}.`, `راجعت ${total} بطاقة. مجدداً ${again} · صعبة ${hard} · جيدة ${good} · سهلة ${easy}.`)}</p>
+        <p className="text-muted-foreground">{tx(`You reviewed ${count(total, 'card')}. Again ${again} · Hard ${hard} · Good ${good} · Easy ${easy}.`, `راجعت ${total} بطاقة. مجدداً ${again} · صعبة ${hard} · جيدة ${good} · سهلة ${easy}.`)}</p>
         <div className="flex gap-2"><Button onClick={onDone}>{tx('Back to deck', 'العودة إلى المجموعة')}</Button><Button variant="secondary" asChild><Link href={`/app/study/flashcards/${deckId}?mode=quiz`}>{tx('Take a quiz', 'خذ اختباراً')}</Link></Button></div>
       </div>
     );
@@ -79,7 +80,7 @@ function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean;
         {flipped && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label={tx('How well did you know it?', 'ما مدى معرفتك بها؟')}>
             {labels.map(([g, l, tone]) => (
-              <button key={g} type="button" onClick={() => grade(g)} className={cn('flex flex-col items-center rounded-[18px] px-2 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5', tone)}>
+              <button key={g} type="button" onClick={() => grade(g)} className={cn('flex flex-col items-center rounded-[18px] px-2 py-3 text-sm font-medium transition-[transform,filter] duration-150 ease-[var(--ease-out)] hover:brightness-[0.97] active:scale-[0.97]', tone)}>
                 {l}<span className="mt-0.5 text-[0.6875rem] font-normal opacity-80">{pv[g]} · {g + 1}</span>
               </button>
             ))}
@@ -198,13 +199,13 @@ export function DeckView() {
   const importBulk = () => {
     const pairs = cardsFromText(bulkText);
     const n = study.addCards(deck.id, pairs);
-    toast({ title: n ? tx(`${n} cards added`, `أُضيفت ${n} بطاقة`) : tx('No cards found', 'لم تُعثر على بطاقات'), description: n ? undefined : tx('Write one card per line as “front :: back”.', 'اكتب بطاقة في كل سطر بصيغة «أمام :: خلف».'), tone: n ? 'success' : 'info' });
+    toast({ title: n ? tx(`${count(n, 'card')} added`, `أُضيفت ${n} بطاقة`) : tx('No cards found', 'لم تُعثر على بطاقات'), description: n ? undefined : tx('Write one card per line as “front :: back”.', 'اكتب بطاقة في كل سطر بصيغة «أمام :: خلف».'), tone: n ? 'success' : 'info' });
     if (n) { setBulk(false); setBulkText(''); }
   };
   const columns: Column<Card>[] = [
     { key: 'front', header: tx('Front', 'الأمام'), value: (c) => c.front, cell: (c) => editing === c.id ? <Textarea aria-label={tx('Front', 'الأمام')} value={edit.front} onChange={(e) => setEdit({ ...edit, front: e.target.value })} className="min-h-16" /> : <span className="font-medium">{c.front}</span> },
     { key: 'back', header: tx('Back', 'الخلف'), value: (c) => c.back, cell: (c) => editing === c.id ? <Textarea aria-label={tx('Back', 'الخلف')} value={edit.back} onChange={(e) => setEdit({ ...edit, back: e.target.value })} className="min-h-16" /> : <span className="text-muted-foreground">{c.back}</span> },
-    { key: 'due', header: tx('Next review', 'المراجعة القادمة'), value: (c) => c.due, cell: (c) => <span className={cn('whitespace-nowrap text-xs', isDue(c, now) ? 'font-medium text-[var(--warning)]' : 'text-muted-foreground')}>{isDue(c, now) ? tx('Due now', 'مستحقة الآن') : ago(c.due, locale)}</span> },
+    { key: 'due', header: tx('Next review', 'المراجعة القادمة'), value: (c) => c.due, cell: (c) => <span className={cn('whitespace-nowrap text-xs', isDue(c, now) ? 'font-medium text-[var(--warning)]' : 'text-muted-foreground')}>{isDue(c, now) ? tx('Due now', 'مستحقة الآن') : <Ago ts={c.due} locale={locale} />}</span> },
     { key: 'reps', header: tx('Streak', 'التتابع'), value: (c) => c.reps, align: 'end', cell: (c) => c.reps },
     { key: 'act', header: '', sortable: false, align: 'end', cell: (c) => editing === c.id ? (
       <span className="inline-flex gap-1"><Button size="icon-sm" aria-label={tx('Save card', 'حفظ البطاقة')} onClick={() => { study.updateCard(c.id, edit); setEditing(null); }}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label={tx('Cancel', 'إلغاء')} onClick={() => setEditing(null)}><X /></Button></span>
@@ -219,7 +220,7 @@ export function DeckView() {
       <Link href="/app/study/flashcards" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All decks', 'كل المجموعات')}</Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="eyebrow mb-3">{deck.subject} · {tx(`${cards.length} cards`, `${cards.length} بطاقة`)}</p>
+          <p className="eyebrow mb-3">{deck.subject} · {tx(count(cards.length, 'card'), `${cards.length} بطاقة`)}</p>
           {rename ? (
             <form onSubmit={(e) => { e.preventDefault(); study.renameDeck(deck.id, title); setRename(false); }} className="flex items-center gap-2">
               <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} aria-label={tx('Deck title', 'عنوان المجموعة')} className="h-12 text-lg" />
@@ -246,7 +247,7 @@ export function DeckView() {
           <div className="flex flex-col gap-3">
             <Label htmlFor="bulk">{tx('One card per line: front :: back', 'بطاقة في كل سطر: أمام :: خلف')}</Label>
             <Textarea id="bulk" value={bulkText} onChange={(e) => setBulkText(e.target.value)} className="min-h-36 font-mono text-[0.8125rem]" placeholder={'Wavelength :: The distance between two peaks\nFrequency :: Waves per second (Hz)'} />
-            <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{tx(`${cardsFromText(bulkText).length} cards found`, `عُثر على ${cardsFromText(bulkText).length} بطاقة`)}</span><Button onClick={importBulk} disabled={!cardsFromText(bulkText).length}><Upload />{tx('Add cards', 'أضف البطاقات')}</Button></div>
+            <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{tx(`${count(cardsFromText(bulkText).length, 'card')} found`, `عُثر على ${cardsFromText(bulkText).length} بطاقة`)}</span><Button onClick={importBulk} disabled={!cardsFromText(bulkText).length}><Upload />{tx('Add cards', 'أضف البطاقات')}</Button></div>
           </div>
         ) : (
           <form onSubmit={add} className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
