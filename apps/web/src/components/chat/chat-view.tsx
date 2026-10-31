@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { RenderChartTool, ShowCvTool, ShowOpportunitiesTool, ShowPlanTool, ShowTasksTool } from './tool-uis';
 import { Workings } from '@/components/shared/workings';
 import { CompanionStage, CompanionToggles } from '@/components/mascot/companion';
+import { friendlyDates } from '@/lib/friendly-dates';
 import type { WorkTrace } from '@/lib/types';
 import type { BuddyStatus, ChatProgress } from '@/lib/types';
 
@@ -152,14 +153,6 @@ function Thinking() {
 }
 
 /** "2026-11-04" → "Wed 4 Nov" (the rules engine and models write ISO dates; people read weekdays). */
-const ISO_DATE = /\b(20\d{2})-(\d{2})-(\d{2})\b/g;
-function friendlyDates(text: string, locale: 'en' | 'ar'): string {
-  return text.replace(ISO_DATE, (m, y, mo, d) => {
-    const dt = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d)));
-    if (Number.isNaN(dt.getTime())) return m;
-    return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-AE' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(dt);
-  });
-}
 
 function TextPart({ text: raw }: { text: string }) {
   const { locale } = useApp();

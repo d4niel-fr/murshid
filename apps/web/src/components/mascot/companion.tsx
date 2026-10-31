@@ -5,10 +5,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Smile, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useApp } from '@/components/providers/app-provider';
-import { DEFAULT_MASCOT } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
 import type { Mood } from './mascot';
-import { MyMascot } from './my-mascot';
+import { friendlyDates } from '@/lib/friendly-dates';
+import { MyMascot, useMascotName } from './my-mascot';
 
 /** Companion mode: the mascot answers beside the chat, like a character you talk to (and can read replies aloud). */
 function useThread(runtime: AssistantRuntime) {
@@ -28,10 +28,8 @@ function pickVoice(lang: string) {
 
 export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
-  const [talk, setTalk] = useState(0);
-  const pulse = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
-  const stop = () => { if (supported) window.speechSynthesis.cancel(); setSpeaking(false); setTalk(0); };
+  const stop = () => { if (supported) window.speechSynthesis.cancel(); setSpeaking(false); };
   const speak = (text: string, locale: 'en' | 'ar') => {
     if (!supported || !text) return;
     window.speechSynthesis.cancel();
@@ -39,14 +37,12 @@ export function useSpeech() {
     u.lang = locale === 'ar' ? 'ar-SA' : 'en-GB';
     const v = pickVoice(u.lang); if (v) u.voice = v;
     u.rate = 1.02; u.pitch = 1.05;
-    // the mouth opens on every word boundary and closes between words
-    u.onboundary = () => { setTalk(0.55 + Math.random() * 0.45); if (pulse.current) clearTimeout(pulse.current); pulse.current = setTimeout(() => setTalk(0.15), 140); };
     u.onstart = () => setSpeaking(true);
-    u.onend = u.onerror = () => { setSpeaking(false); setTalk(0); };
+    u.onend = u.onerror = () => setSpeaking(false);
     window.speechSynthesis.speak(u);
   };
   useEffect(() => () => { if (supported) window.speechSynthesis.cancel(); }, [supported]);
-  return { speak, stop, speaking, talk, supported };
+  return { speak, stop, speaking, supported };
 }
 
 export function CompanionToggles() {
@@ -73,8 +69,8 @@ export function CompanionStage({ runtime, compact }: { runtime: AssistantRuntime
   const { prefs, locale, tx } = useApp();
   const thread = useThread(runtime);
   const typing = useComposerText(runtime).trim().length > 0;
-  const { speak, stop, speaking, talk } = useSpeech();
-  const name = (prefs.mascot ?? DEFAULT_MASCOT).name;
+  const { speak, stop, speaking } = useSpeech();
+  const name = useMascotName();
 
   const last = thread.messages[thread.messages.length - 1];
   const reply = last?.role === 'assistant' ? last.content.map((p) => (p.type === 'text' ? p.text : '')).join(' ').trim() : '';
@@ -82,13 +78,6 @@ export function CompanionStage({ runtime, compact }: { runtime: AssistantRuntime
   const [cheer, setCheer] = useState(false);
   const spoken = useRef<string | null>(null);
   const wasRunning = useRef(false);
-  // streaming text: the mouth moves with it
-  const [flap, setFlap] = useState(0);
-  useEffect(() => {
-    if (!running || !reply) return;
-    const id = setInterval(() => setFlap((f) => (f > 0.3 ? 0.1 : 0.5 + Math.random() * 0.5)), 120);
-    return () => clearInterval(id);
-  }, [running, reply]);
 
   useEffect(() => {
     if (wasRunning.current && !running && last?.role === 'assistant') {
@@ -102,13 +91,13 @@ export function CompanionStage({ runtime, compact }: { runtime: AssistantRuntime
   useEffect(() => { if (!prefs.voice) stop(); }, [prefs.voice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mood: Mood = speaking ? 'talking' : running ? (reply ? 'talking' : 'thinking') : typing ? 'listening' : cheer ? 'happy' : 'idle';
-  const line = running && !reply ? tx('Let me check your week…', 'دعني أراجع أسبوعك…') : reply ? plain(reply) : tx(`Hi, I'm ${name}. Ask me anything about your week.`, `مرحباً، أنا ${name}. اسألني أي شيء عن أسبوعك.`);
+  const line = running && !reply ? tx('Let me check your week…', 'دعني أراجع أسبوعك…') : reply ? friendlyDates(plain(reply), locale) : tx('Hi, I’m Murshid. Ask me anything about your week.', 'مرحباً، أنا مرشد. اسألني أي شيء عن أسبوعك.');
   const short = line.length > 240 ? `${line.slice(0, 237).trimEnd()}…` : line;
 
   return (
     <div className={cn('flex items-start gap-4', compact ? 'flex-row' : 'flex-col items-center text-center md:flex-row md:items-start md:text-start')}>
       <div className="shrink-0 text-[var(--deep)]">
-        <MyMascot size={compact ? 84 : 168} mood={mood} talk={speaking ? talk : flap} />
+        <MyMascot size={compact ? 84 : 168} mood={mood} />
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={running && !reply ? 'wait' : last?.id ?? 'hello'} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6 }}

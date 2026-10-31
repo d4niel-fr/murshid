@@ -129,7 +129,7 @@ export function TopBar({ onMenu, onSearch, onShortcuts }: { onMenu: () => void; 
   const router = useRouter();
   const dark = prefs.theme === 'dark';
   return (
-    <header data-chrome className="sticky top-0 z-30 flex h-[var(--topbar-h)] shrink-0 items-center gap-2.5 bg-[color-mix(in_oklab,var(--bg)_88%,transparent)] px-4 pt-[var(--inset)] backdrop-blur-xl md:px-8">
+    <header data-chrome className="sticky top-0 z-30 flex h-[var(--topbar-h)] shrink-0 items-center gap-2.5 bg-[var(--bg)] px-4 pt-[var(--inset)] md:bg-[color-mix(in_oklab,var(--bg)_88%,transparent)] md:px-8 md:backdrop-blur-xl">
       <button onClick={onMenu} aria-label="Menu" className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)] text-white lg:hidden">
         <Menu className="size-[18px]" />
       </button>
