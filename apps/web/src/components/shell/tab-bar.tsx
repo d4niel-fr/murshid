@@ -45,7 +45,7 @@ export function TabBar({ onMore }: { onMore: () => void }) {
 
   return (
     <nav aria-label={tx('Quick navigation', 'تنقل سريع')} data-chrome
-      className={cn('tab-bar no-print fixed inset-x-0 bottom-0 z-40 border-t border-border bg-[color-mix(in_oklab,var(--bg)_92%,transparent)] backdrop-blur-xl transition-transform duration-200 ease-[cubic-bezier(.22,1,.36,1)] lg:hidden', !show && 'pointer-events-none translate-y-full')}
+      className={cn('tab-bar no-print fixed inset-x-0 bottom-0 z-40 border-t border-border bg-[var(--bg)] transition-transform duration-200 ease-[cubic-bezier(.22,1,.36,1)] lg:hidden', !show && 'pointer-events-none translate-y-full')}
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} aria-hidden={!show} inert={!show}>
       <ul className="mx-auto flex h-16 max-w-lg items-stretch px-2">
         {items.map(({ href, label, Icon }) => {

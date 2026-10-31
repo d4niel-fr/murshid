@@ -36,10 +36,10 @@ export function FeaturesView() {
     { id: 'topics', title: tx('Know what to revise first', 'اعرف ماذا تراجع أولاً'), body: <>
       <p>{tx('The topic tracker lists each subject’s topics from your syllabus. Rate each one from “not started” to “confident”, and the shaky ones rise to the top of your study page. One tap asks Murshid to build a revision plan around them.', 'يعرض متتبع المواضيع مواضيع كل مادة من منهجك. قيّم كلاً منها من «لم أبدأ» إلى «متقن»، فترتفع المواضيع الضعيفة إلى أعلى صفحة الدراسة. وبلمسة واحدة يبني لك مرشد خطة مراجعة حولها.')}</p>
     </> },
-    { id: 'companion', title: tx('Meet Rashid, your companion', 'تعرّف على رشيد، رفيقك'), body: <>
+    { id: 'companion', title: tx('Meet Murshid, your companion', 'تعرّف على مرشد، رفيقك'), body: <>
       <div className="flex flex-col gap-[1.5rem] sm:flex-row sm:items-center">
-        <span className="grid size-[9rem] shrink-0 place-items-center rounded-[2rem] bg-[var(--surface)] text-[var(--deep)]"><Mascot size={112} mood="happy" kind="guide" color="navy" accessory="headphones" label="Rashid, the Murshid mascot" /></span>
-        <p>{tx('Turn on companion mode and Rashid, Murshid’s mascot, answers beside the chat. He listens while you type, thinks while Murshid checks your week, and can read replies aloud. Rename him, pick his hoodie, skin tone, hair and accessory in Settings, or switch to the Murshid star: he’s yours.', 'فعّل وضع الرفيق ليجيبك رشيد، تميمة مرشد، بجانب المحادثة. ينصت أثناء كتابتك، ويفكر بينما يراجع مرشد أسبوعك، ويمكنه قراءة الردود بصوت عالٍ. غيّر اسمه ولون الهودي ولون البشرة والشعر والإكسسوار من الإعدادات، أو اختر نجمة مرشد بدلاً منه: إنه لك.')}</p>
+        <span className="grid size-[9rem] shrink-0 place-items-center rounded-[2rem] bg-[var(--surface)] text-[var(--deep)]"><Mascot size={112} mood="happy" shape="orb" face="round" color="navy" glow="sky" accessory="antenna" label="Murshid" /></span>
+        <p>{tx('Turn on companion mode and Murshid, a small bot with a screen for a face, answers beside the chat. It listens while you type, thinks while it checks your week, and can read replies aloud. Pick its shape, eyes, colours and an accessory in Settings: it’s yours.', 'فعّل وضع الرفيق ليجيبك مرشد، روبوت صغير بشاشة بدل الوجه، بجانب المحادثة. ينصت أثناء كتابتك، ويفكر بينما يراجع أسبوعك، ويمكنه قراءة الردود بصوت عالٍ. اختر شكله وعينيه وألوانه وإكسسواراً من الإعدادات: إنه لك.')}</p>
       </div>
     </> },
     { id: 'everyone', title: tx('Built for every student', 'مصمم لكل طالب'), body: <>
