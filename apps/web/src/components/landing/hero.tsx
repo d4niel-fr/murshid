@@ -14,7 +14,7 @@ function Title({ text }: { text: string }) {
   const reduce = useReducedMotion();
   const words = text.split(' ');
   return (
-    <h1 id="hero-title" aria-label={text} className="mk-title whitespace-nowrap text-[11.6vw]">
+    <h1 id="hero-title" aria-label={text} className="mk-title whitespace-nowrap text-[10.2vw] sm:text-[11.6vw]">
       {words.map((w, i) => (
         <span key={`${i}-${w}`} aria-hidden className="inline-block overflow-hidden pb-[0.04em] align-top">
           <motion.span className="inline-block" initial={reduce ? false : { y: '115%', opacity: 0 }} animate={ready || reduce ? { y: '0%', opacity: 1 } : { y: '115%', opacity: 0 }}

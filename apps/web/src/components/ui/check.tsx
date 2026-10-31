@@ -14,7 +14,7 @@ export function Check({ checked, onChange, label, className }: { checked: boolea
       onClick={() => onChange(!checked)}
       whileTap={{ scale: 0.85 }}
       transition={spring.snappy}
-      className={cn('relative inline-flex size-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors duration-200', checked ? 'border-primary bg-primary' : 'border-[color-mix(in_oklab,var(--text-muted)_60%,transparent)] hover:border-primary', className)}
+      className={cn('hit relative inline-flex size-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors duration-200', checked ? 'border-primary bg-primary' : 'border-[color-mix(in_oklab,var(--text-muted)_60%,transparent)] hover:border-primary', className)}
     >
       <svg viewBox="0 0 24 24" className="size-3.5" fill="none" aria-hidden>
         <motion.path

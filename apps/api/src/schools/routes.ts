@@ -3,7 +3,7 @@
  *
  *   public     GET  /plans, POST /onboarding, GET /auth/microsoft/authorize, GET /auth/microsoft/accounts,
  *              POST /auth/microsoft/callback
- *   teacher    GET  /teacher/me, /teacher/classes/:id/{report,recommendations,homework-timing,weekly-reports,assignments}
+ *   teacher    GET  /teacher/me, /teacher/students, /teacher/classes/:id/{report,recommendations,homework-timing,weekly-reports,assignments,students/:studentId}
  *              POST /teacher/classes/:id/assignments  (lands in every linked student's Murshid app)
  *   school     GET  /orgs/:id, /orgs/:id/students; POST /orgs/:id/microsoft/connect | disconnect
  *   platform   GET  /licensing/overview (families vs institutions, kept apart)
@@ -21,9 +21,10 @@ import type { Api } from '../lib/router';
 import { dubaiDate } from '../lib/time';
 import type { DemoStore, DemoView } from '../v1/store';
 import { DEMO_SCHOOL, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './catalog';
-import { classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
+import { assignedTo, classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
 import type { SchoolStore } from './store';
 import { replanForPost } from './automation';
+import { studentInsight, teacherStudents } from './insights';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
 export const SchoolSchemas = {
@@ -48,6 +49,8 @@ export const SchoolSchemas = {
       id: z.string().regex(/^[a-z0-9_-]{1,24}$/i), type: z.enum(['short', 'long', 'choice']), prompt: z.string().trim().min(2).max(300),
       options: z.array(z.string().trim().min(1).max(120)).min(2).max(6).optional(), required: z.boolean().default(true),
     })).max(20).optional(),
+    /** personalised: set it for these students only (they must be in the class); omit for the whole class */
+    studentIds: z.array(z.string().min(1).max(80)).min(1).max(200).optional(),
   }).superRefine((b, ctx) => {
     const url = b.formUrl ?? '';
     if (b.format === 'google_form' && !FORM_HOSTS.google.test(url)) ctx.addIssue({ code: 'custom', path: ['formUrl'], message: 'Paste a Google Forms link (docs.google.com/forms/… or forms.gle/…)' });
@@ -202,6 +205,22 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return c.json({ class: classCard(st), ...weeklyRollup(schools.school(s.orgId), st, today(c), nowMinutes(c.get('deps').now()), (query as { week: 'current' | 'last' }).week) });
     });
 
+  api.route({ method: 'get', path: '/teacher/students', tag: 'schools', auth: 'custom', summary: 'Every student across the teacher\u2019s classes (a school admin sees the whole school), worst status first' },
+    async (c) => {
+      const s = await staff(c); const school = schools.school(s.orgId);
+      const classes = schools.streams.filter((st) => st.orgId === s.orgId && (s.role === 'school_admin' || st.teacherId === s.teacher.id));
+      return c.json({ classes: classes.map(classCard), students: teacherStudents(school, classes, today(c)) });
+    });
+
+  api.route({ method: 'get', path: '/teacher/classes/:id/students/:studentId', tag: 'schools', auth: 'custom', summary: 'One student in the class: study time per week, grades over time, every subject, recent work, upcoming tests and personalised assignment ideas' },
+    async (c) => {
+      const s = await staff(c); const st = classOf(s, c.req.param('id')!); const school = schools.school(s.orgId);
+      const sid = c.req.param('studentId')!;
+      if (!(schools.members[st.id] ?? []).includes(sid)) throw new HTTPException(404, { message: 'student not found in this class' });
+      const r = school.roster.find((x) => x.id === sid)!;
+      return c.json({ class: classCard(st), ...studentInsight(school, st, r, today(c)) });
+    });
+
   api.route({ method: 'get', path: '/teacher/classes/:id/assignments', tag: 'schools', auth: 'custom', summary: 'Assignments for the class (posted in the portal or synced from Teams) with hand-in counts' },
     async (c) => {
       const s = await staff(c); const st = classOf(s, c.req.param('id')!); const day = today(c);
@@ -209,8 +228,10 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const members = (schools.members[st.id] ?? []).map((id) => school.roster.find((r) => r.id === id)!);
       const items = streamItems(school, st, day).filter((it) => it.setDate <= day || it.posted).reverse().map((it) => {
         const answered = schools.responses[it.id] ?? {};
-        const subs = members.map((m) => (answered[m.id] ? 'submitted' : submission(m, it, day).status));
-        return { ...it, format: it.format ?? 'task', setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, responses: Object.keys(answered).length, students: members.length };
+        const got = members.filter((m) => assignedTo(it, m.id));
+        const subs = got.map((m) => (answered[m.id] ? 'submitted' : submission(m, it, day).status));
+        return { ...it, format: it.format ?? 'task', setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, responses: Object.keys(answered).length, students: got.length,
+          personalised: Boolean(it.assignees), assigneeNames: it.assignees ? got.slice(0, 4).map((m) => m.name) : undefined };
       });
       return c.json({ class: classCard(st), items });
     });
@@ -222,16 +243,21 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const setDate = b.setDate ?? day;
       if (b.dueDate <= setDate) throw new HTTPException(400, { message: 'due date must be after the set date' });
       const teacher = schools.teachers.find((t) => t.id === st.teacherId)!;
+      const classMembers = schools.members[st.id] ?? [];
+      const studentIds = b.studentIds ? [...new Set(b.studentIds)] : null;
+      if (studentIds?.some((id) => !classMembers.includes(id))) throw new HTTPException(400, { message: 'every chosen student must be in this class', cause: { code: 'not_in_class' } });
+      const targets = studentIds ?? classMembers;
       const item: WorkItem = {
         id: schools.nextId(`${st.id}-post`), streamId: st.id, subject: st.subject, teacherId: st.teacherId, title: b.title, instructions: b.instructions,
         setDate, dueDate: b.dueDate, dueTime: b.dueTime, minutes: b.minutes ?? st.minutes, source: 'portal', posted: true, createdAt: now.toISOString(),
         format: b.format, formUrl: b.format === 'google_form' || b.format === 'microsoft_form' ? b.formUrl ?? null : null,
         questions: b.format === 'form' ? b.questions!.map((q) => ({ ...q, options: q.type === 'choice' ? q.options : undefined })) : undefined,
+        assignees: studentIds,
       };
       schools.posted.push(item); schools.postedById.set(item.id, item);
       const how = b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '';
       const delivered: { studentId: string; appId: string; taskId: string }[] = [];
-      for (const rid of schools.members[st.id] ?? []) {
+      for (const rid of targets) {
         const r = schools.roster.find((x) => x.id === rid);
         if (!r?.appId || !store.has(r.appId)) continue;
         const rec = store.record(r.appId, now);
@@ -248,7 +274,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       // automated follow-up for every student in the class: replan the week, set a reminder, flag overload
       const school = schools.school(s.orgId);
       const runs: Record<string, ReturnType<typeof replanForPost>> = {};
-      for (const rid of schools.members[st.id] ?? []) {
+      for (const rid of targets) {
         const r = school.roster.find((x) => x.id === rid);
         if (!r) continue;
         const run = replanForPost(school, r, item, day);
@@ -270,7 +296,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         students: all.length, replanned: all.length, reminders: all.length, inApp: delivered.length, overloaded,
         featured: featured ? { studentId: featured.studentId, name: school.roster.find((r) => r.id === featured.studentId)?.name ?? '', trace: featured.trace } : null,
       };
-      return c.json({ assignment: { ...item, setLabel: shortDay(setDate), dueLabel: shortDay(b.dueDate) }, class: classCard(st), students: schools.members[st.id]?.length ?? 0, deliveredToApp: delivered, automation }, 201);
+      return c.json({ assignment: { ...item, setLabel: shortDay(setDate), dueLabel: shortDay(b.dueDate) }, class: classCard(st), students: targets.length, personalised: Boolean(studentIds), deliveredToApp: delivered, automation }, 201);
     });
 
   // ---------- school (org) ----------
@@ -397,7 +423,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       if (!item || item.streamId !== st.id) throw new HTTPException(404, { message: 'assignment not found' });
       const school = schools.school(s.orgId);
       const answered = schools.responses[item.id] ?? {};
-      const rows = (schools.members[st.id] ?? []).map((id) => school.roster.find((x) => x.id === id)!).filter(Boolean)
+      const rows = (schools.members[st.id] ?? []).filter((id) => assignedTo(item, id)).map((id) => school.roster.find((x) => x.id === id)!).filter(Boolean)
         .map((m) => ({ studentId: m.id, name: m.name, section: m.section, response: answered[m.id] ?? null }));
       return c.json({ assignment: { id: item.id, title: item.title, format: item.format ?? 'task', questions: item.questions ?? [] }, responded: rows.filter((x) => x.response).length, students: rows.length, rows });
     });

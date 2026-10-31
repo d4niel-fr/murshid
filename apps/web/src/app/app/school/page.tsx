@@ -46,7 +46,7 @@ export default function SchoolPage() {
           <Card className="col-span-12 lg:col-span-5">
             <CardHeader title={tx('Does your school use Murshid?', 'هل تستخدم مدرستك مرشد؟')} icon={<Building2 />} />
             <Muted>{tx('If your school licenses Murshid, your teachers can post work straight into your plan.', 'إذا رخّصت مدرستك مرشد، يمكن لمعلميك إرسال الواجبات مباشرة إلى خطتك.')}</Muted>
-            <Link href="/welcome" className="mt-3 text-sm font-medium text-primary">{tx('Link my school', 'ربط مدرستي')}</Link>
+            <Link href="/welcome" className="tap-row mt-3 text-sm font-medium text-primary">{tx('Link my school', 'ربط مدرستي')}</Link>
           </Card>
         </Bento>
       </Page>

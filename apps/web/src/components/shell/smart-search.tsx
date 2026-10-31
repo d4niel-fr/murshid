@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, Bookmark, Clock, CornerDownLeft, FileText, HelpCircle, Layers, MessageCircle, Moon, Plus, Search, Sparkles, Timer, Type, Languages } from 'lucide-react';
+import { BookOpen, Bookmark, Clock, CornerDownLeft, FileText, HelpCircle, Languages, Layers, MessageCircle, Moon, PenLine, Plus, Search, Sparkles, Timer, Type } from 'lucide-react';
 import { Dialog as D } from 'radix-ui';
 import { useApp } from '@/components/providers/app-provider';
 import { DialogContent } from '@/components/ui/dialog';
@@ -48,6 +48,7 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       ['/app/study/flashcards', tx('Flashcards', 'البطاقات التعليمية'), 'cards spaced repetition decks revise', <Layers key="i" className="size-4" />],
       ['/app/study/notes', tx('Notes', 'الملاحظات'), 'notes write summary', <FileText key="i" className="size-4" />],
       ['/app/study/focus', tx('Focus timer', 'مؤقت التركيز'), 'pomodoro timer focus concentrate', <Timer key="i" className="size-4" />],
+      ['/app/study/notebook', tx('Notebook (handwriting)', 'الدفتر (كتابة يدوية)'), 'handwriting pen stylus pencil draw write goodnotes notebook ink', <PenLine key="i" className="size-4" />],
       ['/app/study/topics', tx('Topic tracker', 'متتبع المواضيع'), 'topics confidence exam revision', <Sparkles key="i" className="size-4" />],
       ['/app/saved', tx('Saved and recent', 'المحفوظات والأخيرة'), 'bookmarks saved for later history recent', <Bookmark key="i" className="size-4" />],
       ['/app/profile', tx('Profile & links', 'الملف والروابط'), 'cv linkedin portfolio', I('Link')],

@@ -19,7 +19,7 @@ export function CookieBanner() {
     <AnimatePresence>
       {show && (
         <motion.div role="region" aria-label={tx('Cookies', 'ملفات تعريف الارتباط')} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
-          className="no-print fixed bottom-4 start-4 z-[70] w-[min(calc(100vw-2rem),25rem)] rounded-[24px] bg-popover p-5 shadow-lift">
+          className="no-print fixed bottom-[calc(1rem+var(--tabbar-h))] start-4 z-[70] w-[min(calc(100vw-2rem),25rem)] rounded-[24px] bg-popover p-5 shadow-lift">
           <p className="text-[0.9375rem] font-medium">{tx('Just the essentials', 'الضروري فقط')}</p>
           <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
             {tx('Murshid stores your settings and demo progress on this device so the app remembers you. No ads and no tracking cookies.', 'يحفظ مرشد إعداداتك وتقدّمك التجريبي على هذا الجهاز ليتذكّرك التطبيق. لا إعلانات ولا ملفات تتبّع.')}

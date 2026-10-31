@@ -8,7 +8,7 @@ import { PageHeader, MicrosoftMark, useSession } from '@/components/shell';
 import { Workings } from '@/components/workings';
 import { AssignmentsTable, PostAssignmentForm } from '@/components/assignments';
 import { Delegation, HomeworkTiming, ProgressTable, SummaryStats, WeeklyReports } from '@/components/teacher';
-import { Button, Empty, ErrorBox, Modal, Tabs } from '@/components/ui';
+import { Button, cn, Empty, ErrorBox, Modal, Tabs } from '@/components/ui';
 import { getSession } from '@/lib/api';
 import { useData } from '@/lib/use-data';
 
@@ -37,9 +37,11 @@ function TeacherPortal() {
     if (!getSession()) { router.replace('/login'); return; }
     const p = new URLSearchParams(window.location.search);
     if (p.get('tab')) setTab(p.get('tab')!);
+    if (p.get('class')) setClassId(p.get('class'));
     setReady(true);
   }, [router]);
   const switchTab = (id: string) => { setTab(id); const u = new URL(window.location.href); u.searchParams.set('tab', id); window.history.replaceState(null, '', u); };
+  const pickClass = (id: string) => { setClassId(id); setPosted(null); const u = new URL(window.location.href); u.searchParams.set('class', id); window.history.replaceState(null, '', u); };
 
   const me = useData<any>(ready ? '/teacher/me' : null, 'staff');
   const cls = classId ?? me.data?.classes?.[0]?.id ?? null;
@@ -60,14 +62,19 @@ function TeacherPortal() {
       <PageHeader
         title={t ? <span>{t.name} <span className="font-normal text-[var(--text-muted)]">&middot; {c?.name ?? ''}</span></span> : 'My classes'}
         sub={me.data ? <span className="inline-flex flex-wrap items-center gap-x-2">{me.data.org.name} &middot; {c?.students ?? 0} students{me.data.org.microsoft?.connected && <> &middot; <span className="inline-flex items-center gap-1"><MicrosoftMark className="size-3" />Teams classes sync</span></>}</span> : null}
-        action={<div className="flex items-center gap-2">
-          {(me.data?.classes?.length ?? 0) > 1 && (
-            <select aria-label="Class" className="input w-64" value={cls ?? ''} onChange={(e) => setClassId(e.target.value)}>
-              {me.data.classes.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          )}
-          <Button onClick={() => openPost()} disabled={!cls}><Plus className="size-4" />Post assignment</Button>
-        </div>} />
+        action={<Button onClick={() => openPost()} disabled={!cls}><Plus className="size-4" />Post assignment</Button>} />
+      {(me.data?.classes?.length ?? 0) > 1 && (
+        <div role="tablist" aria-label="Your classes" className="tabs-scroll -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          {me.data.classes.map((x: any) => (
+            <button key={x.id} role="tab" aria-selected={x.id === cls} onClick={() => pickClass(x.id)}
+              className={cn('flex shrink-0 flex-col items-start rounded-[18px] border px-4 py-2.5 text-start transition-colors duration-150 active:scale-[0.98]',
+                x.id === cls ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-[var(--border)] hover:border-[var(--text)]')}>
+              <span className="text-[13.5px] font-medium">{x.name}</span>
+              <span className={cn('text-xs', x.id === cls ? 'text-white/65' : 'text-[var(--text-muted)]')}>{x.students} students</span>
+            </button>
+          ))}
+        </div>
+      )}
       <ErrorBox error={me.error ?? report.error} />
       {posted && (
         <div className="mb-4 flex items-start gap-3 rounded-[var(--radius)] border border-[color-mix(in_oklab,var(--success)_35%,var(--border))] bg-[color-mix(in_oklab,var(--success)_8%,var(--surface))] p-3.5 text-sm" role="status">
@@ -89,14 +96,14 @@ function TeacherPortal() {
       {report.data && <SummaryStats s={report.data.summary} />}
       <div className="mb-4"><Tabs tabs={TABS} active={tab} onChange={switchTab} /></div>
 
-      {tab === 'progress' && (report.data ? <ProgressTable report={report.data} subjectName={c?.subjectName ?? ''} /> : <Empty>Loading the class picture…</Empty>)}
+      {tab === 'progress' && (report.data ? <ProgressTable report={report.data} subjectName={c?.subjectName ?? ''} classId={cls ?? undefined} /> : <Empty>Loading the class picture…</Empty>)}
       {tab === 'delegate' && (rec.data ? <Delegation rec={rec.data} /> : <Empty>Working out groups…</Empty>)}
       {tab === 'timing' && (timing.data ? <HomeworkTiming t={timing.data} minutes={minutes ?? timing.data.minutes} onMinutes={setMinutes} onUse={(s, d) => openPost(s, d)} /> : <Empty>Checking everyone&rsquo;s week…</Empty>)}
       {tab === 'weekly' && (weekly.data ? <WeeklyReports w={weekly.data} week={week} onWeek={setWeek} /> : <Empty>Loading reports…</Empty>)}
       {tab === 'assignments' && (assignments.error ? <ErrorBox error={assignments.error} /> : <AssignmentsTable items={assignments.data?.items ?? null} loading={assignments.loading} classId={cls!} onPost={() => openPost()} />)}
 
       <Modal open={posting !== null} title={`Post an assignment \u00b7 ${c?.name ?? ''}`} onClose={() => setPosting(null)} wide>
-        {posting && <PostAssignmentForm classId={cls!} initial={posting} minutes={timing.data?.minutes ?? c?.minutes ?? 45} best={timing.data?.best}
+        {posting && <PostAssignmentForm classId={cls!} initial={posting} minutes={timing.data?.minutes ?? c?.minutes ?? 45} best={timing.data?.best} students={report.data?.students}
           onDone={(r) => { setPosting(null); setPosted(r); void report.reload(); void timing.reload(); void assignments.reload(); switchTab('assignments'); }} />}
       </Modal>
       <p className="mt-6 text-[11px] text-[var(--text-muted)]">Synthetic students. Every number is worked out from the class&rsquo;s seeded work, tests and activities with fixed rules (see &ldquo;How this is worked out&rdquo;). <Link href="/school" className="underline">School &amp; licence</Link></p>

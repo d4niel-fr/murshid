@@ -36,15 +36,21 @@ function readDraft(classId: string): Draft | null {
 }
 
 /** Post an assignment: written task, built-in form, or a Google / Microsoft Forms link. The draft autosaves per class. */
-export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: { classId: string; initial: { setDate: string; dueDate: string }; minutes: number; best?: any; onDone: (r: any) => void }) {
-  const [title, setTitle] = useState('');
-  const [instructions, setInstructions] = useState('');
+export interface ClassStudent { id: string; name: string; status?: string; statusLabel?: string }
+export interface PostPreset { title?: string; instructions?: string; minutes?: number; dueDate?: string; studentIds?: string[] }
+export function PostAssignmentForm({ classId, initial, minutes, best, onDone, students, preset }: { classId: string; initial: { setDate: string; dueDate: string }; minutes: number; best?: any; onDone: (r: any) => void; students?: ClassStudent[]; preset?: PostPreset }) {
+  const [title, setTitle] = useState(preset?.title ?? '');
+  const [instructions, setInstructions] = useState(preset?.instructions ?? '');
+  // who gets it: the whole class, or chosen students (personalised work)
+  const [who, setWho] = useState<'class' | 'chosen'>(preset?.studentIds?.length ? 'chosen' : 'class');
+  const [chosen, setChosen] = useState<string[]>(preset?.studentIds ?? []);
+  const [find, setFind] = useState('');
   const [format, setFormat] = useState<Format>('task');
   const [formUrl, setFormUrl] = useState('');
   const [questions, setQuestions] = useState<Question[]>([newQuestion('short')]);
   const [setDate, setSetDate] = useState(initial.setDate);
-  const [dueDate, setDueDate] = useState(initial.dueDate);
-  const [mins, setMins] = useState(minutes);
+  const [dueDate, setDueDate] = useState(preset?.dueDate ?? initial.dueDate);
+  const [mins, setMins] = useState(preset?.minutes ?? minutes);
   const [error, setError] = useState<string | null>(null);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState(false);
@@ -56,8 +62,9 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: 
   const top = useRef<HTMLDivElement>(null);
   useEffect(() => { if (error) top.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [error]);
 
-  // restore the draft once
+  // restore the draft once (not when opened from a suggestion: that brings its own text)
   useEffect(() => {
+    if (preset) { loaded.current = true; return; }
     const d = readDraft(classId);
     if (d && (d.title || d.instructions || d.formUrl || d.questions?.some((q) => q.prompt))) {
       setTitle(d.title); setInstructions(d.instructions); setFormat(d.format); setFormUrl(d.formUrl);
@@ -65,6 +72,7 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: 
       setRestored(true);
     }
     loaded.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId]);
   // autosave (debounced)
   useEffect(() => {
@@ -76,9 +84,10 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: 
     return () => clearTimeout(t);
   }, [classId, title, instructions, format, formUrl, questions]);
   // any edit makes this a new request
-  useEffect(() => { key.current = newIdempotencyKey('post'); }, [title, instructions, format, formUrl, questions, setDate, dueDate, mins]);
+  useEffect(() => { key.current = newIdempotencyKey('post'); }, [title, instructions, format, formUrl, questions, setDate, dueDate, mins, who, chosen]);
 
   const errors = { ...validateAssignment({ title, format, formUrl, questions }), ...serverErrors };
+  if (who === 'chosen' && !chosen.length) errors.who = 'Choose at least one student, or set it for the whole class.';
   if (dueDate && setDate && dueDate <= setDate) errors.dueDate = 'The due date must be after the set date (students need at least one evening).';
   const show = (k: string) => (touched ? errors[k] : undefined);
 
@@ -92,6 +101,7 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: 
     setBusy(true);
     const body: Record<string, unknown> = { title: title.trim(), instructions: instructions.trim() || null, setDate, dueDate, minutes: mins, format };
     if (format === 'google_form' || format === 'microsoft_form') body.formUrl = formUrl.trim();
+    if (who === 'chosen') body.studentIds = chosen;
     if (format === 'form') body.questions = questions.map((q) => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: q.required, ...(q.type === 'choice' ? { options: q.options.map((o) => o.trim()).filter(Boolean) } : {}) }));
     try {
       const r = await api(`/teacher/classes/${classId}/assignments`, { method: 'POST', as: 'staff', body, headers: { 'idempotency-key': key.current } });
@@ -126,6 +136,22 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone }: 
         </div>
       )}
       <div ref={top} role="alert" className="scroll-mt-4 empty:hidden">{error && <ErrorBox error={error} />}</div>
+
+      {(students?.length || preset?.studentIds?.length) ? (
+        <fieldset>
+          <legend className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">Who gets it</legend>
+          <div className="seg grid-cols-2">
+            <label className="seg-opt"><input type="radio" name="who" checked={who === 'class'} onChange={() => setWho('class')} className="sr-only" />
+              <span className="min-w-0"><span className="block text-sm font-medium">Whole class</span><span className="block text-xs text-[var(--text-muted)]">{students?.length ?? 'Every'} students</span></span></label>
+            <label className="seg-opt"><input type="radio" name="who" checked={who === 'chosen'} onChange={() => setWho('chosen')} className="sr-only" />
+              <span className="min-w-0"><span className="block text-sm font-medium">Chosen students</span><span className="block text-xs text-[var(--text-muted)]">{chosen.length ? `${chosen.length} chosen` : 'Personalised work'}</span></span></label>
+          </div>
+          {who === 'chosen' && students && (
+            <StudentPicker students={students} chosen={chosen} setChosen={setChosen} find={find} setFind={setFind} />
+          )}
+          {show('who') && <p className="mt-2 text-xs text-[var(--danger)]">{show('who')}</p>}
+        </fieldset>
+      ) : null}
 
       <fieldset>
         <legend className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">How students answer</legend>
@@ -266,7 +292,7 @@ export function AssignmentsTable({ items, loading, classId, onPost }: { items: a
               const f: Format = a.format ?? 'task';
               return (
                 <tr key={a.id} className={a.posted ? 'bg-[color-mix(in_oklab,var(--success)_7%,transparent)]' : ''}>
-                  <td><span className="font-medium">{a.title}</span>{a.posted && <Badge tone="success" className="ml-2">New</Badge>}{a.instructions && <div className="line-clamp-2 text-xs text-[var(--text-muted)]">{a.instructions}</div>}</td>
+                  <td><span className="font-medium">{a.title}</span>{a.posted && <Badge tone="success" className="ml-2">New</Badge>}{a.personalised && <Badge tone="accent" className="ml-2">For {a.students === 1 ? a.assigneeNames?.[0] ?? '1 student' : `${a.students} students`}</Badge>}{a.instructions && <div className="line-clamp-2 text-xs text-[var(--text-muted)]">{a.instructions}</div>}</td>
                   <td className="whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5 text-sm"><FormatIcon f={f} className="size-3.5" />{FORMAT_LABEL[f]}</span>
                     {f === 'form' && <button onClick={() => setOpen(a)} className="mt-1 block text-xs font-medium text-[var(--accent)] hover:underline">{a.responses ?? 0} answer{a.responses === 1 ? '' : 's'} &middot; view</button>}
@@ -329,6 +355,42 @@ export function ResponsesView({ classId, itemId }: { classId: string; itemId: st
         </table>
       </div>
       <ol className="space-y-1 text-xs text-[var(--text-muted)]">{qs.map((q, i) => <li key={q.id}><span className="font-medium text-[var(--text)]">Q{i + 1}.</span> {q.prompt}{q.type === 'choice' && <> &middot; {q.options.join(' / ')}</>}</li>)}</ol>
+    </div>
+  );
+}
+
+/** Pick students for personalised work: search, quick groups (at risk, keep an eye), checkboxes. */
+function StudentPicker({ students, chosen, setChosen, find, setFind }: { students: ClassStudent[]; chosen: string[]; setChosen: (v: string[]) => void; find: string; setFind: (v: string) => void }) {
+  const q = find.trim().toLowerCase();
+  const shown = students.filter((s) => !q || s.name.toLowerCase().includes(q));
+  const group = (status: string) => students.filter((s) => s.status === status).map((s) => s.id);
+  const toggle = (id: string) => setChosen(chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id]);
+  const quick = (label: string, ids: string[]) => ids.length ? (
+    <button type="button" onClick={() => setChosen([...new Set([...chosen, ...ids])])} className="inline-flex h-8 items-center rounded-full border border-[var(--border)] px-3 text-xs font-medium hover:border-[var(--text)]">+ {label} ({ids.length})</button>
+  ) : null;
+  return (
+    <div className="mt-3 rounded-[var(--radius)] border border-[var(--border)] p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-0 flex-1"><span className="sr-only">Find a student</span>
+          <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-3.5 text-[var(--text-muted)]" aria-hidden />
+          <input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Find a student" className="input h-9 ps-8 text-sm" />
+        </label>
+        {quick('At risk', group('at_risk'))}
+        {quick('Keep an eye', group('watch'))}
+        {chosen.length > 0 && <button type="button" onClick={() => setChosen([])} className="h-8 px-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)]">Clear</button>}
+      </div>
+      <ul className="mt-2 max-h-56 overflow-y-auto" aria-label="Students">
+        {shown.map((s) => (
+          <li key={s.id}>
+            <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-[10px] px-2 py-1.5 hover:bg-[var(--surface)]">
+              <input type="checkbox" checked={chosen.includes(s.id)} onChange={() => toggle(s.id)} className="size-4 accent-[var(--deep)]" />
+              <span className="min-w-0 flex-1 truncate text-sm">{s.name}</span>
+              {s.statusLabel && s.status !== 'on_track' && <Badge tone={s.status === 'at_risk' ? 'danger' : s.status === 'watch' ? 'warning' : 'success'}>{s.statusLabel}</Badge>}
+            </label>
+          </li>
+        ))}
+        {!shown.length && <li className="px-2 py-4 text-center text-sm text-[var(--text-muted)]">No student matches &ldquo;{find}&rdquo;.</li>}
+      </ul>
     </div>
   );
 }

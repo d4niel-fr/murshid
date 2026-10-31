@@ -148,7 +148,7 @@ export function NoteEditor() {
   return (
     <Page wide>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
-        <Link href="/app/study/notes" className="me-auto inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All notes', 'كل الملاحظات')}</Link>
+        <Link href="/app/study/notes" className="me-auto inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All notes', 'كل الملاحظات')}</Link>
         <span className="text-xs text-muted-foreground" aria-live="polite">{status === 'saving' ? tx('Saving…', 'جارٍ الحفظ…') : tx(`Saved · $<Ago ts={note.updatedAt} locale={locale} />`, `محفوظة · $<Ago ts={note.updatedAt} locale={locale} />`)}</span>
         <button type="button" onClick={() => study.saveNote(note.id, { pinned: !note.pinned })} aria-pressed={Boolean(note.pinned)} aria-label={note.pinned ? tx('Unpin', 'إلغاء التثبيت') : tx('Pin', 'تثبيت')} className="grid size-9 place-items-center rounded-full bg-surface">{note.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}</button>
         <SaveButton id={`note:${note.id}`} kind="note" title={title || tx('Untitled note', 'ملاحظة بلا عنوان')} href={`/app/study/notes/${note.id}`} iconOnly />

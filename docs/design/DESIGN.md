@@ -231,7 +231,7 @@ Guidelines (after Emil Kowalski's design engineering rules):
 - **Hover** only behind `@media (hover: hover) and (pointer: fine)` (Tailwind's `hover:` already is), so a tap on a phone never leaves a hover stuck on.
 - **Marketing pages** may reveal on scroll, softly: at most 16px of rise, scale no lower than 0.97, delay capped at 240ms, text revealed as a block, never word by word.
 - Celebration (task complete streak milestones): g5-6 and g7-8 only (`bandMotion[band].celebrate`) — Magic UI `Confetti`, max 1 burst, 80 particles, ≤1.2s. g9-12: a soft accent pulse on the streak numeral instead.
-- Loops allowed only while something is happening: the "thinking" dots, loading skeletons, spinners, the recording dot, and Nour while listening, thinking or talking. Nothing loops at rest (no pulsing status dots, no idle float).
+- Loops allowed only while something is happening: the "thinking" dots, loading skeletons, spinners, the recording dot, and the mascot while listening, thinking or talking. Nothing loops at rest (no pulsing status dots, no idle float).
 
 ### Performance rules (60fps on iPad)
 1. Animate **transform and opacity only.** Height changes via `layout` (FLIP) or `grid-template-rows: 0fr→1fr`; never animate `height`, `width`, `top`, `box-shadow` in JS. Shadow change on hover = CSS transition on one element at a time.

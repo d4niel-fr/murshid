@@ -25,7 +25,7 @@ Built by Vardan (Sam) Kapur, Grade 11, Dubai.
 - **Ask Murshid**: plan the week in plain words. Every reply shows how it was worked out (goal, plan, tools, actions, result).
 - **Study tools** (`/app/study`): flashcard decks with spaced repetition (Again, Hard, Good, Easy) and a quiz mode; Markdown notes with checklists, tables and an outline, which turn `term :: meaning` lines into flashcards; a focus timer with a weekly chart; a topic tracker for exam revision.
 - **Saved and recently viewed** pages, smart search (`/` or Ctrl+K), keyboard shortcuts (`?`), adjustable text size, dark mode, English and Arabic (right to left).
-- **Nour**, an optional companion mascot you can recolour, rename and dress up in Settings, with a calm companion mode in chat.
+- **Rashid**, the companion mascot: a boy in a Murshid-blue hoodie with a choice of skin tone, hair, hoodie colour, accessory and name (or the original Murshid star), with a calm companion mode in chat.
 - **School page**: work from teachers, including Murshid forms to answer in the app and Google Forms or Microsoft Forms links.
 
 **For teachers** (`apps/admin`)

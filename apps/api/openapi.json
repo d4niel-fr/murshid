@@ -13273,6 +13273,93 @@
         "security": []
       }
     },
+    "/teacher/students": {
+      "get": {
+        "tags": [
+          "schools"
+        ],
+        "summary": "Every student across the teacher’s classes (a school admin sees the whole school), worst status first",
+        "operationId": "get_teacher_students",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/teacher/classes/{id}/students/{studentId}": {
+      "get": {
+        "tags": [
+          "schools"
+        ],
+        "summary": "One student in the class: study time per week, grades over time, every subject, recent work, upcoming tests and personalised assignment ideas",
+        "operationId": "get_teacher_classes_id_students_studentId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
     "/teacher/classes/{id}/assignments": {
       "get": {
         "tags": [
@@ -13465,6 +13552,16 @@
                         "type",
                         "prompt"
                       ]
+                    }
+                  },
+                  "studentIds": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
                     }
                   }
                 },

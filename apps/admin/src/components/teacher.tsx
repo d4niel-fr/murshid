@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarCheck2, CheckCircle2, Info, Smartphone, TriangleAlert, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { Badge, Bar, Card, cn } from './ui';
 
@@ -27,16 +28,16 @@ export function SummaryStats({ s }: { s: any }) {
     ['Class average', s.avgGrade === null ? '\u2014' : `${s.avgGrade}%`, 'recent marked work'],
   ];
   return (
-    <section className="on-deep mb-6 rounded-[var(--radius-band)] px-8 pb-8 pt-7">
+    <section className="on-deep mb-6 rounded-[var(--radius-band)] px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-7">
       <div className="flex items-center justify-between gap-4">
         <span className="eyebrow">This week, in numbers</span>
-        <span className="text-xs text-white/55">Worked out with fixed rules from the class&rsquo;s own work, tests and activities</span>
+        <span className="hidden text-xs text-white/55 md:inline">Worked out with fixed rules from the class&rsquo;s own work, tests and activities</span>
       </div>
-      <dl className="mt-8 grid grid-cols-5 gap-x-6">
+      <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-6 sm:mt-8 sm:grid-cols-3 lg:grid-cols-5">
         {items.map(([label, value, sub, tone]) => (
           <div key={label} className="min-w-0 border-t border-white/20 pt-5">
             <dt className="truncate text-[10.5px] font-medium uppercase tracking-[0.2em] text-white/60">{label}</dt>
-            <dd className={cn('figure mt-4 text-[3rem]', tone === 'danger' && 'text-[#ff9b8f]', tone === 'warning' && 'text-[#f3c76f]')}>{value}</dd>
+            <dd className={cn('figure mt-3 text-[2.25rem] sm:mt-4 sm:text-[3rem]', tone === 'danger' && 'text-[#ff9b8f]', tone === 'warning' && 'text-[#f3c76f]')}>{value}</dd>
             {sub && <dd className="mt-2 truncate text-xs text-white/60">{sub}</dd>}
           </div>
         ))}
@@ -45,7 +46,7 @@ export function SummaryStats({ s }: { s: any }) {
   );
 }
 
-export function ProgressTable({ report, subjectName }: { report: any; subjectName: string }) {
+export function ProgressTable({ report, subjectName, classId }: { report: any; subjectName: string; classId?: string }) {
   const [filter, setFilter] = useState<string>('all');
   const rows = report.students.filter((r: any) => filter === 'all' || r.status === filter);
   const chip = (id: string, label: string, n: number) => (
@@ -54,8 +55,8 @@ export function ProgressTable({ report, subjectName }: { report: any; subjectNam
   const s = report.summary;
   return (
     <Card pad={false} title={<span>Class progress <span className="hidden font-normal text-[var(--text-muted)] xl:inline">&middot; {subjectName} work, with each student&rsquo;s whole week in view</span></span>}
-      action={<div className="flex flex-wrap justify-end gap-0.5 rounded-full bg-[var(--surface-2)] p-1">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
-      <table className="tbl">
+      action={<div className="tabs-scroll flex max-w-[calc(100vw-5rem)] gap-0.5 overflow-x-auto rounded-full bg-[var(--surface-2)] p-1">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
+      <table className="tbl min-w-[920px]">
         <thead><tr><th>Student</th><th>Status</th><th>Handed in</th><th>Avg</th><th>Still to do</th><th>Next 7 days</th><th className="w-[30%]">Why</th></tr></thead>
         <tbody>
           {rows.map((r: any) => (
@@ -63,7 +64,10 @@ export function ProgressTable({ report, subjectName }: { report: any; subjectNam
               <td>
                 <div className="flex items-center gap-2.5">
                   <Avatar initials={r.initials} app={Boolean(r.appId)} />
-                  <span className="min-w-0"><span className="block whitespace-nowrap font-medium">{r.name}</span><span className="text-xs text-[var(--text-muted)]">{r.section}</span></span>
+                  <span className="min-w-0">
+                    {classId ? <Link href={`/teacher/students/${r.id}?class=${classId}`} className="block whitespace-nowrap font-medium underline-offset-4 hover:underline">{r.name}</Link> : <span className="block whitespace-nowrap font-medium">{r.name}</span>}
+                    <span className="text-xs text-[var(--text-muted)]">{r.section}</span>
+                  </span>
                 </div>
               </td>
               <td><Badge tone={STATUS_TONE[r.status]}>{r.statusLabel}</Badge></td>

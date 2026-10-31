@@ -10,6 +10,7 @@ import { MurshidMark } from './icons';
 import { ShortcutsDialog, useShortcuts } from './shortcuts';
 import { NavList, Sidebar } from './sidebar';
 import { SmartSearch } from './smart-search';
+import { TabBar } from './tab-bar';
 import { TopBar } from './topbar';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -34,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {overlay && <button aria-label="Close menu" onClick={() => setOverlay(false)} className="fixed inset-0 z-30 hidden bg-[rgb(15_47_99/0.25)] backdrop-blur-[2px] lg:block xl:hidden" />}
         <div className="shell-main flex min-h-dvh flex-col">
           <TopBar onMenu={() => setDrawer(true)} onSearch={() => setPalette(true)} onShortcuts={() => setHelp(true)} />
-          <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>
+          <main id="main" tabIndex={-1} className="flex-1 pb-[var(--tabbar-h)] outline-none">{children}</main>
         </div>
       </div>
       <D.Root open={drawer} onOpenChange={setDrawer}>
@@ -46,6 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </D.Root>
       <SmartSearch open={palette} onOpenChange={setPalette} />
       <ShortcutsDialog open={help} onOpenChange={setHelp} />
+      <TabBar onMore={() => setDrawer(true)} />
       <BackToTop />
     </TooltipProvider>
   );
