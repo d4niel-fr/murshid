@@ -60,10 +60,10 @@ export function BandSwitcher() {
   );
 }
 
-function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function IconButton({ label, onClick, children, className }: { label: string; onClick: () => void; children: React.ReactNode; className?: string }) {
   return (
     <Tip label={label} side="bottom">
-      <button onClick={onClick} aria-label={label} className="relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full bg-surface text-muted-foreground transition-colors hover:bg-[color-mix(in_oklab,var(--surface)_80%,var(--text)_6%)] hover:text-foreground">
+      <button onClick={onClick} aria-label={label} className={cn('relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full bg-surface text-muted-foreground transition-colors hover:bg-[color-mix(in_oklab,var(--surface)_80%,var(--text)_6%)] hover:text-foreground', className)}>
         {children}
       </button>
     </Tip>
@@ -72,7 +72,8 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
 
 /** Page actions: save for later, share, copy link, print, text size and the shortcuts list. */
 function PageMenu({ onShortcuts }: { onShortcuts: () => void }) {
-  const { tx, toast, prefs, setPrefs } = useApp();
+  const { tx, t, toast, prefs, setPrefs } = useApp();
+  const router = useRouter();
   const pathname = usePathname();
   const lib = useLibrary();
   const id = `page:${pathname}`;
@@ -93,6 +94,12 @@ function PageMenu({ onShortcuts }: { onShortcuts: () => void }) {
       </Tip>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" sideOffset={8} className="z-50 w-64 rounded-[22px] bg-popover p-2 shadow-lift data-[state=open]:animate-in data-[state=open]:fade-in-0">
+          {/* phones: the language and theme buttons live here instead of the top bar */}
+          <div className="sm:hidden">
+            <DropdownMenu.Item className={item} onSelect={() => { setPrefs({ locale: prefs.locale === 'ar' ? 'en' : 'ar' }); router.refresh(); }}><Languages className="size-4" />{t('top.language')}<span className="ms-auto text-xs text-muted-foreground">{prefs.locale === 'ar' ? 'English' : 'العربية'}</span></DropdownMenu.Item>
+            <DropdownMenu.Item className={item} onSelect={() => setPrefs({ theme: prefs.theme === 'dark' ? 'light' : 'dark' })}>{prefs.theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}{prefs.theme === 'dark' ? tx('Light mode', 'الوضع الفاتح') : tx('Dark mode', 'الوضع الداكن')}</DropdownMenu.Item>
+            <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+          </div>
           <DropdownMenu.Item className={item} onSelect={() => { const on = library.toggle({ id, kind: 'page', title: document.title, href: pathname }); toast({ title: on ? tx('Saved for later', 'حُفظ لوقت لاحق') : tx('Removed from saved', 'أُزيل من المحفوظات'), tone: on ? 'success' : 'info' }); }}>
             {saved ? <BookmarkCheck className="size-4 text-primary" /> : <Bookmark className="size-4" />}{saved ? tx('Saved (remove)', 'محفوظ (إزالة)') : tx('Save page for later', 'حفظ الصفحة لوقت لاحق')}
           </DropdownMenu.Item>
@@ -140,10 +147,10 @@ export function TopBar({ onMenu, onSearch, onShortcuts }: { onMenu: () => void; 
             {apiStatus === 'up' ? t('common.live') : t('common.demo')}
           </button>
         </Tip>
-        <IconButton label={t('top.language')} onClick={() => { setPrefs({ locale: prefs.locale === 'ar' ? 'en' : 'ar' }); router.refresh(); }}>
+        <IconButton className="hidden sm:inline-flex" label={t('top.language')} onClick={() => { setPrefs({ locale: prefs.locale === 'ar' ? 'en' : 'ar' }); router.refresh(); }}>
           <Languages className="size-4" />
         </IconButton>
-        <IconButton label={t('top.theme')} onClick={() => setPrefs({ theme: dark ? 'light' : 'dark' })}>
+        <IconButton className="hidden sm:inline-flex" label={t('top.theme')} onClick={() => setPrefs({ theme: dark ? 'light' : 'dark' })}>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span key={dark ? 'moon' : 'sun'} {...iconSwap} className="inline-flex">
               {dark ? <Moon className="size-4" /> : <Sun className="size-4" />}

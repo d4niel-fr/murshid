@@ -45,8 +45,8 @@ const PILL = {
 export function Pill({
   children, href, onClick, variant = 'solid', className = '', testid, external, arrow = true, icon,
 }: { children: ReactNode; href?: string; onClick?: () => void; variant?: keyof typeof PILL; className?: string; testid?: string; external?: boolean; arrow?: boolean; icon?: ReactNode }) {
-  const cls = `mk-pill inline-flex items-center justify-center gap-[0.6rem] whitespace-nowrap rounded-full px-[1.75rem] py-[0.875rem] text-[0.875rem] font-medium uppercase leading-none tracking-[0.06em] transition-colors duration-200 ${PILL[variant]} ${className}`;
-  const inner = <>{icon}{children}{arrow && <ArrowIcon className="mk-nudge size-4" />}</>;
+  const cls = `mk-pill inline-flex max-w-full items-center justify-center gap-[0.6rem] text-balance rounded-full px-[1.75rem] py-[0.875rem] text-center text-[0.875rem] font-medium uppercase leading-[1.15] sm:whitespace-nowrap sm:leading-none tracking-[0.06em] transition-colors duration-200 ${PILL[variant]} ${className}`;
+  const inner = <>{icon}{children}{arrow && <ArrowIcon className="mk-nudge size-4 shrink-0" />}</>;
   if (href) return <a href={href} className={cls} data-testid={testid} {...(external ? { target: '_blank', rel: 'noreferrer' } : {})}>{inner}</a>;
   return <button type="button" onClick={onClick} className={cls} data-testid={testid}>{inner}</button>;
 }
@@ -69,7 +69,7 @@ export function Dots({ count, active, onPick, tone = 'dark' }: { count: number; 
   return (
     <div className="flex items-center gap-2">
       {Array.from({ length: count }, (_, i) => (
-        <button key={i} type="button" onClick={() => onPick?.(i)} aria-label={`Slide ${i + 1}`} aria-current={i === active || undefined} className="p-1.5">
+        <button key={i} type="button" onClick={() => onPick?.(i)} aria-label={`Slide ${i + 1}`} aria-current={i === active || undefined} className="hit p-1.5">
           <span className={`block h-1.5 rounded-full transition-[width,background-color] duration-200 ease-[var(--ease-out)] ${i === active ? `w-5 ${tone === 'light' ? 'bg-white' : 'bg-[var(--text)]'}` : `w-1.5 ${tone === 'light' ? 'bg-white/40' : 'bg-[var(--ghost)]'}`}`} />
         </button>
       ))}
@@ -403,9 +403,9 @@ export function Footer() {
         {FOOT_COLS.map((c) => (
           <nav key={c.h[0]} aria-label={L(c.h)}>
             <p className="text-[0.75rem] font-medium uppercase tracking-[0.2em] text-white/60 rtl:tracking-normal">{L(c.h)}</p>
-            <ul className="mt-[1rem] space-y-[0.75rem] text-[0.875rem] text-white/80">
+            <ul className="mt-[1rem] space-y-[0.25rem] text-[0.875rem] text-white/80 sm:space-y-[0.75rem]">
               {c.links.map((l) => (
-                <li key={l.label[0]}>{l.overlay ? <button type="button" onClick={() => open(l.overlay!)} className="mk-link hover:text-white">{L(l.label)}</button> : <a href={l.href} className="mk-link hover:text-white">{L(l.label)}</a>}</li>
+                <li key={l.label[0]}>{l.overlay ? <button type="button" onClick={() => open(l.overlay!)} className="mk-link tap-row hover:text-white">{L(l.label)}</button> : <a href={l.href} className="mk-link tap-row hover:text-white">{L(l.label)}</a>}</li>
               ))}
             </ul>
           </nav>
@@ -413,7 +413,7 @@ export function Footer() {
       </div>
       <div className="flex flex-col gap-[1.25rem] border-t border-white/15 pt-[2rem] text-[0.875rem] text-white/60 sm:flex-row sm:items-center sm:justify-between">
         <p>{tx('© 2026 Murshid. Demo build: every student and teacher is fictional.', '© 2026 مرشد. نسخة تجريبية: كل الطلاب والمعلمين وهميون.')}</p>
-        <p className="flex flex-wrap gap-x-[1.25rem] gap-y-[0.5rem]"><a href="/privacy" className="mk-link hover:text-white">{tx('Privacy', 'الخصوصية')}</a><a href="/privacy#cookies" className="mk-link hover:text-white">{tx('Cookies', 'ملفات الارتباط')}</a><span>{tx('Proposed Grade 11 pilot, subject to the school’s approval.', 'تجربة مقترحة للصف 11، رهناً بموافقة المدرسة.')}</span></p>
+        <p className="flex flex-wrap gap-x-[1.25rem] gap-y-[0.5rem]"><a href="/privacy" className="mk-link tap-row hover:text-white">{tx('Privacy', 'الخصوصية')}</a><a href="/privacy#cookies" className="mk-link tap-row hover:text-white">{tx('Cookies', 'ملفات الارتباط')}</a><span>{tx('Proposed Grade 11 pilot, subject to the school’s approval.', 'تجربة مقترحة للصف 11، رهناً بموافقة المدرسة.')}</span></p>
       </div>
     </footer>
   );

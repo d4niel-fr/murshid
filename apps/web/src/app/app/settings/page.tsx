@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { billing, price, useBilling } from '@/lib/billing';
 import { ApiError, newIdempotencyKey } from '@/lib/http';
 import { cancelPlan } from '@/lib/school-api';
-import { DEFAULT_MASCOT, MASCOT_ACCESSORIES, MASCOT_COLORS, type MascotAccessory, type MascotColor, type TextSize } from '@/lib/prefs';
-import { MASCOT_FILL } from '@/components/mascot/mascot';
+import { DEFAULT_MASCOT, MASCOT_ACCESSORIES, MASCOT_COLORS, MASCOT_DEFAULT_NAME, MASCOT_HAIRS, MASCOT_KINDS, MASCOT_SKINS, type MascotAccessory, type MascotColor, type MascotHair, type MascotKind, type MascotSkin, type TextSize } from '@/lib/prefs';
+import { MASCOT_FILL, MASCOT_SKIN } from '@/components/mascot/mascot';
 import { cn } from '@/lib/utils';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '@/components/providers/app-provider';
@@ -58,7 +58,7 @@ export default function SettingsPage() {
 
   const test = async () => {
     setTesting(true);
-    const r = await createClient({ band, mode: 'auto', timeoutMs: 2500 }).getDashboard();
+    const r = await createClient({ band, mode: 'auto', timeoutMs: 8000 }).getDashboard();
     reportSource(r.source);
     setTesting(false);
     toast(r.source === 'api'
@@ -249,36 +249,75 @@ function MascotCard() {
   const { prefs, setPrefs, tx, toast } = useApp();
   const m = prefs.mascot ?? DEFAULT_MASCOT;
   const [name, setName] = useState(m.name);
+  // the name changes with the character: follow it
+  const [seen, setSeen] = useState(m.name);
+  if (seen !== m.name) { setSeen(m.name); setName(m.name); }
   const set = (patch: Partial<typeof m>) => setPrefs({ mascot: { ...m, ...patch } });
-  const ACC: Record<MascotAccessory, string> = { none: tx('None', 'بدون'), glasses: tx('Glasses', 'نظارة'), cap: tx('Grad cap', 'قبعة تخرج'), headphones: tx('Headphones', 'سماعات'), bow: tx('Bow', 'فيونكة') };
+  const male = m.kind === 'guide';
+  // switching character takes the new one's name, unless the student picked their own
+  const pickKind = (kind: MascotKind) => set({ kind, name: m.name === MASCOT_DEFAULT_NAME[m.kind] ? MASCOT_DEFAULT_NAME[kind] : m.name });
+  const KIND: Record<MascotKind, string> = { guide: tx('Rashid', 'رشيد'), star: tx('Star', 'النجمة') };
+  const ACC: Record<MascotAccessory, string> = { none: tx('None', 'بدون'), glasses: tx('Glasses', 'نظارة'), cap: tx('Grad cap', 'قبعة تخرج'), headphones: tx('Headphones', 'سماعات'), bow: male ? tx('Bow tie', 'ربطة عنق') : tx('Bow', 'فيونكة') };
   const COL: Record<MascotColor, string> = { navy: tx('Navy', 'كحلي'), royal: tx('Royal blue', 'أزرق ملكي'), teal: tx('Teal', 'تركوازي'), lime: tx('Lime', 'ليموني'), coral: tx('Coral', 'مرجاني'), violet: tx('Violet', 'بنفسجي') };
+  const SKIN: Record<MascotSkin, string> = { light: tx('Light', 'فاتح'), fair: tx('Fair', 'حنطي فاتح'), medium: tx('Medium', 'حنطي'), tan: tx('Tan', 'أسمر'), deep: tx('Deep', 'داكن') };
+  const HAIRS: Record<MascotHair, string> = { swoop: tx('Swoop', 'مموج جانبي'), curly: tx('Curls', 'مجعد'), fade: tx('Short', 'قصير'), buzz: tx('Buzz', 'حلاقة قصيرة جداً') };
+  const label = 'mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal';
+  const chip = (on: boolean) => cn('h-10 rounded-full px-3.5 text-[0.8125rem] font-medium transition-colors sm:h-8 sm:px-3 sm:text-xs', on ? 'bg-[var(--deep)] text-white' : 'bg-surface-2 text-muted-foreground hover:text-foreground');
+  const swatch = (on: boolean) => cn('size-10 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-shadow duration-150 hover:ring-2 hover:ring-[var(--border)] active:scale-[0.95] sm:size-9', on && 'ring-2 ring-[var(--text)]');
   return (
     <Card id="mascot" className="col-span-12 scroll-mt-24 lg:col-span-6">
       <CardHeader title={tx('Your mascot', 'تميمتك')} icon={<Smile />} />
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-        <div className="grid size-40 shrink-0 place-items-center rounded-[28px] bg-surface text-[var(--deep)]"><Mascot size={128} color={m.color} accessory={m.accessory} mood="happy" label={m.name} /></div>
-        <div className="flex w-full flex-col gap-4">
-          <form onSubmit={(e) => { e.preventDefault(); set({ name: name.trim() || DEFAULT_MASCOT.name }); toast({ title: tx(`Say hi to ${name.trim() || DEFAULT_MASCOT.name}`, `رحّب بـ ${name.trim() || DEFAULT_MASCOT.name}`) }); }} className="flex items-end gap-2">
-            <label className="flex-1"><span className="mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal">{tx('Name', 'الاسم')}</span>
+        <div className="grid size-40 shrink-0 place-items-center rounded-[28px] bg-surface text-[var(--deep)]"><Mascot size={128} kind={m.kind} color={m.color} accessory={m.accessory} skin={m.skin} hair={m.hair} mood="happy" label={m.name} /></div>
+        <div className="flex w-full min-w-0 flex-col gap-4">
+          <div>
+            <p className={label}>{tx('Character', 'الشخصية')}</p>
+            <div role="radiogroup" aria-label={tx('Character', 'الشخصية')} className="grid grid-cols-2 gap-2">
+              {MASCOT_KINDS.map((k) => (
+                <button key={k} type="button" role="radio" aria-checked={m.kind === k} onClick={() => pickKind(k)}
+                  className={cn('flex items-center gap-2 rounded-2xl border p-2 text-start text-[0.8125rem] font-medium transition-colors active:scale-[0.98]', m.kind === k ? 'border-[var(--deep)] bg-[var(--deep)]/5' : 'border-[var(--border)] hover:bg-surface')}>
+                  <span className="text-[var(--deep)]" aria-hidden><Mascot size={40} kind={k} color={m.color} skin={m.skin} hair={m.hair} track={false} /></span>{KIND[k]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); set({ name: name.trim() || MASCOT_DEFAULT_NAME[m.kind] }); toast({ title: tx(`Say hi to ${name.trim() || MASCOT_DEFAULT_NAME[m.kind]}`, `رحّب بـ ${name.trim() || MASCOT_DEFAULT_NAME[m.kind]}`) }); }} className="flex items-end gap-2">
+            <label className="min-w-0 flex-1"><span className={label}>{tx('Name', 'الاسم')}</span>
               <Input value={name} maxLength={18} onChange={(e) => setName(e.target.value)} className="h-10" /></label>
             <Button type="submit" variant="secondary" disabled={name.trim() === m.name}>{tx('Save', 'حفظ')}</Button>
           </form>
           <div>
-            <p className="mb-2 text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal">{tx('Colour', 'اللون')}</p>
-            <div role="radiogroup" aria-label={tx('Colour', 'اللون')} className="flex flex-wrap gap-2">
-              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={cn('size-9 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-shadow duration-150 hover:ring-2 hover:ring-[var(--border)] active:scale-[0.95]', m.color === c && 'ring-2 ring-[var(--text)]')} style={{ background: MASCOT_FILL[c].body }} />)}
+            <p className={label}>{male ? tx('Hoodie', 'لون الهودي') : tx('Colour', 'اللون')}</p>
+            <div role="radiogroup" aria-label={male ? tx('Hoodie colour', 'لون الهودي') : tx('Colour', 'اللون')} className="flex flex-wrap gap-2">
+              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={swatch(m.color === c)} style={{ background: MASCOT_FILL[c].body }} />)}
             </div>
           </div>
+          {male && (
+            <>
+              <div>
+                <p className={label}>{tx('Skin tone', 'لون البشرة')}</p>
+                <div role="radiogroup" aria-label={tx('Skin tone', 'لون البشرة')} className="flex flex-wrap gap-2">
+                  {MASCOT_SKINS.map((k) => <button key={k} type="button" role="radio" aria-checked={m.skin === k} aria-label={SKIN[k]} title={SKIN[k]} onClick={() => set({ skin: k })} className={swatch(m.skin === k)} style={{ background: MASCOT_SKIN[k].skin }} />)}
+                </div>
+              </div>
+              <div>
+                <p className={label}>{tx('Hair', 'الشعر')}</p>
+                <div role="radiogroup" aria-label={tx('Hair', 'الشعر')} className="flex flex-wrap gap-1.5">
+                  {MASCOT_HAIRS.map((h) => <button key={h} type="button" role="radio" aria-checked={m.hair === h} onClick={() => set({ hair: h })} className={chip(m.hair === h)}>{HAIRS[h]}</button>)}
+                </div>
+              </div>
+            </>
+          )}
           <div>
-            <p className="mb-2 text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal">{tx('Accessory', 'إكسسوار')}</p>
+            <p className={label}>{tx('Accessory', 'إكسسوار')}</p>
             <div role="radiogroup" aria-label={tx('Accessory', 'إكسسوار')} className="flex flex-wrap gap-1.5">
-              {MASCOT_ACCESSORIES.map((a) => <button key={a} type="button" role="radio" aria-checked={m.accessory === a} onClick={() => set({ accessory: a })} className={cn('h-8 rounded-full px-3 text-xs font-medium transition-colors', m.accessory === a ? 'bg-[var(--deep)] text-white' : 'bg-surface-2 text-muted-foreground hover:text-foreground')}>{ACC[a]}</button>)}
+              {MASCOT_ACCESSORIES.map((a) => <button key={a} type="button" role="radio" aria-checked={m.accessory === a} onClick={() => set({ accessory: a })} className={chip(m.accessory === a)}>{ACC[a]}</button>)}
             </div>
           </div>
         </div>
       </div>
       <div className="mt-4">
-        <Row title={tx('Companion mode', 'وضع الرفيق')} desc={tx(`${m.name} answers beside the chat in Ask Murshid.`, `تجيبك ${m.name} بجانب المحادثة في «اسأل مرشد».`)}><Switch checked={Boolean(prefs.companion)} onCheckedChange={(v) => setPrefs({ companion: v })} aria-label={tx('Companion mode', 'وضع الرفيق')} /></Row>
+        <Row title={tx('Companion mode', 'وضع الرفيق')} desc={tx(`${m.name} answers beside the chat in Ask Murshid.`, male ? `يجيبك ${m.name} بجانب المحادثة في «اسأل مرشد».` : `تجيبك ${m.name} بجانب المحادثة في «اسأل مرشد».`)}><Switch checked={Boolean(prefs.companion)} onCheckedChange={(v) => setPrefs({ companion: v })} aria-label={tx('Companion mode', 'وضع الرفيق')} /></Row>
         <Row title={tx('Read replies aloud', 'قراءة الردود بصوت عالٍ')} desc={tx('Uses your browser’s voice. Nothing is recorded.', 'يستخدم صوت متصفحك. لا يُسجّل شيء.')}><Switch checked={Boolean(prefs.voice)} onCheckedChange={(v) => setPrefs({ voice: v })} aria-label={tx('Read replies aloud', 'قراءة الردود بصوت عالٍ')} /></Row>
       </div>
     </Card>

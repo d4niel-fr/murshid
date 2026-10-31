@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, FileText, Flame, Layers, ListChecks, Play, Sparkles, Timer } from 'lucide-react';
+import { ArrowRight, FileText, Flame, Layers, ListChecks, PenLine, Play, Sparkles, Timer } from 'lucide-react';
 import { useApp } from '@/components/providers/app-provider';
 import { MyMascot, useMascotName } from '@/components/mascot/my-mascot';
 import { Page, PageHeader } from '@/components/shared/page';
@@ -12,10 +12,12 @@ import { isDue, studyStreak, useStudy, weekFocusMinutes } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { count } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
+import { useNotebooks } from '@/lib/notebook';
 
 export function StudyHub() {
   const { tx, locale, world } = useApp();
   const s = useStudy();
+  const nbs = useNotebooks();
   const name = useMascotName();
   const now = Date.now();
   const due = s.cards.filter((c) => isDue(c, now)).length;
@@ -36,6 +38,7 @@ export function StudyHub() {
   const tools = [
     { href: '/app/study/flashcards', icon: Layers, title: tx('Flashcards', 'البطاقات التعليمية'), body: tx('Spaced repetition: each card comes back just before you would forget it.', 'تكرار متباعد: تعود كل بطاقة قبل أن تنساها مباشرة.'), meta: tx(`${count(s.decks.length, 'deck')} · ${due} due`, `${s.decks.length} مجموعات · ${due} مستحقة`) },
     { href: '/app/study/notes', icon: FileText, title: tx('Notes', 'الملاحظات'), body: tx('Headings, checklists and tables. Saves as you type; turns “term :: meaning” lines into cards.', 'عناوين وقوائم وجداول. تُحفظ أثناء الكتابة؛ وتحوّل سطور «مصطلح :: معنى» إلى بطاقات.'), meta: tx(count(s.notes.length, 'note'), `${s.notes.length} ملاحظات`) },
+    { href: '/app/study/notebook', icon: PenLine, title: tx('Notebook', 'الدفتر'), body: tx('Write by hand with a stylus or finger: pen, highlighter, eraser, lined or grid paper.', 'اكتب بخط يدك بالقلم أو الإصبع: قلم وقلم تمييز وممحاة وورق مسطّر أو مربعات.'), meta: tx(count(nbs.notebooks.length, 'notebook'), `${nbs.notebooks.length} دفاتر`) },
     { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${week} دقيقة هذا الأسبوع`) },
     { href: '/app/study/topics', icon: ListChecks, title: tx('Topic tracker', 'متتبع المواضيع'), body: tx('Rate each topic from “not started” to “confident” and revise the shaky ones first.', 'قيّم كل موضوع من «لم أبدأ» إلى «متقن» وراجع الضعيفة أولاً.'), meta: tx(`${shaky.length} to revise`, `${shaky.length} للمراجعة`) },
   ];
@@ -49,7 +52,7 @@ export function StudyHub() {
       <motion.section initial="hidden" animate="show" variants={stagger} className="on-deep relative mb-6 overflow-hidden rounded-[var(--radius-band)] bg-[var(--deep)] p-6 text-white md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
           <motion.div variants={fadeUp} className="flex items-center gap-4 lg:w-[34%]">
-            <span className="text-white"><MyMascot size={92} mood={due > 0 ? 'idle' : 'happy'} /></span>
+            <span className="grid size-[6.5rem] shrink-0 place-items-center rounded-full bg-white/[0.09] text-white"><MyMascot size={92} mood={due > 0 ? 'idle' : 'happy'} /></span>
             <div>
               <p className="eyebrow">{name}</p>
               <p className="mt-1.5 text-[1.0625rem] leading-snug">
@@ -70,8 +73,9 @@ export function StudyHub() {
       </motion.section>
 
       <motion.div initial="hidden" animate="show" variants={stagger} className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {tools.map((t) => (
-          <motion.div key={t.href} variants={fadeUp} className="col-span-12 sm:col-span-6 xl:col-span-3">
+          <motion.div key={t.href} variants={fadeUp}>
             <Link href={t.href} className="lift card group flex h-full flex-col p-5">
               <span className="grid size-10 place-items-center rounded-full bg-[var(--deep)] text-white"><t.icon className="size-4" /></span>
               <h2 className="card-title mt-4">{t.title}</h2>
@@ -80,9 +84,10 @@ export function StudyHub() {
             </Link>
           </motion.div>
         ))}
+        </div>
 
         <motion.section variants={fadeUp} className="card col-span-12 p-5 lg:col-span-7">
-          <div className="mb-4 flex items-center justify-between"><h2 className="card-title flex items-center gap-2"><Flame className="size-4 text-[var(--warning)]" />{tx('Due now', 'مستحق الآن')}</h2><Link href="/app/study/flashcards" className="text-[0.8125rem] text-muted-foreground hover:text-foreground">{tx('All decks', 'كل المجموعات')}</Link></div>
+          <div className="mb-4 flex items-center justify-between"><h2 className="card-title flex items-center gap-2"><Flame className="size-4 text-[var(--warning)]" />{tx('Due now', 'مستحق الآن')}</h2><Link href="/app/study/flashcards" className="tap-row text-[0.8125rem] text-muted-foreground hover:text-foreground">{tx('All decks', 'كل المجموعات')}</Link></div>
           {decksDue.length ? (
             <ul className="flex flex-col">
               {decksDue.map(({ d, n }) => (
@@ -97,7 +102,7 @@ export function StudyHub() {
         </motion.section>
 
         <motion.section variants={fadeUp} className="card col-span-12 p-5 lg:col-span-5">
-          <div className="mb-4 flex items-center justify-between"><h2 className="card-title flex items-center gap-2"><FileText className="size-4" />{tx('Recent notes', 'أحدث الملاحظات')}</h2><Link href="/app/study/notes" className="text-[0.8125rem] text-muted-foreground hover:text-foreground">{tx('All notes', 'كل الملاحظات')}</Link></div>
+          <div className="mb-4 flex items-center justify-between"><h2 className="card-title flex items-center gap-2"><FileText className="size-4" />{tx('Recent notes', 'أحدث الملاحظات')}</h2><Link href="/app/study/notes" className="tap-row text-[0.8125rem] text-muted-foreground hover:text-foreground">{tx('All notes', 'كل الملاحظات')}</Link></div>
           <ul className="flex flex-col">
             {notes.map((n) => (
               <li key={n.id}><Link href={`/app/study/notes/${n.id}`} className="flex items-center gap-3 rounded-[14px] px-2 py-2.5 transition-colors hover:bg-[var(--bg)]">

@@ -188,7 +188,10 @@ export interface RosterStudent {
   id: string;
   orgId: string;
   name: string;
-  section: '11A' | '11B' | '11C';
+  /** class group, e.g. '11B' (Grade 11) or '10A' */
+  section: string;
+  /** year group (10, 11 or 12) */
+  grade?: number;
   /** fixed key the synthetic numbers are generated from (kept stable so ids can change) */
   seed?: string;
   /** the student's id in the Murshid app (DemoStore), when they use it in this demo */
@@ -254,8 +257,29 @@ function hash(s: string): number {
   return (h >>> 0) / 4294967296;
 }
 
+/* Grades 10 and 12: generated from fixed name pools, so every run (and every test) sees the same students. */
+const FIRST = ['Aaliyah', 'Abdulla', 'Adam', 'Advait', 'Alia', 'Amaan', 'Amira', 'Arnav', 'Ayaan', 'Bilal', 'Chloe', 'Dania', 'Daniel', 'Elena', 'Emir', 'Farah', 'Gabriel', 'Hana', 'Hassan', 'Ibrahim', 'Isla', 'Jana', 'Jasmine', 'Joel', 'Kiara', 'Leo', 'Lucas', 'Malak', 'Mansoor', 'Mohammed', 'Nadia', 'Naveen', 'Nikhil', 'Nora', 'Omar', 'Priya', 'Rania', 'Reem', 'Rohan', 'Salma', 'Sami', 'Shreya', 'Sofia', 'Tariq', 'Usman', 'Vanya', 'Yara', 'Youssef', 'Zain', 'Zoya'];
+const LAST = ['Abbas', 'Al Ameri', 'Al Ketbi', 'Al Mazrouei', 'Al Shamsi', 'Anand', 'Bakr', 'Bhatt', 'Castillo', 'Das', 'Dsouza', 'El Masri', 'Fernando', 'Ghosh', 'Habib', 'Hussain', 'Jain', 'Kamal', 'Khan', 'Kumar', 'Lopez', 'Mathew', 'Menon', 'Mishra', 'Nasser', 'Okafor', 'Pillai', 'Qureshi', 'Rao', 'Reyes', 'Saeed', 'Santos', 'Sen', 'Sharma', 'Tan', 'Varghese', 'Wong', 'Yusuf', 'Zaki', 'Zubair'];
+
+function cohort(grade: 10 | 12, sections: string[], size: number, taken: Set<string>): [string, string, number][] {
+  const out: [string, string, number][] = [];
+  for (let i = 0; out.length < size; i++) {
+    const f = FIRST[Math.floor(hash(`g${grade}-f-${i}`) * FIRST.length)]!;
+    const l = LAST[Math.floor(hash(`g${grade}-l-${i}`) * LAST.length)]!;
+    const name = `${f} ${l}`;
+    if (taken.has(name)) continue;
+    taken.add(name);
+    out.push([name, sections[out.length % sections.length]!, grade]);
+  }
+  return out;
+}
+
 export function seedRoster(): RosterStudent[] {
-  return NAMES.map(([name, section], i) => {
+  const taken = new Set(NAMES.map(([n]) => n));
+  // Grade 11 (the original 38) first: their ids, numbers and class lists are unchanged
+  const grade11 = NAMES.map(([name, section]) => [name, section, 11] as [string, string, number]);
+  const all = [...grade11, ...cohort(10, ['10A', '10B'], 44, taken), ...cohort(12, ['12A', '12B', '12C'], 58, taken)];
+  return all.map(([name, section, grade], i) => {
     const slug = name.toLowerCase().replace(/[^a-z]+/g, '-');
     const id = `dss-${slug}`;
     // the synthetic numbers are seeded from this fixed key, so renaming ids never reshuffles the class
@@ -263,7 +287,7 @@ export function seedRoster(): RosterStudent[] {
     const seed = key;
     if (name === 'Ahamed Mehta') {
       return {
-        id, seed, orgId: DEMO_SCHOOL, name, section, appId: 'demo-ideal', electives: ['physics', 'economics', 'business'],
+        id, seed, orgId: DEMO_SCHOOL, name, section, grade, appId: 'demo-ideal', electives: ['physics', 'economics', 'business'],
         activities: [
           { name: 'Football, 1st XI (vice-captain)', days: [1, 3], minutes: 90 },
           { name: 'Club swimming', days: [0, 2, 4, 6], minutes: 75 },
@@ -277,10 +301,11 @@ export function seedRoster(): RosterStudent[] {
     const h3 = hash(`${key}:c`);
     const set = ACTIVITY_SETS[Math.floor(h2 * ACTIVITY_SETS.length)]!;
     // a few students carry real risk; most are steady
-    const diligence = i % 9 === 4 ? 0.48 + h * 0.12 : i % 11 === 7 ? 0.6 + h * 0.1 : 0.74 + h * 0.24;
+    const diligence = i % 9 === 4 ? 0.48 + h * 0.12 : i % 11 === 7 ? 0.6 + h * 0.1 : 0.74 + h * 0.24; // a few at risk, most steady
     return {
-      id, seed, orgId: DEMO_SCHOOL, name, section, appId: null,
-      electives: ELECTIVE_SETS[Math.floor(h3 * ELECTIVE_SETS.length)]!,
+      id, seed, orgId: DEMO_SCHOOL, name, section, grade, appId: null,
+      // only Grade 11 takes the elective classes in this demo; Grades 10 and 12 have English (and Grade 10 maths)
+      electives: grade === 11 ? ELECTIVE_SETS[Math.floor(h3 * ELECTIVE_SETS.length)]! : [],
       activities: set.acts, events: set.events,
       diligence: Math.round(diligence * 100) / 100,
       ability: Math.round((0.45 + h2 * 0.5 + (diligence - 0.75) * 0.3) * 100) / 100,
@@ -289,7 +314,6 @@ export function seedRoster(): RosterStudent[] {
 }
 
 export function seedStreams(roster: RosterStudent[]): { streams: Stream[]; members: Record<string, string[]> } {
-  const ids = roster.map((s) => s.id);
   const streams: Stream[] = [
     { id: 'cls-eng-11ab', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-thomas', name: 'Grade 11 English (11A/11B)', setDays: [1, 3], minutes: 45, teamsClassId: 'teams-eng-11ab' },
     { id: 'cls-eng-11c', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-pereira', name: 'Grade 11 English (11C)', setDays: [2, 4], minutes: 40, teamsClassId: 'teams-eng-11c' },
@@ -301,12 +325,21 @@ export function seedStreams(roster: RosterStudent[]): { streams: Stream[]; membe
     { id: 'cls-eco-11', orgId: DEMO_SCHOOL, subject: 'economics', teacherId: 't-bansal', name: 'Grade 11 Economics', setDays: [1, 4], minutes: 45, teamsClassId: 'teams-eco-11' },
     { id: 'cls-bus-11', orgId: DEMO_SCHOOL, subject: 'business', teacherId: 't-dsouza', name: 'Grade 11 Business Studies', setDays: [3], minutes: 40, teamsClassId: 'teams-bus-11' },
     { id: 'cls-cs-11', orgId: DEMO_SCHOOL, subject: 'cs', teacherId: 't-bhat', name: 'Grade 11 Computer Science', setDays: [2], minutes: 60, teamsClassId: 'teams-cs-11' },
+    // more classes for the two portal teachers: 30 to 60 students each
+    { id: 'cls-eng-10ab', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-thomas', name: 'Grade 10 English (10A/10B)', setDays: [2, 4], minutes: 35, teamsClassId: 'teams-eng-10ab' },
+    { id: 'cls-eng-12', orgId: DEMO_SCHOOL, subject: 'english', teacherId: 't-thomas', name: 'Grade 12 English Literature (12A–12C)', setDays: [1, 4], minutes: 50, teamsClassId: 'teams-eng-12' },
+    { id: 'cls-math-10ab', orgId: DEMO_SCHOOL, subject: 'maths', teacherId: 't-desai', name: 'Grade 10 Mathematics (10A/10B)', setDays: [1, 3], minutes: 35, teamsClassId: 'teams-math-10ab' },
   ];
+  const g = (n: number) => roster.filter((s) => (s.grade ?? 11) === n).map((s) => s.id);
+  const g11 = g(11);
   const members: Record<string, string[]> = {
-    'cls-eng-11ab': ids.slice(0, 30),
-    'cls-eng-11c': ids.slice(30),
-    'cls-math-11bc': ids.slice(8),
-    'cls-math-11a': ids.slice(0, 8),
+    'cls-eng-11ab': g11.slice(0, 30),
+    'cls-eng-11c': g11.slice(30),
+    'cls-math-11bc': g11.slice(8),
+    'cls-math-11a': g11.slice(0, 8),
+    'cls-eng-10ab': g(10),
+    'cls-math-10ab': g(10),
+    'cls-eng-12': g(12),
   };
   for (const st of streams) {
     if (members[st.id]) continue;

@@ -6,13 +6,24 @@ export type ThemePref = 'light' | 'dark';
 export type TextSize = 'sm' | 'md' | 'lg' | 'xl';
 export const TEXT_SIZES: TextSize[] = ['sm', 'md', 'lg', 'xl'];
 
-/** The mascot's look: one character, customised by the student. */
+/**
+ * The mascot's look, customised by the student. Two characters: Rashid, a boy in a Murshid-blue hoodie (the default),
+ * and the original Murshid star. Colour is the hoodie (or the star); skin and hair apply to Rashid.
+ */
+export type MascotKind = 'guide' | 'star';
 export type MascotColor = 'navy' | 'royal' | 'teal' | 'lime' | 'coral' | 'violet';
 export type MascotAccessory = 'none' | 'glasses' | 'cap' | 'headphones' | 'bow';
-export interface MascotPrefs { color: MascotColor; accessory: MascotAccessory; name: string }
+export type MascotSkin = 'light' | 'fair' | 'medium' | 'tan' | 'deep';
+export type MascotHair = 'swoop' | 'curly' | 'fade' | 'buzz';
+export interface MascotPrefs { kind: MascotKind; color: MascotColor; accessory: MascotAccessory; skin: MascotSkin; hair: MascotHair; name: string }
+export const MASCOT_KINDS: MascotKind[] = ['guide', 'star'];
 export const MASCOT_COLORS: MascotColor[] = ['navy', 'royal', 'teal', 'lime', 'coral', 'violet'];
 export const MASCOT_ACCESSORIES: MascotAccessory[] = ['none', 'glasses', 'cap', 'headphones', 'bow'];
-export const DEFAULT_MASCOT: MascotPrefs = { color: 'navy', accessory: 'none', name: 'Nour' };
+export const MASCOT_SKINS: MascotSkin[] = ['light', 'fair', 'medium', 'tan', 'deep'];
+export const MASCOT_HAIRS: MascotHair[] = ['swoop', 'curly', 'fade', 'buzz'];
+/** each character's own name, used until the student renames it */
+export const MASCOT_DEFAULT_NAME: Record<MascotKind, string> = { guide: 'Rashid', star: 'Nour' };
+export const DEFAULT_MASCOT: MascotPrefs = { kind: 'guide', color: 'navy', accessory: 'none', skin: 'medium', hair: 'swoop', name: MASCOT_DEFAULT_NAME.guide };
 
 export interface Prefs {
   band: BandId;
@@ -41,10 +52,15 @@ export const DEFAULT_PREFS: Prefs = { band: 'g9-10', locale: 'en', theme: 'light
 function parseMascot(x: unknown): MascotPrefs {
   const m = (x && typeof x === 'object' ? x : {}) as Partial<MascotPrefs>;
   const name = typeof m.name === 'string' ? m.name.replace(/[^\p{L}\p{N} '-]/gu, '').trim().slice(0, 18) : '';
+  // saved before characters existed: move to the new default character, and its name if it was never changed
+  const legacy = !MASCOT_KINDS.includes(m.kind as MascotKind);
   return {
+    kind: legacy ? DEFAULT_MASCOT.kind : (m.kind as MascotKind),
     color: MASCOT_COLORS.includes(m.color as MascotColor) ? (m.color as MascotColor) : DEFAULT_MASCOT.color,
     accessory: MASCOT_ACCESSORIES.includes(m.accessory as MascotAccessory) ? (m.accessory as MascotAccessory) : DEFAULT_MASCOT.accessory,
-    name: name || DEFAULT_MASCOT.name,
+    skin: MASCOT_SKINS.includes(m.skin as MascotSkin) ? (m.skin as MascotSkin) : DEFAULT_MASCOT.skin,
+    hair: MASCOT_HAIRS.includes(m.hair as MascotHair) ? (m.hair as MascotHair) : DEFAULT_MASCOT.hair,
+    name: (legacy && name === MASCOT_DEFAULT_NAME.star ? '' : name) || DEFAULT_MASCOT.name,
   };
 }
 export const PREFS_COOKIE = 'murshid_prefs';

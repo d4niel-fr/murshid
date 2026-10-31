@@ -84,7 +84,7 @@ describe('Microsoft 365 (simulated connector)', () => {
     expect(cb.body.session.headers).toEqual({ 'x-dev-role': 'teacher', 'x-dev-user-id': 't-thomas' });
     const me = (await req('GET', '/teacher/me', cb.body.session.headers)).body;
     expect(me.teacher.name).toBe('Ms. Sana Thomas');
-    expect(me.classes.map((c: any) => [c.id, c.students])).toEqual([['cls-eng-11ab', 30]]);
+    expect(me.classes.map((c: any) => [c.id, c.students])).toEqual([['cls-eng-11ab', 30], ['cls-eng-10ab', 44], ['cls-eng-12', 58]]);
     expect((await req('POST', '/auth/microsoft/callback', {}, { code: 'sim:nobody' })).status).toBe(400);
   });
 
@@ -102,7 +102,7 @@ describe('Microsoft 365 (simulated connector)', () => {
     expect((await req('GET', '/orgs/demo-school', ADMIN)).body.microsoft.connected).toBe(false);
     const r = await req('POST', '/orgs/demo-school/microsoft/connect', ADMIN);
     expect(r.status).toBe(200);
-    expect(r.body.microsoft).toMatchObject({ connected: true, simulated: true, synced: { classes: 10, teachers: 10, students: 38 } });
+    expect(r.body.microsoft).toMatchObject({ connected: true, simulated: true, synced: { classes: 13, teachers: 10, students: 140 } });
     expect(r.body.microsoft.synced.assignments).toBeGreaterThan(20);
     const a = (await req('GET', '/teacher/classes/cls-eng-11ab/assignments', THOMAS)).body.items;
     expect(a[0].source).toBe('teams');

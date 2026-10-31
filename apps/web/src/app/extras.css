@@ -2,7 +2,7 @@
 
 /* ---------------------------------------------------------------- mascot */
 .mascot .mascot-body { transform-box: view-box; transform-origin: 60px 108px; }
-/* idle and sleepy stay still (a loop on something always on screen is noise); the rest show what Nour is doing */
+/* idle and sleepy stay still (a loop on something always on screen is noise); the rest show what the mascot is doing */
 .mascot-listening .mascot-body { animation: mascot-lean 2.2s ease-in-out infinite; }
 .mascot-thinking .mascot-body { animation: mascot-tilt 2.6s ease-in-out infinite; }
 .mascot-talking .mascot-body { animation: mascot-bob 0.46s ease-in-out infinite; }
@@ -14,6 +14,14 @@
 @keyframes mascot-tilt { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-2deg) translateY(-3px); } }
 @keyframes mascot-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015, 0.985); } }
 @keyframes mascot-hop { 0%, 60%, 100% { transform: translateY(0) scale(1); } 20% { transform: translateY(-9px) scale(0.98, 1.03); } 40% { transform: translateY(0) scale(1.04, 0.96); } }
+/* the hoodie character moves his head; the shoulders stay put */
+.mascot-guide .mascot-head { transform-box: view-box; transform-origin: 60px 84px; }
+.guide-listening .mascot-head { animation: mascot-lean 2.2s ease-in-out infinite; }
+.guide-thinking .mascot-head { animation: mascot-tilt 2.6s ease-in-out infinite; }
+.guide-talking .mascot-head { animation: guide-talk 0.46s ease-in-out infinite; }
+.guide-happy .mascot-head { animation: guide-nod 0.9s cubic-bezier(0.3, 1.4, 0.5, 1) 1; }
+@keyframes guide-talk { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-1.2px) rotate(-1deg); } }
+@keyframes guide-nod { 0%, 100% { transform: none; } 30% { transform: translateY(-3px) rotate(-4deg); } 60% { transform: translateY(1px) rotate(2.5deg); } }
 @keyframes mascot-dot { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
 
 /* the companion's speech bubble */
@@ -48,7 +56,7 @@
 .flip[data-flipped='true'] .flip-inner { transform: rotateY(180deg); }
 .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flip-back { transform: rotateY(180deg); }
-@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } .mascot .mascot-body, .mascot .mascot-head { animation: none !important; } }
 
 /* ---------------------------------------------------------------- loading */
 .skeleton { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface); }

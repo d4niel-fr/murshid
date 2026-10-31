@@ -34,12 +34,17 @@ export function setAdminPasscode(code: string | null) {
   if (code) localStorage.setItem(PASSCODE_KEY, code); else localStorage.removeItem(PASSCODE_KEY);
   window.dispatchEvent(new Event('murshid-passcode'));
 }
-/** Check a passcode against the API (true when accepted, or when the API has no passcode set). */
-export async function checkAdminPasscode(code: string): Promise<boolean> {
+/** Check a passcode against the API: 'ok' (accepted, or the API needs none), 'locked' (wrong or missing), 'offline'. */
+export async function adminAccess(code: string): Promise<'ok' | 'locked' | 'offline'> {
   try {
-    const res = await fetch(`${API_BASE}/admin/ai-status`, { headers: { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER, 'x-admin-passcode': code }, cache: 'no-store' });
-    return res.ok;
-  } catch { return false; }
+    const res = await fetch(`${API_BASE}/admin/ai-status`, { headers: { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER, 'x-admin-passcode': code }, cache: 'no-store', signal: AbortSignal.timeout(10_000) });
+    if (res.ok) return 'ok';
+    return res.status === 401 || res.status === 403 ? 'locked' : 'offline';
+  } catch { return 'offline'; }
+}
+/** true when the passcode is accepted (or the API has no passcode set). */
+export async function checkAdminPasscode(code: string): Promise<boolean> {
+  return (await adminAccess(code)) === 'ok';
 }
 
 export async function api<T = any>(path: string, init: { method?: string; body?: unknown; as?: 'admin' | 'staff' | 'public'; headers?: Record<string, string>; timeoutMs?: number } = {}): Promise<T> {

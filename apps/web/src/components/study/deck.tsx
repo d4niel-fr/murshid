@@ -217,7 +217,7 @@ export function DeckView() {
 
   return (
     <Page>
-      <Link href="/app/study/flashcards" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All decks', 'كل المجموعات')}</Link>
+      <Link href="/app/study/flashcards" className="mb-4 inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All decks', 'كل المجموعات')}</Link>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="eyebrow mb-3">{deck.subject} · {tx(count(cards.length, 'card'), `${cards.length} بطاقة`)}</p>

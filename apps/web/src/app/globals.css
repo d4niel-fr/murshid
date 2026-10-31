@@ -18,6 +18,10 @@
   --inset: 0.75rem;      /* the white frame around the navy sidebar */
   --rail: 5rem;          /* sidebar widths (without the inset) */
   --side: 16rem;
+  --tabbar-h: 0px;     /* the phone tab bar's height, when it shows (set by TabBar) */
+}
+@media (max-width: 1023.98px) {
+  :root[data-tabbar='on'] { --tabbar-h: calc(4rem + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 639px) { :root { --inset: 0.5rem; } }
 
@@ -84,6 +88,13 @@
   .tint-warning { background: color-mix(in oklab, var(--warning) 14%, transparent); color: color-mix(in oklab, var(--warning) 62%, var(--text)); }
   .tint-danger { background: color-mix(in oklab, var(--danger) 11%, transparent); color: color-mix(in oklab, var(--danger) 80%, var(--text)); }
   .tint-info { background: color-mix(in oklab, var(--info) 11%, transparent); color: color-mix(in oklab, var(--info) 82%, var(--text)); }
+  /* touch screens: a bigger invisible hit area on small controls, without changing how they look */
+  @media (pointer: coarse) {
+    .hit { position: relative; }
+    .hit::after { content: ''; position: absolute; inset: -10px; }
+    .seg-btn { min-height: 2.25rem; }
+    .tap-row { display: inline-block; padding-block: 0.5rem; }
+  }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 }

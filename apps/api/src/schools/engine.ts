@@ -50,7 +50,12 @@ export interface WorkItem {
   format?: AssignmentFormat;
   formUrl?: string | null;
   questions?: FormQuestion[];
+  /** personalised work: only these students get it (null/absent = the whole class) */
+  assignees?: string[] | null;
 }
+
+/** Whether a student gets an item: everyone in the class, unless it was set for chosen students only. */
+export const assignedTo = (item: WorkItem, studentId: string) => !item.assignees || item.assignees.includes(studentId);
 export type AssignmentFormat = 'task' | 'form' | 'google_form' | 'microsoft_form';
 export interface FormQuestion { id: string; type: 'short' | 'long' | 'choice'; prompt: string; options?: string[]; required: boolean }
 export interface FormResponse { answers: Record<string, string>; submittedAt: string; updatedAt: string }
@@ -130,7 +135,9 @@ export interface DatedItem { date: string; title: string; kind: 'test' | 'event'
 
 export function calendarFor(st: RosterStudent, today: string): DatedItem[] {
   const mon = mondayOfDate(today);
-  const subs = new Set<SubjectId>(['english', 'maths', ...st.electives]);
+  // Grade 11 takes English, maths and electives; Grade 10 English and maths; Grade 12 (in this demo) English only
+  const core: SubjectId[] = (st.grade ?? 11) === 12 ? ['english'] : ['english', 'maths'];
+  const subs = new Set<SubjectId>([...core, ...st.electives]);
   return CALENDAR.filter((c) => (c.kind === 'test' ? subs.has(c.subject!) : c.allStudents || st.events.includes(c.eventTag ?? '')))
     .map((c) => ({ date: addDays(mon, c.weekOffset * 7 + c.weekday - 1), title: c.title, kind: c.kind, subject: c.subject, minutes: c.minutes, allStudents: c.allStudents }))
     .sort((x, y) => x.date.localeCompare(y.date));
@@ -147,7 +154,7 @@ export function studentWork(school: School, st: RosterStudent, today: string, an
   const items: StudentWork['items'] = [];
   for (const s of streamsOf(school, st.id)) {
     const t = school.teachers.find((x) => x.id === s.teacherId);
-    for (const it of streamItems(school, s, today)) items.push({ item: it, sub: submission(st, it, today), subjectName: SUBJECT_NAMES[s.subject], teacherName: t?.name ?? '' });
+    for (const it of streamItems(school, s, today)) if (assignedTo(it, st.id)) items.push({ item: it, sub: submission(st, it, today), subjectName: SUBJECT_NAMES[s.subject], teacherName: t?.name ?? '' });
   }
   return { student: st, items, calendar: calendarFor(st, anchor) };
 }

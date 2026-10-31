@@ -43,7 +43,8 @@ const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object
 const linkOverrides = new Map<BandId, ProfileLinks>();
 
 export function createClient(opts: ClientOptions) {
-  const { band, locale = 'en', mode = 'auto', baseUrl = API_BASE, timeoutMs = 1200, now } = opts;
+  // generous: a serverless API can take a few seconds to wake up, and giving up early shows demo data instead of live
+  const { band, locale = 'en', mode = 'auto', baseUrl = API_BASE, timeoutMs = 8000, now } = opts;
   const f = opts.fetchImpl ?? (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : undefined);
   const world = opts.world ?? (() => mockWorld(band, now));
 
@@ -125,7 +126,7 @@ export function createClient(opts: ClientOptions) {
       if (mode === 'mock' || !f) return { data: fallback(), source: 'mock' };
       const ctrl = new AbortController();
       // short timeout until the response starts, then the long model timeout
-      let timer = setTimeout(() => ctrl.abort(), timeoutMs * 4);
+      let timer = setTimeout(() => ctrl.abort(), Math.max(20_000, timeoutMs * 2));
       signal?.addEventListener('abort', () => ctrl.abort());
       try {
         const res = await f(`${baseUrl}/chat`, {
