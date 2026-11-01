@@ -67,7 +67,17 @@ export default function SettingsPage() {
       : { title: tx('API not reachable, using demo data', 'الواجهة غير متاحة، تُستخدم بيانات تجريبية'), description: API_BASE, tone: 'info' });
   };
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), band, student: world.dashboard.student, localState: user, privacy }, null, 2)], { type: 'application/json' });
+    // everything Murshid keeps on this device: notes, decks, notebooks, focus sessions, saved items, drafts, preferences
+    const device: Record<string, unknown> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k?.startsWith('murshid:') || k === 'murshid:admin-passcode') continue;
+        const raw = localStorage.getItem(k) ?? '';
+        try { device[k.slice('murshid:'.length)] = JSON.parse(raw); } catch { device[k.slice('murshid:'.length)] = raw; }
+      }
+    } catch { /* storage off: export what is in memory */ }
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), band, student: world.dashboard.student, localState: user, privacy, prefs, device }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `murshid-${band}-data.json`;
@@ -145,16 +155,16 @@ export default function SettingsPage() {
         <Card className="col-span-12 lg:col-span-6">
           <CardHeader title={tx('Privacy', 'الخصوصية')} icon={<Shield />} />
           <Row title={tx('Weekly digest to guardian', 'ملخص أسبوعي لولي الأمر')} desc={g ? tx(`Your band's guardian view: ${g.level}. Chats are ${g.seesChatTranscripts ? 'visible' : 'never shared'}.`, `عرض ولي الأمر لمرحلتك: ${g.level}. المحادثات ${g.seesChatTranscripts ? 'مرئية' : 'لا تُشارك أبداً'}.`) : undefined}>
-            <Switch checked={privacy.shareDigest} onCheckedChange={(v) => setP('shareDigest', v)} aria-label="digest" />
+            <Switch checked={privacy.shareDigest} onCheckedChange={(v) => setP('shareDigest', v)} aria-label={tx('Weekly digest to guardian', 'ملخص أسبوعي لولي الأمر')} />
           </Row>
           <Row title={tx('Personalised opportunities', 'فرص مخصصة')} desc={tx('Use your subjects and activities to rank opportunities.', 'استخدم موادك وأنشطتك لترتيب الفرص.')}>
-            <Switch checked={privacy.personalisedOpps} onCheckedChange={(v) => setP('personalisedOpps', v)} aria-label="opps" />
+            <Switch checked={privacy.personalisedOpps} onCheckedChange={(v) => setP('personalisedOpps', v)} aria-label={tx('Personalised opportunities', 'فرص مخصصة')} />
           </Row>
           <Row title={tx('Public profile', 'ملف عام')} desc={bandConfig.features.publicProfile ? tx('Let programmes view a read-only summary.', 'اسمح للبرامج برؤية ملخص للقراءة فقط.') : tx('Not available for your grade band.', 'غير متاح لمرحلتك.')}>
-            <Switch checked={privacy.publicProfile && bandConfig.features.publicProfile} disabled={!bandConfig.features.publicProfile} onCheckedChange={(v) => setP('publicProfile', v)} aria-label="public" />
+            <Switch checked={privacy.publicProfile && bandConfig.features.publicProfile} disabled={!bandConfig.features.publicProfile} onCheckedChange={(v) => setP('publicProfile', v)} aria-label={tx('Public profile', 'ملف عام')} />
           </Row>
           <Row title={tx('Anonymous usage analytics', 'إحصاءات استخدام مجهولة')} desc={tx('Counts which screens are used, never what you type or your name. Off by default; nothing is sent in this demo.', 'نحصي الشاشات المستخدمة فقط، لا ما تكتبه ولا اسمك. متوقف افتراضياً؛ لا يُرسل شيء في هذا العرض.')}>
-            <Switch checked={privacy.analytics} onCheckedChange={(v) => setP('analytics', v)} aria-label="analytics" />
+            <Switch checked={privacy.analytics} onCheckedChange={(v) => setP('analytics', v)} aria-label={tx('Anonymous usage analytics', 'إحصاءات استخدام مجهولة')} />
           </Row>
         </Card>
 

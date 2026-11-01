@@ -18,6 +18,7 @@ import { getAssignment, handIn, sendMessage, undoHandIn, uploadFile, type Assign
 import { notebooks } from '@/lib/notebook';
 import { ACCEPT_HANDIN, prepareFile, UploadError, type Prepared } from '@/lib/upload';
 import { useAutosave } from '@/lib/use-autosave';
+import { subjectName } from '@/lib/subjects';
 import { cn } from '@/lib/utils';
 import { Files } from './files';
 import { AssignmentAction } from './form-assignment';
@@ -80,7 +81,7 @@ export function AssignmentView({ id }: { id: string }) {
             <Card className={cn(cls, data.handIn.state === 'returned' && 'ring-1 ring-[color-mix(in_oklab,var(--warning)_45%,transparent)]')}>
               <CardHeader title={data.handIn.state === 'marked' ? tx('Feedback', 'الملاحظات') : tx('Changes requested', 'تعديلات مطلوبة')} icon={data.handIn.state === 'marked' ? <CheckCircle2 /> : <RotateCcw />}
                 action={data.handIn.grade !== null && data.handIn.state === 'marked' ? <span className="text-2xl font-semibold tabular-nums">{data.handIn.grade}%</span> : undefined} />
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{data.handIn.feedback}</p>
+              <p dir="auto" className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{data.handIn.feedback}</p>
               <p className="mt-3 text-xs text-muted-foreground">{data.handIn.reviewer}</p>
             </Card>
   ) : null;
@@ -91,9 +92,9 @@ export function AssignmentView({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={st.tone}>{tx(st.en, st.ar)}{data.status === 'marked' && data.handIn?.grade !== null && data.handIn?.grade !== undefined ? ` · ${data.handIn.grade}%` : ''}</Badge>
           {data.handIn?.late && <Badge tone="warning">{tx('Late', 'متأخر')}</Badge>}
-          <span className="text-sm text-muted-foreground">{a.subject} · {a.teacher}</span>
+          <span className="text-sm text-muted-foreground">{subjectName(a.subject, locale)} · <bdi>{a.teacher}</bdi></span>
         </div>
-        <h1 className="text-[1.75rem] font-medium leading-tight tracking-[-0.02em] sm:text-[2.25rem]">{a.title}</h1>
+        <h1 dir="auto" className="text-[1.75rem] font-medium leading-tight tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-[2.25rem]">{a.title}</h1>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="size-4" />{tx(`Due ${friendlyDates(a.dueDate, 'en')}, ${a.dueTime}`, `التسليم ${friendlyDates(a.dueDate, 'ar')}، ${a.dueTime}`)} · {tx(`about ${a.minutes} min`, `حوالي ${a.minutes} دقيقة`)}</p>
       </header>
 
@@ -107,7 +108,7 @@ export function AssignmentView({ id }: { id: string }) {
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
           <Card>
             <CardHeader title={tx('Instructions', 'التعليمات')} />
-            <p className="whitespace-pre-wrap text-[0.9375rem] leading-relaxed [overflow-wrap:anywhere]">{a.instructions ? friendlyDates(a.instructions, locale) : tx('No written instructions. Check the attachments or ask your teacher below.', 'لا تعليمات مكتوبة. راجع المرفقات أو اسأل معلمك أدناه.')}</p>
+            <p dir={a.instructions ? 'auto' : undefined} className="whitespace-pre-wrap text-[0.9375rem] leading-relaxed [overflow-wrap:anywhere]">{a.instructions ? friendlyDates(a.instructions, locale) : tx('No written instructions. Check the attachments or ask your teacher below.', 'لا تعليمات مكتوبة. راجع المرفقات أو اسأل معلمك أدناه.')}</p>
             {a.format === 'task' && <NotesButton id={a.id} title={a.title} subject={a.subject} />}
             {a.photosRequired && (
               <p className="mt-4 flex items-start gap-2.5 rounded-xl bg-[color-mix(in_oklab,var(--deep)_7%,transparent)] px-3.5 py-3 text-sm"><Camera className="mt-0.5 size-4 shrink-0" />{tx('Hand in photos of your notes. Take them with your camera, or add pages from your Murshid notebook.', 'سلّم صوراً لملاحظاتك. التقطها بالكاميرا أو أضف صفحات من دفتر مرشد.')}</p>
@@ -171,8 +172,12 @@ function HandInCard({ data, onChange }: { data: AssignmentDetail; onChange: (d: 
   const { client, tx, toast } = useApp();
   const a = data.assignment;
   const h = data.handIn;
-  const draft = useAutosave(`handin:${a.id}`, { text: h?.text ?? '' });
-  const [files, setFiles] = useState<Attached[]>(h?.files ?? []);
+  // the draft keeps the answer and the files already uploaded, so a reload (a phone camera often causes one) loses nothing
+  const draft = useAutosave<{ text: string; files: FileRef[] }>(`handin:${a.id}`, { text: h?.text ?? '', files: h?.files ?? [] });
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const files: Attached[] = (draft.value.files ?? []).map((f) => (previews[f.id] ? { ...f, preview: previews[f.id] } : f));
+  const setFiles = (fn: (x: FileRef[]) => FileRef[]) => draft.setValue((v) => ({ ...v, files: fn(v.files ?? []) }));
+  const keep = (f: Attached) => { const { preview, ...ref } = f; if (preview) setPreviews((p) => ({ ...p, [f.id]: preview })); setFiles((x) => [...x, ref]); };
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
@@ -184,7 +189,7 @@ function HandInCard({ data, onChange }: { data: AssignmentDetail; onChange: (d: 
   const text = draft.value.text;
   const changed = !h || text.trim() !== h.text || files.map((f) => f.id).join() !== h.files.map((f) => f.id).join();
 
-  const add = (list: (File | Prepared)[]) => { setErr(null); void up.upload(list, (f) => setFiles((x) => [...x, f])); };
+  const add = (list: (File | Prepared)[]) => { setErr(null); void up.upload(list, keep); };
   const submit = async () => {
     setErr(null);
     if (!text.trim() && !files.length) { setErr(tx('Write your answer or add a photo first.', 'اكتب إجابتك أو أضف صورة أولاً.')); return; }
@@ -210,7 +215,7 @@ function HandInCard({ data, onChange }: { data: AssignmentDetail; onChange: (d: 
     <Card>
       <CardHeader title={tx('Your work', 'عملك')} action={h ? <span className="text-xs text-muted-foreground">{handedIn ? tx('Handed in', 'سُلّم') : marked ? tx('Marked', 'مُصحّح') : tx('Returned', 'أُعيد')} · v{h.versions}</span> : draft.status === 'saved' ? <span className="text-xs text-muted-foreground">{tx('Draft saved', 'حُفظت المسودة')}</span> : undefined} />
       <label className="sr-only" htmlFor={`answer-${a.id}`}>{tx('Your answer', 'إجابتك')}</label>
-      <Textarea id={`answer-${a.id}`} value={text} disabled={marked} onChange={(e) => draft.setValue({ text: e.target.value })} rows={5} maxLength={8000}
+      <Textarea id={`answer-${a.id}`} dir="auto" value={text} disabled={marked} onChange={(e) => { const t = e.target.value; draft.setValue((v) => ({ ...v, text: t })); }} rows={5} maxLength={8000}
         placeholder={a.photosRequired ? tx('Add a note for your teacher (optional)', 'أضف ملاحظة لمعلمك (اختياري)') : tx('Write your answer, or add photos of your work', 'اكتب إجابتك أو أضف صوراً لعملك')} />
       <div className="mt-1 text-end text-2xs text-muted-foreground tabular-nums">{text.trim() ? text.trim().split(/\s+/).length : 0} {tx('words', 'كلمة')}</div>
 
@@ -281,7 +286,12 @@ function Thread({ id, teacher, messages, onSent }: { id: string; teacher: string
         <AnimatePresence initial={false}>
           {messages.map((m) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={cn('flex max-w-[88%] flex-col gap-1', m.from === 'student' ? 'self-end items-end' : 'self-start items-start')}>
-              {m.text && <p className={cn('whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm [overflow-wrap:anywhere]', m.from === 'student' ? 'bg-[var(--deep)] text-white' : 'bg-surface-2')}>{m.text}</p>}
+              {m.review ? (
+                <p className="whitespace-pre-wrap rounded-2xl bg-surface-2 px-3.5 py-2.5 text-sm [overflow-wrap:anywhere]">
+                  <span className="mb-0.5 block text-xs font-medium text-muted-foreground">{m.review.action === 'mark' ? (m.review.grade !== null ? tx(`Marked ${m.review.grade}%`, `صُحّح: ${m.review.grade}٪`) : tx('Marked', 'صُحّح')) : tx('Returned for changes', 'أُعيد للتعديل')}</span>
+                  <span dir="auto" className="block">{m.review.feedback}</span>
+                </p>
+              ) : m.text && <p dir="auto" className={cn('whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm [overflow-wrap:anywhere]', m.from === 'student' ? 'bg-[var(--deep)] text-white' : 'bg-surface-2')}>{m.text}</p>}
               {m.files.length > 0 && <Files files={m.files} compact className="w-56" />}
               <span className="text-2xs text-muted-foreground">{m.from === 'teacher' ? `${m.name} · ` : ''}{time(m.at)}</span>
             </motion.div>
@@ -297,7 +307,7 @@ function Thread({ id, teacher, messages, onSent }: { id: string; teacher: string
         <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => { void up.upload([...(e.target.files ?? [])], (f) => setFiles((x) => [...x, f])); e.target.value = ''; }} />
         <Button type="button" size="icon" variant="secondary" aria-label={tx('Attach a photo', 'إرفاق صورة')} onClick={() => input.current?.click()}><Camera /></Button>
         <label htmlFor={`msg-${id}`} className="sr-only">{tx('Message', 'رسالة')}</label>
-        <Textarea id={`msg-${id}`} value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={2000} placeholder={tx('Message your teacher…', 'راسل معلمك…')} className="min-h-11 flex-1 resize-none py-2.5"
+        <Textarea id={`msg-${id}`} dir="auto" value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={2000} placeholder={tx('Message your teacher…', 'راسل معلمك…')} className="min-h-11 flex-1 resize-none py-2.5"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }} />
         <Button type="submit" size="icon" aria-label={tx('Send', 'إرسال')} disabled={busy || up.busy || (!text.trim() && !files.length)}>{busy ? <Loader2 className="animate-spin" /> : <Send className="rtl:-scale-x-100" />}</Button>
       </form>

@@ -2,6 +2,7 @@
 
 import { CheckCircle2, ExternalLink, ListChecks, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { countAr } from '@/lib/plural';
 import { useApp } from '@/components/providers/app-provider';
 import { MicrosoftMark } from '@/components/shell/icons';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,7 @@ export function AssignmentAction({ a, onAnswered }: { a: any; onAnswered: (r: Fo
         className={cn('lift mt-2 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors',
           a.response ? 'border border-border hover:border-foreground' : 'bg-foreground text-background hover:bg-[var(--deep)]')}>
         {a.response ? <CheckCircle2 className="size-3.5 text-success" /> : <ListChecks className="size-3.5" />}
-        {a.response ? tx('Answered · edit', 'تمت الإجابة · تعديل') : tx(`Answer ${a.questions.length} question${a.questions.length > 1 ? 's' : ''}`, `أجب عن ${a.questions.length} سؤال`)}
+        {a.response ? tx('Answered · edit', 'تمت الإجابة · تعديل') : tx(`Answer ${a.questions.length} question${a.questions.length > 1 ? 's' : ''}`, `أجب عن ${countAr(a.questions.length, { one: 'سؤال واحد', two: 'سؤالين', few: 'أسئلة', many: 'سؤالاً', other: 'سؤال' })}`)}
       </button>
       <DialogContent title={a.title} description={`${a.subject} · ${a.teacher}`} className="max-h-[88vh] w-[min(94vw,640px)] overflow-y-auto">
         <FormFill a={a} onDone={(r) => { onAnswered(r); setOpen(false); }} />

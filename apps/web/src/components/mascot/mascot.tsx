@@ -4,7 +4,7 @@ import { memo, useEffect, useId, useMemo, useRef } from 'react';
 import { useReducedMotion } from 'motion/react';
 import type { MascotColor, MascotFace, MascotGlow, MascotShape } from '@/lib/prefs';
 import { cn } from '@/lib/utils';
-import { bodyPath, distance, eyePaths, mix, moodPose, shadeOf, type BotMood, type Pose } from './bot-face';
+import { bodyPath, distance, eyePaths, mix, moodPose, readableEyes, shadeOf, type BotMood, type Pose } from './bot-face';
 
 /**
  * Murshid, the companion bot: a soft matte head with two capsule eyes and no other features. The eyes live on a 3D
@@ -61,7 +61,8 @@ function MascotImpl({
   const eye0 = useRef<SVGPathElement>(null); const eye1 = useRef<SVGPathElement>(null);
   const sh0 = useRef<SVGPathElement>(null); const sh1 = useRef<SVGPathElement>(null);
   const base = MASCOT_FILL[color] ?? MASCOT_FILL.royal;
-  const ink = MASCOT_GLOW[glow] ?? MASCOT_GLOW.white;
+  // the chosen eye colour, unless it would vanish into the body (graphite + ink, lime + lime)
+  const ink = readableEyes(MASCOT_GLOW[glow] ?? MASCOT_GLOW.white, base);
   const body = useMemo(() => bodyPath(shape, CX, CY, R), [shape]);
   const first = useMemo(() => eyePaths(moodPose(mood, face), CX, CY, R), [mood, face]);
 
@@ -127,18 +128,20 @@ function MascotImpl({
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
         <radialGradient id={g('ground')} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#0b1430" stopOpacity="0.28" />
-          <stop offset="1" stopColor="#0b1430" stopOpacity="0" />
+          <stop offset="0" className="mascot-ground-stop" stopColor="#0b1430" stopOpacity="0.28" />
+          <stop offset="1" className="mascot-ground-stop" stopColor="#0b1430" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={g('eye')} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={ink} />
-          <stop offset="1" stopColor={glow === 'ink' ? shadeOf(ink, 0.1) : shadeOf(ink, -0.08)} />
+          <stop offset="1" stopColor={ink === MASCOT_GLOW.ink ? shadeOf(ink, 0.1) : shadeOf(ink, -0.08)} />
         </linearGradient>
         <clipPath id={g('clip')}><path d={body} /></clipPath>
       </defs>
       {grounded && <ellipse cx="60" cy="110" rx="34" ry="5.5" fill={`url(#${g('ground')})`} />}
       <g className="mascot-body">
         <path d={body} fill={`url(#${g('body')})`} />
+        {/* a faint edge so dark bodies still read on the dark theme (transparent in light) */}
+        <path d={body} fill="none" className="mascot-rim" strokeWidth="1.2" />
         <g clipPath={`url(#${g('clip')})`}>
           <path d={body} fill={`url(#${g('rim')})`} />
           <rect x="0" y="0" width="120" height="120" fill={`url(#${g('bounce')})`} />

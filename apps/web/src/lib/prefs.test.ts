@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_MASCOT, MASCOT_NAME, parsePrefs, serializePrefs } from './prefs';
 import { hits, simplify, type Stroke } from './notebook';
+import { contrast, readableEyes } from '@/components/mascot/bot-face';
+import { MASCOT_FILL, MASCOT_GLOW } from '@/components/mascot/mascot';
 
 const raw = (mascot: unknown) => serializePrefs({ ...parsePrefs(null), mascot } as never);
 
@@ -40,5 +42,19 @@ describe('mascot prefs without a saved mascot', () => {
   it('uses the default bot', () => {
     const raw = encodeURIComponent(JSON.stringify({ band: 'g11-12', companion: true }));
     expect(parsePrefs(raw).mascot).toEqual(DEFAULT_MASCOT);
+  });
+});
+
+describe('mascot eyes stay readable', () => {
+  it('keeps a chosen eye colour that stands out', () => {
+    expect(readableEyes(MASCOT_GLOW.white, MASCOT_FILL.royal)).toBe(MASCOT_GLOW.white);
+    expect(readableEyes(MASCOT_GLOW.lime, MASCOT_FILL.navy)).toBe(MASCOT_GLOW.lime);
+  });
+  it('swaps eyes that would vanish into the body', () => {
+    for (const [eye, body] of [['ink', 'graphite'], ['lime', 'lime'], ['sky', 'sky']] as const) {
+      const out = readableEyes(MASCOT_GLOW[eye], MASCOT_FILL[body]);
+      expect(out).not.toBe(MASCOT_GLOW[eye]);
+      expect(contrast(out, MASCOT_FILL[body])).toBeGreaterThanOrEqual(2.6);
+    }
   });
 });

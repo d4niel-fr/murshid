@@ -47,7 +47,7 @@ export const cancelPlan = (orderId: string, email: string, idempotencyKey: strin
 export type FileKind = 'image' | 'pdf' | 'slides' | 'doc' | 'sheet' | 'text';
 export interface FileRef { id: string; name: string; mime: string; kind: FileKind; size: number; url: string }
 export interface HandIn { text: string; files: FileRef[]; state: 'handed_in' | 'returned' | 'marked'; late: boolean; submittedAt: string; updatedAt: string; versions: number; grade: number | null; scores: Record<string, number> | null; feedback: string | null; reviewedAt: string | null; reviewer: string | null }
-export interface Message { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; files: FileRef[]; at: string }
+export interface Message { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; files: FileRef[]; at: string; review?: { action: 'mark' | 'return'; grade: number | null; feedback: string } }
 export interface AssignmentCard {
   id: string; classId: string; title: string; subject: string; teacher: string; instructions: string | null; setDate: string; dueDate: string; dueTime: string; setLabel: string; dueLabel: string; minutes: number;
   format: 'task' | 'form' | 'google_form' | 'microsoft_form'; formUrl: string | null; questions: { id: string; type: 'short' | 'long' | 'choice'; prompt: string; options?: string[]; required: boolean }[] | null; posted: boolean;

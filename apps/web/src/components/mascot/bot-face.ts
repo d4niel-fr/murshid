@@ -144,6 +144,25 @@ export function bodyPath(shape: BotShape, cx: number, cy: number, r: number): st
 
 const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
 const toHex = (c: number[]) => `#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
+/** WCAG relative luminance of a #rrggbb colour (0 black … 1 white). */
+export function luminance(h: string): number {
+  const [r, g, b] = hex(h).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+/** Contrast ratio between two colours (1 … 21). */
+export function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p) as [number, number];
+  return (x + 0.05) / (y + 0.05);
+}
+/**
+ * Eyes that stay readable on the body: keep the chosen colour when it stands out enough,
+ * otherwise use white or near-black, whichever stands out more.
+ */
+export function readableEyes(eye: string, body: string): string {
+  if (contrast(eye, body) >= 2.6) return eye;
+  return contrast('#ffffff', body) >= contrast('#141a2e', body) ? '#ffffff' : '#141a2e';
+}
+
 /** Mix a colour towards white (t > 0) or black (t < 0). */
 export function shadeOf(h: string, t: number): string {
   const c = hex(h); const to = t > 0 ? 255 : 0; const k = Math.abs(t);

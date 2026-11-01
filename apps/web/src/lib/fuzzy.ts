@@ -11,13 +11,19 @@ export function fuzzy(query: string, text: string): { score: number; hits: numbe
     const wordStart = sub === 0 || /[\s\-_/·(]/.test(t[sub - 1]!);
     return { score: 100 + (wordStart ? 40 : 0) + (sub === 0 ? 20 : 0) - Math.min(sub, 30) - t.length / 50, hits: Array.from({ length: q.length }, (_, i) => sub + i) };
   }
+  // letters in order, but a jump must land on the start of a word or stay inside the same word:
+  // "fcm" finds "Forces and motion", while "planner" no longer matches "pricing plans single school price"
+  const SEP = /[\s\-_/·(]/;
+  const wordStart = (i: number) => i === 0 || SEP.test(t[i - 1]!);
+  const sameWord = (a: number, b: number) => a >= 0 && !SEP.test(t.slice(a + 1, b));
   let ti = 0; let score = 0; let prev = -2; const hits: number[] = [];
   for (const ch of q) {
     if (ch === ' ') continue;
-    const at = t.indexOf(ch, ti);
+    let at = t.indexOf(ch, ti);
+    while (at >= 0 && !(at === prev + 1 || wordStart(at) || sameWord(prev, at))) at = t.indexOf(ch, at + 1);
     if (at < 0) return null;
     score += at === prev + 1 ? 6 : 1;
-    if (at === 0 || /[\s\-_/·(]/.test(t[at - 1]!)) score += 4;
+    if (wordStart(at)) score += 4;
     hits.push(at); prev = at; ti = at + 1;
   }
   return { score: score - (hits[hits.length - 1]! - hits[0]!) / 10 - t.length / 80, hits };

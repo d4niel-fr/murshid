@@ -9,10 +9,12 @@ import { MicrosoftMark } from '@/components/shell/icons';
 import { Bento, Empty, Page, PageHeader } from '@/components/shared/page';
 import { LoadingState } from '@/components/shared/states';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardHeader, Muted } from '@/components/ui/card';
 import { getSchool, getStream, type Announcement, type Reminder } from '@/lib/school-api';
 import { ClassStream, Reminders } from '@/components/school/stream';
 import { Workings } from '@/components/shared/workings';
+import { subjectName } from '@/lib/subjects';
 import { cn } from '@/lib/utils';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -25,17 +27,25 @@ export default function SchoolPage() {
   const [error, setError] = useState<string | null>(null);
   const [stream, setStream] = useState<{ announcements: Announcement[]; reminders: Reminder[] }>({ announcements: [], reminders: [] });
   const [showAll, setShowAll] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const retry = () => { setError(null); setAttempt((n) => n + 1); };
   useEffect(() => {
     let live = true;
     getSchool(client.devUser).then((d) => {
       if (!live) return;
-      setData(d);
+      setData(d); setError(null);
       if (d.licence?.type === 'institution') getStream(client.devUser).then((x) => { if (live) setStream(x); }).catch(() => {});
     }).catch((e) => { if (live) setError((e as Error).message); });
     return () => { live = false; };
-  }, [client.devUser]);
+  }, [client.devUser, attempt]);
 
-  if (error) return <Page><PageHeader title={tx('School', 'المدرسة')} /><Empty action={<Link className="text-sm font-medium text-primary" href="/welcome">{tx('Set up Murshid', 'إعداد مرشد')}</Link>}>{tx('Connect to the Murshid API to see your school or family plan.', 'اتصل بواجهة مرشد لعرض مدرستك أو خطتك العائلية.')}</Empty></Page>;
+  if (error && !data) return (
+    <Page><PageHeader title={tx('School', 'المدرسة')} />
+      <Empty action={<Button variant="secondary" onClick={retry}>{tx('Try again', 'حاول مجدداً')}</Button>}>
+        {/not set up|onboard|no student/i.test(error) ? tx('Finish setting up Murshid to see your school.', 'أكمل إعداد مرشد لعرض مدرستك.') : tx('Could not reach Murshid. Check your connection and try again.', 'تعذّر الاتصال بمرشد. تحقّق من اتصالك وحاول مجدداً.')}
+      </Empty>
+    </Page>
+  );
   if (!data) return <Page><PageHeader title={tx('School', 'المدرسة')} /><LoadingState label={tx('Loading your school…', 'جارٍ تحميل مدرستك…')} rows={4} /></Page>;
 
   const lic = data.licence;
@@ -78,25 +88,25 @@ export default function SchoolPage() {
                 : a.status === 'returned' ? tx('Returned', 'أُعيد') : a.status === 'missing' ? tx('Overdue', 'متأخر') : a.status === 'submitted' ? tx('Handed in', 'سُلّم') : tx(`Due ${shortDate(a.dueDate)}`, `التسليم ${shortDate(a.dueDate, 'ar')}`);
               const tone = a.status === 'missing' ? 'text-danger font-medium' : a.status === 'returned' ? 'text-warning font-medium' : a.status === 'submitted' || a.status === 'marked' ? 'text-success font-medium' : 'text-muted-foreground';
               return (
-                <motion.li key={a.id} layout className={cn('relative flex items-start gap-3 py-3', a.posted && a.status === 'pending' && 'rounded-xl bg-[color-mix(in_oklab,var(--success)_7%,transparent)] px-2.5')}>
+                <motion.li key={a.id} layout className={cn('relative flex flex-wrap items-start gap-x-3 py-3', a.posted && a.status === 'pending' && 'rounded-xl bg-[color-mix(in_oklab,var(--success)_7%,transparent)] px-2.5')}>
                   <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', a.status === 'missing' ? 'bg-danger' : a.status === 'returned' ? 'bg-warning' : a.status === 'submitted' || a.status === 'marked' ? 'bg-success' : 'bg-[var(--text-muted)]')} />
                   <span className="min-w-0 flex-1">
                     <Link href={`/app/school/assignments/${encodeURIComponent(a.id)}`} className="block text-sm font-medium after:absolute after:inset-0 hover:underline">
                       {a.title}{a.posted && a.status === 'pending' && <Badge className="ms-2" tone="success">{tx('New', 'جديد')}</Badge>}{formLabel[a.format] && <Badge className="ms-2" tone="outline">{formLabel[a.format]}</Badge>}
                     </Link>
-                    <span className="block text-xs text-muted-foreground">{a.subject} &middot; {a.teacher}</span>
+                    <span className="block text-xs text-muted-foreground">{subjectName(a.subject, locale)} &middot; <bdi>{a.teacher}</bdi></span>
                     {(a.attachments > 0 || a.photosRequired || a.unread > 0 || (a.status === 'returned' && h?.feedback)) && (
                       <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         {a.attachments > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="size-3.5" />{a.attachments}</span>}
                         {a.photosRequired && <span className="inline-flex items-center gap-1"><Camera className="size-3.5" />{tx('Photos of notes', 'صور الملاحظات')}</span>}
-                        {a.unread > 0 && <span className="inline-flex items-center gap-1 font-medium text-primary"><MessageCircle className="size-3.5" />{tx(`${a.unread} new from ${a.teacher.split(' ').slice(-1)[0]}`, `${a.unread} جديدة`)}</span>}
+                        {a.unread > 0 && <span className="inline-flex items-center gap-1 font-medium text-primary"><MessageCircle className="size-3.5" />{tx(`${a.unread === 1 ? '1 new message' : `${a.unread} new messages`} from ${a.teacher}`, `${a.unread === 1 ? 'رسالة جديدة' : a.unread === 2 ? 'رسالتان جديدتان' : a.unread <= 10 ? `${a.unread} رسائل جديدة` : `${a.unread} رسالة جديدة`} من ${a.teacher}`)}</span>}
                         {a.status === 'returned' && h?.feedback && <span className="line-clamp-1 text-warning">“{h.feedback}”</span>}
                       </span>
                     )}
                     {a.posted && a.trace && a.status === 'pending' && <span className="mt-1 block text-xs text-muted-foreground">{tx('Murshid added a work session and a reminder to your plan.', 'أضاف مرشد جلسة عمل وتذكيراً إلى خطتك.')}</span>}
-                    {prefs.showWorkings && a.trace && <span className="relative z-10 block"><Workings trace={a.trace} className="mt-2" /></span>}
                   </span>
                   <span className={cn('flex shrink-0 items-center gap-1 text-xs', tone)}>{label}<ChevronRight className="size-3.5 text-muted-foreground rtl:rotate-180" /></span>
+                  {prefs.showWorkings && a.trace && <span className="relative z-10 block basis-full ps-5"><Workings trace={a.trace} className="mt-2" /></span>}
                 </motion.li>
               );
             })}

@@ -2,6 +2,10 @@
 
 /* ---------------------------------------------------------------- mascot */
 .mascot .mascot-body { transform-box: view-box; transform-origin: 60px 108px; }
+.mascot .mascot-rim { stroke: transparent; }
+.dark .mascot .mascot-rim { stroke: rgb(255 255 255 / 0.15); }
+/* on the dark theme a black ground shadow disappears: a soft blue glow sits under the bot instead */
+.dark .mascot .mascot-ground-stop { stop-color: #5790e6; }
 /* idle and sleepy stay still (a loop on something always on screen is noise); the rest show what the mascot is doing */
 .mascot-listening .mascot-body { animation: mascot-lean 2.2s ease-in-out infinite; }
 .mascot-thinking .mascot-body { animation: mascot-tilt 2.6s ease-in-out infinite; }

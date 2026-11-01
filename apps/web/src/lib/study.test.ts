@@ -60,6 +60,12 @@ describe('smart search', () => {
     expect(fuzzy('fcm', 'Forces and motion')?.hits).toEqual([0, 3, 11]);
     expect(fuzzy('xyz', 'Forces and motion')).toBeNull();
   });
+  it('does not stitch a word together from letters scattered over other words', () => {
+    expect(fuzzy('planner', 'Pricing plans single school price')).toBeNull();
+    expect(fuzzy('planner', 'Profile & links cv linkedin portfolio')).toBeNull();
+    expect(fuzzy('plnr', 'Planner')).not.toBeNull();
+    expect(fuzzy('fm', 'Forces and motion')?.hits).toEqual([0, 11]);
+  });
 });
 
 describe('notes outline', () => {

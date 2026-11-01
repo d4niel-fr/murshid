@@ -250,6 +250,8 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
       >
         <ComposerPrimitive.Input
           autoFocus
+          dir="auto"
+          aria-label={t('chat.inputLabel')}
           rows={1}
           maxRows={8}
           placeholder={ph !== 'chat.placeholder' ? ph : t('dash.askPh')}
@@ -286,7 +288,7 @@ function Composer({ runtime, docked }: { runtime: AssistantRuntime; docked: bool
 }
 
 /** Tutor / Study buddy switch. The buddy is optional, clearly an AI, and a guardian or the school can switch it off. */
-export function PersonaToggle({ onSwitch }: { onSwitch?: () => void }) {
+export function PersonaToggle({ onSwitch, compact }: { onSwitch?: () => void; compact?: boolean }) {
   const { tx, prefs, setPrefs, client } = useApp();
   const [status, setStatus] = useState<BuddyStatus | null>(null);
   useEffect(() => { let on = true; client.getBuddy().then((r) => { if (on) setStatus(r.data); }); return () => { on = false; }; }, [client]);
@@ -307,8 +309,8 @@ export function PersonaToggle({ onSwitch }: { onSwitch?: () => void }) {
           const dis = p === 'buddy' && blocked;
           return (
             <button key={p} role="radio" aria-checked={on} aria-disabled={dis || undefined} title={dis ? why ?? undefined : undefined} onClick={() => set(p)}
-              className={cn('h-8 rounded-full px-4 font-medium transition-colors pointer-coarse:h-10', on ? 'bg-[var(--deep)] text-white' : 'text-muted-foreground hover:text-foreground', dis && 'cursor-not-allowed opacity-50')}>
-              {p === 'tutor' ? tx('Tutor', 'المعلّم') : tx('Study buddy', 'رفيق الدراسة')}
+              className={cn('h-8 whitespace-nowrap rounded-full font-medium transition-colors pointer-coarse:h-10', compact ? 'px-3 sm:px-4' : 'px-4', on ? 'bg-[var(--deep)] text-white' : 'text-muted-foreground hover:text-foreground', dis && 'cursor-not-allowed opacity-50')}>
+              {p === 'tutor' ? tx('Tutor', 'المعلّم') : compact ? <><span className="sm:hidden">{tx('Buddy', 'الرفيق')}</span><span className="hidden sm:inline">{tx('Study buddy', 'رفيق الدراسة')}</span></> : tx('Study buddy', 'رفيق الدراسة')}
             </button>
           );
         })}
@@ -368,14 +370,14 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
   return (
     <div className="fill-view relative flex flex-col">
       {count > 0 && (
-        <div className="flex h-14 shrink-0 items-center justify-between px-4 md:px-8">
-          <span className="flex items-center gap-2 text-sm font-medium"><MurshidMark className="size-6" /><span className="hidden sm:inline">{t('chat.title')}</span></span>
-          <div className="flex items-center gap-2"><PersonaToggle onSwitch={() => runtime.thread.reset()} /><span className="hidden md:block"><CompanionToggles /></span></div>
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-3 sm:px-4 md:px-8 [@media(max-height:560px)]:h-12">
+          <span className="flex shrink-0 items-center gap-2 text-sm font-medium"><MurshidMark className="size-6" /><span className="hidden sm:inline">{t('chat.title')}</span></span>
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2"><PersonaToggle compact onSwitch={() => runtime.thread.reset()} /><CompanionToggles compact /></div>
           <Button variant="ghost" size="sm" onClick={() => runtime.thread.reset()}><SquarePen /><span className="hidden sm:inline">{t('chat.new')}</span><span className="sr-only sm:hidden">{t('chat.new')}</span></Button>
         </div>
       )}
       {count > 0 && prefs.companion && (
-        <div className="no-print shrink-0 border-b border-border px-4 py-4 md:px-8">
+        <div className="no-print shrink-0 border-b border-border px-4 py-4 md:px-8 [@media(max-height:560px)]:py-1.5">
           <div className="mx-auto max-w-[760px]"><CompanionStage runtime={runtime} compact /></div>
         </div>
       )}
@@ -402,11 +404,11 @@ function ChatInner({ runtime }: { runtime: AssistantRuntime }) {
               <button aria-label="Scroll to bottom" className="sticky bottom-3 mx-auto flex size-9 items-center justify-center rounded-full border border-border bg-surface shadow-lift disabled:invisible"><ArrowDown className="size-4" /></button>
             </ThreadPrimitive.ScrollToBottom>
           </ThreadPrimitive.Viewport>
-          <div className="relative px-4 pb-4 md:px-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <div className="relative px-4 pb-4 md:px-6 [@media(max-height:560px)]:!pb-[max(0.5rem,env(safe-area-inset-bottom))]" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
             <div className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-background to-transparent" />
             <div className="mx-auto max-w-[760px]">
               <Composer runtime={runtime} docked />
-              <p className="mt-2 text-center text-2xs text-muted-foreground">{t('chat.disclaimer')}</p>
+              <p className="mt-2 text-center text-2xs text-muted-foreground [@media(max-height:560px)]:hidden">{t('chat.disclaimer')}</p>
             </div>
           </div>
         </>
