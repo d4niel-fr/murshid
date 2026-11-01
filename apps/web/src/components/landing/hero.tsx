@@ -3,7 +3,6 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { Star3D } from '@/components/brand/star-3d';
-import { FlyingMascot } from './flying-mascot';
 import { Dots, Masthead, Pill, PlayMark, Shot, WeekColumns, usePage } from '@/components/marketing/chrome';
 import { EASE, Lines, Rise, spring, useReady, useScrub } from '@/components/marketing/motion';
 import { TEACHER_DEMO_URL, openStudent } from '@/lib/demo';
@@ -83,10 +82,6 @@ export function Hero() {
       <motion.div style={{ y: drift }} className="pointer-events-none absolute left-1/2 top-[10rem] -z-10 w-[min(17rem,calc(100svh-26rem))] -translate-x-1/2 sm:left-[44%] sm:top-[calc(4rem+11vw)] sm:w-[28rem]">
         <Rise gate={ready} delay={250} y="3rem" scale={0.9} margin="0px" config={spring(90, 22)}>
           <Star3D className="aspect-square w-full" />
-        </Rise>
-        {/* a small Murshid bot keeping the star company */}
-        <Rise gate={ready} delay={900} y="1.5rem" scale={0.85} margin="0px" config={spring(120, 20)} className="absolute -end-[6%] top-[14%] w-[22%] max-w-[5.75rem] sm:-end-[10%] sm:top-[16%] sm:w-[20%]">
-          <FlyingMascot />
         </Rise>
       </motion.div>
 
