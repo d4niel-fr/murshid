@@ -455,16 +455,19 @@ export function weeklyReport(school: School, st: RosterStudent, today: string, n
   const events = w.calendar.filter((c) => c.kind === 'event' && c.date >= mon && c.date <= addDays(fri, 1));
   const actMin = st.activities.reduce((t, a) => t + a.minutes * a.days.filter((d) => d >= 1 && d <= 6).length, 0) + events.reduce((t, e) => t + e.minutes, 0);
   const completion = dueThisWeek.length ? Math.round(((dueThisWeek.length - dueThisWeek.filter((x) => x.sub.status === 'missing').length) / dueThisWeek.length) * 100) : 100;
+  // the percentage and the sentence use the same numbers: work due this week that was handed in (on time or late)
+  const handedDue = dueThisWeek.length - dueThisWeek.filter((x) => x.sub.status === 'missing').length;
+  const caughtUp = Math.max(0, completed.length - handedDue);
   const first = st.name.split(' ')[0];
   const summary = [
-    `${first} handed in ${completed.length} piece${completed.length === 1 ? '' : 's'} of work this week (${onTime} of ${dueThisWeek.length} on time).`,
+    dueThisWeek.length ? `${first} handed in ${handedDue} of the ${dueThisWeek.length} piece${dueThisWeek.length === 1 ? '' : 's'} of work due this week (${onTime} on time)${caughtUp ? `, and caught up on ${caughtUp} older piece${caughtUp === 1 ? '' : 's'}` : ''}.` : `${first} had no work due this week${completed.length ? ` and handed in ${completed.length} piece${completed.length === 1 ? '' : 's'}` : ''}.`,
     missing.length ? `${missing.length} overdue (${[...new Set(missing.map((x) => x.subjectName))].join(', ')}).` : 'Nothing overdue.',
     remaining.length ? `${remaining.length} due in the next 7 days${tests.length ? ` and ${tests.length} test${tests.length > 1 ? 's' : ''}` : ''}.` : tests.length ? `${tests.length} test${tests.length > 1 ? 's' : ''} coming up.` : '',
     actMin ? `${round(actMin / 60, 1)} h of sport and activities.` : '',
   ].filter(Boolean).join(' ');
   // the same summary in Arabic, for students and parents using the app in Arabic
   const summaryAr = [
-    `سلّم ${first} ${completed.length} من الأعمال هذا الأسبوع (${onTime} من ${dueThisWeek.length} في الموعد).`,
+    dueThisWeek.length ? `سلّم ${first} ${handedDue} من ${dueThisWeek.length} أعمال مستحقة هذا الأسبوع (${onTime} في الموعد)${caughtUp ? `، وأنجز ${caughtUp} من الأعمال الأقدم` : ''}.` : `لم يكن على ${first} أعمال مستحقة هذا الأسبوع.`,
     missing.length ? `${missing.length} متأخرة.` : 'لا شيء متأخر.',
     remaining.length ? `${remaining.length} مستحقة خلال الأيام السبعة القادمة${tests.length ? ` و${tests.length} ${tests.length > 1 ? 'اختبارات' : 'اختبار'}` : ''}.` : tests.length ? `${tests.length} ${tests.length > 1 ? 'اختبارات قادمة' : 'اختبار قادم'}.` : '',
     actMin ? `${round(actMin / 60, 1)} ساعة من الرياضة والأنشطة.` : '',
