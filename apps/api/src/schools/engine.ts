@@ -437,7 +437,8 @@ export function homeworkTiming(school: School, stream: Stream, today: string, op
 }
 
 // ---------- weekly reports ----------
-export function weeklyReport(school: School, st: RosterStudent, today: string, nowMinutes: number, weekStart?: string) {
+/** `tests`: the student's own assessment calendar when they use the app, so every page counts the same tests. */
+export function weeklyReport(school: School, st: RosterStudent, today: string, nowMinutes: number, weekStart?: string, ownTests?: { date: string; title: string }[]) {
   const mon = weekStart ?? mondayOfDate(today);
   const fri = addDays(mon, 4);
   const submittedAtDue = today > fri || (today === fri && nowMinutes >= 16 * 60);
@@ -450,7 +451,7 @@ export function weeklyReport(school: School, st: RosterStudent, today: string, n
   const onTime = dueThisWeek.filter((x) => x.sub.status === 'on_time' || x.sub.status === 'submitted').length;
   const missing = w.items.filter((x) => x.sub.status === 'missing');
   const remaining = w.items.filter((x) => x.sub.status === 'pending' && x.item.dueDate <= addDays(asOf, 7));
-  const tests = w.calendar.filter((c) => c.kind === 'test' && c.date > asOf && c.date <= addDays(asOf, 7));
+  const tests = ownTests ? ownTests.filter((c) => c.date > asOf && c.date <= addDays(asOf, 7)).sort((a, b) => a.date.localeCompare(b.date)) : w.calendar.filter((c) => c.kind === 'test' && c.date > asOf && c.date <= addDays(asOf, 7));
   const events = w.calendar.filter((c) => c.kind === 'event' && c.date >= mon && c.date <= addDays(fri, 1));
   const actMin = st.activities.reduce((t, a) => t + a.minutes * a.days.filter((d) => d >= 1 && d <= 6).length, 0) + events.reduce((t, e) => t + e.minutes, 0);
   const completion = dueThisWeek.length ? Math.round(((dueThisWeek.length - dueThisWeek.filter((x) => x.sub.status === 'missing').length) / dueThisWeek.length) * 100) : 100;

@@ -19,7 +19,7 @@ export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: Re
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4 xl:mb-10">
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
-        <h1 className="display text-[2.25rem] sm:text-[2.75rem]">{typeof title === 'string' ? <RevealTitle text={title} /> : title}</h1>
+        <h1 className="display text-[2.25rem] [overflow-wrap:anywhere] sm:text-[2.75rem]">{typeof title === 'string' ? <RevealTitle text={title} /> : title}</h1>
         {subtitle && <p className="mt-3 max-w-[68ch] text-[0.9375rem] leading-relaxed text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

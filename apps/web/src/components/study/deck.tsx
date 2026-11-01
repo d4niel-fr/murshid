@@ -67,15 +67,16 @@ function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean;
     <div className="mx-auto max-w-2xl">
       <div className="mb-4 flex items-center gap-3">
         <button type="button" onClick={onDone} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-sm"><X className="size-4" />{tx('End', 'إنهاء')}</button>
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}><motion.div className="h-full rounded-full bg-[var(--brand)]" animate={{ width: `${(done / Math.max(1, total)) * 100}%` }} /></div>
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]" role="progressbar" aria-label={tx('Cards reviewed', 'البطاقات المراجعة')} aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-valuetext={tx(`${done} of ${total} reviewed`, `${done} من ${total}`)}><motion.div className="h-full rounded-full bg-[var(--brand)]" animate={{ width: `${(done / Math.max(1, total)) * 100}%` }} /></div>
         <span className="tabular text-sm text-muted-foreground">{done}/{total}</span>
       </div>
       <button type="button" onClick={() => setFlipped((f) => !f)} data-flipped={flipped} className="flip block h-[min(52vh,360px)] w-full text-start" aria-label={flipped ? tx('Show the question', 'اعرض السؤال') : tx('Show the answer', 'اعرض الإجابة')}>
         <div className="flip-inner h-full">
-          <div className="flip-face card flex flex-col justify-between p-7"><p className="eyebrow">{tx('Question', 'السؤال')}</p><p className="text-center text-[1.5rem] font-medium leading-snug">{card.front}</p><p className="text-center text-xs text-muted-foreground">{tx('Space to flip', 'المسافة للقلب')}</p></div>
-          <div className="flip-face flip-back on-deep flex flex-col justify-between rounded-[var(--radius-lg)] bg-[var(--deep)] p-7 text-white"><p className="eyebrow">{tx('Answer', 'الإجابة')}</p><p className="text-center text-[1.25rem] leading-relaxed">{card.back}</p><p className="text-center text-xs text-white/60">{card.front}</p></div>
+          <div className="flip-face card flex flex-col justify-between p-7" aria-hidden={flipped}><p className="eyebrow">{tx('Question', 'السؤال')}</p><p className="text-center text-[1.5rem] font-medium leading-snug">{card.front}</p><p className="text-center text-xs text-muted-foreground">{tx('Space to flip', 'المسافة للقلب')}</p></div>
+          <div aria-hidden={!flipped} className="flip-face flip-back on-deep flex flex-col justify-between rounded-[var(--radius-lg)] bg-[var(--deep)] p-7 text-white"><p className="eyebrow">{tx('Answer', 'الإجابة')}</p><p className="text-center text-[1.25rem] leading-relaxed">{card.back}</p><p className="text-center text-xs text-white/60">{card.front}</p></div>
         </div>
       </button>
+      <p className="sr-only" aria-live="polite">{flipped ? `${tx('Answer', 'الإجابة')}: ${card.back}` : `${tx('Question', 'السؤال')}: ${card.front}`}</p>
       <AnimatePresence>
         {flipped && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label={tx('How well did you know it?', 'ما مدى معرفتك بها؟')}>

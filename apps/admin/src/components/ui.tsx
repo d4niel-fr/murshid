@@ -34,14 +34,14 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: 'neutr
 
 export function Card({ title, action, children, className, pad = true }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
   return (
-    <section className={cn('card', className)}>
+    <section className={cn('card min-w-0', className)}>
       {(title || action) && (
-        <header className="flex min-h-16 items-center justify-between gap-3 border-b border-[var(--border)] px-6 py-4">
-          <h3 className="card-title">{title}</h3>
-          <div className="flex items-center gap-2">{action}</div>
+        <header className="flex min-h-16 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border)] px-4 py-4 sm:px-6">
+          <h3 className="card-title min-w-0">{title}</h3>
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{action}</div>
         </header>
       )}
-      <div className={pad ? 'p-6' : 'overflow-x-auto'}>{children}</div>
+      <div className={pad ? 'p-4 sm:p-6' : 'overflow-x-auto'}>{children}</div>
     </section>
   );
 }

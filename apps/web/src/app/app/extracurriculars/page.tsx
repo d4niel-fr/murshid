@@ -89,7 +89,7 @@ function View() {
           <CardHeader title={tx('Latest result', 'آخر نتيجة')} icon={<TrendingUp />} />
           {(() => {
             const m = [...act.sessions].reverse().find((s) => s.metric)?.metric;
-            return m ? <div className="flex items-baseline gap-1"><span className="text-3xl font-semibold tabular">{m.value}</span><span className="text-sm text-muted-foreground">{m.unit} · {m.name}</span></div>
+            return m ? <div className="flex items-baseline gap-1"><span className="text-3xl font-semibold tabular">{m.value}</span><span className="text-sm text-muted-foreground">{m.unit}{m.name.toLowerCase() !== m.unit.toLowerCase() ? ` · ${m.name}` : ''}</span></div>
               : <p className="text-sm text-muted-foreground">{tx('No measured result yet. Add one when you log a session.', 'لا توجد نتيجة بعد. أضف واحدة عند تسجيل جلسة.')}</p>;
           })()}
         </Card>

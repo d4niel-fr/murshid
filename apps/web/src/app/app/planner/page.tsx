@@ -3,7 +3,7 @@
 import { Dialog as D } from 'radix-ui';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp, useEndpoint } from '@/components/providers/app-provider';
 import { applyTaskState } from '@/lib/merge';
 import { Page, PageHeader } from '@/components/shared/page';
@@ -31,8 +31,12 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
   const [start, setStart] = useState('17:00');
   const [minutes, setMinutes] = useState('45');
   const [area, setArea] = useState<Task['area']>('academics');
+  // the day resets every time the dialog opens (however it was opened)
+  useEffect(() => { if (open) setDate(defaultDate); }, [open, defaultDate]);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const timeOk = /^\d{2}:\d{2}$/.test(start);
   const save = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !dateOk || !timeOk) return;
     const b: PlannerBlock = { id: `pb-${Date.now()}`, title: title.trim(), date, start, minutes: Number(minutes) || 30, area };
     update((u) => ({ ...u, planner: [...u.planner, b] }));
     toast({ title: tx('Added to your week', 'أضيف إلى أسبوعك'), description: `${b.title} · ${formatDate(b.date, 'en', { weekday: 'short' })} ${b.start}` });
@@ -44,7 +48,7 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
         <form onSubmit={(e) => { e.preventDefault(); save(); }} className="grid gap-4">
           <div><Label htmlFor="pb-t">{tx('What', 'ماذا')}</Label><Input id="pb-t" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Physics revision: waves', 'مثلاً: مراجعة الفيزياء')} /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><Label htmlFor="pb-d">{tx('Day', 'اليوم')}</Label><Input id="pb-d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div><Label htmlFor="pb-d">{tx('Day', 'اليوم')}</Label><Input id="pb-d" type="date" required value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!dateOk} />{!dateOk && <p className="mt-1 text-xs text-danger">{tx('Pick a day.', 'اختر يوماً.')}</p>}</div>
             <div><Label htmlFor="pb-s">{tx('Start', 'البداية')}</Label><Input id="pb-s" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></div>
             <div><Label htmlFor="pb-m">{tx('Minutes', 'الدقائق')}</Label><Input id="pb-m" type="number" min={10} max={300} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div>
           </div>
@@ -53,7 +57,7 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
               <option value="academics">{tx('Study', 'دراسة')}</option><option value="extracurriculars">{tx('Activity', 'نشاط')}</option>
               <option value="wellbeing">{tx('Wellbeing', 'العافية')}</option><option value="applications">{tx('Applications', 'الطلبات')}</option>
             </Select></div>
-          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim()}>{tx('Add', 'إضافة')}</Button></div>
+          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim() || !dateOk || !timeOk}>{tx('Add', 'إضافة')}</Button></div>
         </form>
       </DialogContent>
     </D.Root>

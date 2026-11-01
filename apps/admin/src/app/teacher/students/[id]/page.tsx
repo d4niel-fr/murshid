@@ -120,7 +120,7 @@ function StudentPage() {
             {s.items.map((it: any) => {
               const [label, tone] = SUB_LABEL[it.status] ?? ['', 'neutral'];
               return (
-                <li key={it.id} className="flex items-center gap-3 px-6 py-3">
+                <li key={it.id} className="flex min-w-0 items-center gap-3 px-4 py-3 sm:px-6">
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm">{it.title}{it.personalised && <Badge tone="accent" className="ms-2">Personalised</Badge>}</span><span className="block text-xs text-[var(--text-muted)]">Due {it.dueLabel}</span></span>
                   {it.grade !== null && <span className="text-sm tabular-nums">{it.grade}%</span>}
                   <Badge tone={tone}>{label}</Badge>

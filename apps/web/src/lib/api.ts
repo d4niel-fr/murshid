@@ -127,6 +127,12 @@ export function createClient(opts: ClientOptions) {
       const buddyOffline = (): ChatReply => ({ text: locale === 'ar' ? 'وضع رفيق الدراسة يحتاج إلى خادم مرشد، وهو غير متاح الآن. يمكن للمعلّم مساعدتك.' : "Study buddy mode needs the Murshid server, which isn't reachable right now. Switch to Tutor and I'll help from your saved data.", toolCalls: [], persona: 'buddy', generatedBy: 'rules' });
       const fallback = () => (opts.persona === 'buddy' ? buddyOffline() : withOfflineTrace(mockChatReply(message, world(), { locale }), message));
       if (mode === 'mock' || !f) return { data: fallback(), source: 'mock' };
+      // the API takes up to 2,000 characters: say so plainly instead of answering something else
+      if (message.length > 2000) {
+        return { data: { text: locale === 'ar'
+          ? `رسالتك طويلة (${message.length.toLocaleString('ar-AE')} حرفاً). الحد هو 2000 حرف: أرسلها على أجزاء، أو الصق الفقرة التي تريد أن أساعدك فيها.`
+          : `That message is ${message.length.toLocaleString('en-GB')} characters, and the limit is 2,000. Send it in parts, or paste just the paragraph you want help with.` } as ChatReply, source: 'api' };
+      }
       const ctrl = new AbortController();
       // short timeout until the response starts, then the long model timeout
       let timer = setTimeout(() => ctrl.abort(), Math.max(20_000, timeoutMs * 2));
@@ -137,6 +143,11 @@ export function createClient(opts: ClientOptions) {
           headers: { 'content-type': 'application/json', accept: 'text/event-stream', 'x-dev-user-id': devUser, 'x-dev-user': devUser },
           body: JSON.stringify({ message, band, locale, ...(opts.history?.length ? { history: opts.history.slice(-10).map((m) => ({ role: m.role, content: m.content.slice(0, 4000) })) } : {}), ...(opts.persona === 'buddy' ? { persona: 'buddy' } : {}) }),
         });
+        if (res.status === 400 || res.status === 413) {
+          // a request the API refused (not an outage): explain instead of falling back to bundled answers
+          const err = await res.json().catch(() => null) as { error?: string } | null;
+          return { data: { text: locale === 'ar' ? 'لم أستطع إرسال هذه الرسالة. جرّب صياغة أقصر.' : `I couldn't send that message${err?.error ? ` (${err.error})` : ''}. Try a shorter one.` } as ChatReply, source: 'api' };
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         clearTimeout(timer);
         timer = setTimeout(() => ctrl.abort(), chatTimeoutMs);

@@ -442,7 +442,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
           return { handIn, unread, attachments: x.item.attachments?.length ?? 0, photosRequired: Boolean(x.item.photosRequired), id: x.item.id, title: x.item.title, subject: x.subjectName, teacher: x.teacherName, setDate: x.item.setDate, dueDate: x.item.dueDate, dueLabel: shortDay(x.item.dueDate), minutes: x.item.minutes, status: hand ? (hand.state === 'handed_in' ? 'submitted' : hand.state) : mine ? 'submitted' : x.sub.status, source: x.item.source, posted: x.item.posted, instructions: x.item.instructions,
             format: x.item.format ?? 'task', formUrl: x.item.formUrl ?? null, questions: x.item.questions ?? null, response: mine ?? null, trace: schools.automations[x.item.id]?.[r.id]?.trace ?? null };
         });
-      return c.json({ ...base, today: day, family: null, school: { org: orgCard(org.id), section: r.section, classes, assignments, weeklyReport: weeklyReport(school, r, day, nowMinutes(v.now)) } });
+      // the app student's own tests (the same ones the dashboard counts)
+      const subjectName = new Map(v.profile.subjects.map((x) => [x.id, x.name]));
+      const ownTests = v.data.assessments.filter((a) => a.status === 'upcoming' && (a.kind === 'test' || a.kind === 'quiz' || a.kind === 'exam'))
+        .map((a) => ({ date: a.date, title: `${subjectName.get(a.subjectId) ?? ''} ${a.kind === 'quiz' ? 'quiz' : a.kind === 'exam' ? 'exam' : 'test'}: ${a.title}`.trim() }));
+      return c.json({ ...base, today: day, family: null, school: { org: orgCard(org.id), section: r.section, classes, assignments, weeklyReport: weeklyReport(school, r, day, nowMinutes(v.now), undefined, ownTests) } });
     });
 
   // ---------- built-in forms ----------
