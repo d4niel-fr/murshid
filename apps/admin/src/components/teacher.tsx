@@ -56,7 +56,24 @@ export function ProgressTable({ report, subjectName, classId }: { report: any; s
   return (
     <Card pad={false} title={<span>Class progress <span className="hidden font-normal text-[var(--text-muted)] xl:inline">&middot; {subjectName} work, with each student&rsquo;s whole week in view</span></span>}
       action={<div className="tabs-scroll flex max-w-[calc(100vw-5rem)] gap-0.5 overflow-x-auto rounded-full bg-[var(--surface-2)] p-1">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
-      <table className="tbl min-w-[920px]">
+      {/* phones: one card per student */}
+      <ul className="divide-y divide-[var(--border)] md:hidden">
+        {rows.map((r: any) => {
+          const inner = (
+            <>
+              <Avatar initials={r.initials} app={Boolean(r.appId)} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2"><span className="truncate font-medium">{r.name}</span><span className="shrink-0 text-xs text-[var(--text-muted)]">{r.section}</span></span>
+                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{r.subject.completion}% handed in{r.subject.avgGrade !== null ? ` · avg ${r.subject.avgGrade}%` : ''}{r.subject.overdue ? ` · ${r.subject.overdue} overdue` : ''} · week {r.all.loadPct}% full</span>
+                {r.flags.length > 0 && <span className="mt-1 line-clamp-2 block text-xs text-[var(--text-muted)]">{r.flags.slice(0, 2).join(' · ')}</span>}
+              </span>
+              <Badge tone={STATUS_TONE[r.status]}>{r.statusLabel}</Badge>
+            </>
+          );
+          return <li key={r.id}>{classId ? <Link href={`/teacher/students/${r.id}?class=${classId}`} className="flex items-start gap-3 px-4 py-3 active:bg-[var(--surface)]">{inner}</Link> : <div className="flex items-start gap-3 px-4 py-3">{inner}</div>}</li>;
+        })}
+      </ul>
+      <table className="tbl hidden min-w-[920px] md:table">
         <thead><tr><th>Student</th><th>Status</th><th>Handed in</th><th>Avg</th><th>Still to do</th><th>Next 7 days</th><th className="w-[30%]">Why</th></tr></thead>
         <tbody>
           {rows.map((r: any) => (
