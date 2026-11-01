@@ -4,7 +4,8 @@ import { Dialog as D } from 'radix-ui';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useApp } from '@/components/providers/app-provider';
+import { useApp, useEndpoint } from '@/components/providers/app-provider';
+import { applyTaskState } from '@/lib/merge';
 import { Page, PageHeader } from '@/components/shared/page';
 import { TaskList } from '@/components/shared/task-list';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Input, Label, Select } from '@/components/ui/input';
 import { addDays, formatDate, startOfWeek } from '@/lib/dates';
 import type { PlannerBlock } from '@/lib/merge';
 import { stagger, fadeUp } from '@/lib/motion';
-import type { Task } from '@/lib/types';
+import type { Dashboard, Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const AREA_COLOR: Record<Task['area'], string> = {
@@ -60,7 +61,10 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
 }
 
 export default function PlannerPage() {
-  const { world, tx, locale, user, update } = useApp();
+  const { world, tx, locale, user, update, band } = useApp();
+  // the same live "today" and "coming up" as the dashboard (API when available), with local ticks on top
+  const { data: raw } = useEndpoint<Dashboard>(`dashboard:${band}`, (c) => c.getDashboard(), world.dashboard);
+  const dash: Dashboard = raw === world.dashboard ? raw : { ...raw, today: applyTaskState(raw.today, user) };
   const [offset, setOffset] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(world.today);
@@ -70,10 +74,10 @@ export default function PlannerPage() {
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {};
     for (const d of days) m[d] = [];
-    for (const u of world.dashboard.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)' });
+    for (const u of dash.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)' });
     for (const b of user.planner) if (m[b.date]) m[b.date]!.push({ id: b.id, kind: 'block', title: b.title, time: b.start, minutes: b.minutes, color: AREA_COLOR[b.area], done: !!user.plannerDone[b.id] });
     // today's tasks (incl. ones teachers set) sit in today's column too, so the week never looks empty next to the task list
-    if (m[world.today]) for (const t of world.dashboard.today) {
+    if (m[world.today]) for (const t of dash.today) {
       const time = t.due && /^\d{2}:\d{2}$/.test(t.due) ? t.due : undefined;
       m[world.today]!.push({ id: `task-${t.id}`, kind: 'task', title: t.title, time, minutes: t.minutes, color: AREA_COLOR[t.area] ?? 'var(--chart-1)', done: !!(t.id in user.taskDone ? user.taskDone[t.id] : t.done) });
     }
@@ -81,7 +85,7 @@ export default function PlannerPage() {
     for (const d of days) m[d]!.sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, world, user]);
+  }, [weekStart, world, user, dash]);
 
   const label = `${formatDate(days[0]!, locale, { day: 'numeric', month: 'short' })} – ${formatDate(days[6]!, locale, { day: 'numeric', month: 'short' })}`;
   return (
@@ -132,7 +136,7 @@ export default function PlannerPage() {
         </motion.div>
         <div className="card h-fit p-5">
           <p className="card-title mb-3">{tx("Today's tasks", "مهام اليوم")}</p>
-          <TaskList tasks={world.dashboard.today} />
+          <TaskList tasks={dash.today} />
         </div>
       </div>
       <AddBlock key={addDate} defaultDate={addDate} open={addOpen} setOpen={setAddOpen} />

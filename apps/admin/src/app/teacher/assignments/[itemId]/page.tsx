@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, BellRing, Camera, CheckCircle2, ChevronLeft, ChevronRight, Clock3, FileText, Link2, MessageCircle, RotateCcw, Send, Sheet, X } from 'lucide-react';
+import { ArrowLeft, BellRing, Camera, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Link2, MessageCircle, RotateCcw, Send, Sheet, X } from 'lucide-react';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Files } from '@/components/files';
 import { PageHeader } from '@/components/shell';
@@ -45,6 +45,7 @@ function Review() {
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<string | null>(search.get('student'));
   const [remind, setRemind] = useState(false);
+  const [copy, setCopy] = useState(false);
   const pick = (id: string | null) => { setSelected(id); const u = new URL(window.location.href); if (id) u.searchParams.set('student', id); else u.searchParams.delete('student'); window.history.replaceState(null, '', u); };
 
   const rows: any[] = list.data?.rows ?? [];
@@ -65,7 +66,7 @@ function Review() {
       {!a ? <Card pad={false}><SkeletonRows rows={6} /></Card> : (
         <>
           <PageHeader title={a.title} sub={<>{list.data.class.name} · due {a.dueLabel}, {a.dueTime}{a.photosRequired ? ' · photos of notes' : ''}{a.rubric ? ` · rubric (${a.rubric.reduce((t: number, r: any) => t + r.points, 0)} pts)` : ''}</>}
-            action={<Button variant="outline" onClick={() => setRemind(true)} disabled={!k.notStarted && !k.returned}><BellRing />Remind {k.notStarted + k.returned}</Button>} />
+            action={<div className="flex flex-wrap gap-2">{a.posted && <Button variant="ghost" onClick={() => setCopy(true)}><Copy />Copy to class</Button>}<Button variant="outline" onClick={() => setRemind(true)} disabled={!k.notStarted && !k.returned}><BellRing />Remind {k.notStarted + k.returned}</Button></div>} />
           <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {[['To review', k.toReview, 'to_review'], ['Handed in', k.handedIn + k.marked + k.returned, 'all'], ['Not handed in', k.notStarted, 'not_started'], ['Late', k.late, 'late'], ['Marked', k.marked, 'marked'], ['Average', list.data.average === null ? '—' : `${list.data.average}%`, 'marked']].map(([l, v, f]) => (
               <button key={l as string} type="button" onClick={() => setFilter(f as Filter)} className="card px-4 py-3 text-start transition-colors hover:bg-[var(--surface)]">
@@ -125,6 +126,7 @@ function Review() {
               )}
             </div>
           </div>
+          <CopyModal open={copy} onClose={() => setCopy(false)} cls={cls} itemId={itemId} dueDate={a.dueDate} />
           <RemindModal open={remind} onClose={() => setRemind(false)} cls={cls} itemId={itemId} count={k.notStarted + k.returned} onDone={list.reload} />
         </>
       )}
@@ -327,6 +329,45 @@ function RemindModal({ open, onClose, cls, itemId, count, onDone }: { open: bool
       <label className="field mt-4"><span>Note (optional)</span><input aria-label="Note" className="input" value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Bring your notebook to class tomorrow" /></label>
       {msg && <p role="status" className="mt-3 text-sm">{msg}</p>}
       <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" onClick={close}>Close</Button><Button onClick={() => void send()} disabled={busy || !count}><BellRing />{busy ? 'Sending…' : `Remind ${count}`}</Button></div>
+    </Modal>
+  );
+}
+
+function CopyModal({ open, onClose, cls, itemId, dueDate }: { open: boolean; onClose: () => void; cls: string; itemId: string; dueDate: string }) {
+  const me = useData<any>(open ? '/teacher/me' : null, 'staff');
+  const others: any[] = (me.data?.classes ?? []).filter((c: any) => c.id !== cls);
+  const [to, setTo] = useState('');
+  const [due, setDue] = useState(dueDate);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => { if (!to && others[0]) setTo(others[0].id); }, [others, to]);
+  const close = () => { setDone(null); setErr(null); onClose(); };
+  const send = async () => {
+    setBusy(true); setErr(null);
+    try { setDone(await api<any>(`/teacher/classes/${cls}/assignments/${encodeURIComponent(itemId)}/copy`, { method: 'POST', as: 'staff', body: { toClassId: to, dueDate: due }, headers: { 'idempotency-key': newIdempotencyKey('copy') } })); }
+    catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <Modal open={open} title="Copy to another class" onClose={close}>
+      {done ? (
+        <div className="flex flex-col gap-3">
+          <p className="flex items-center gap-2 text-sm text-[var(--success)]"><CheckCircle2 className="size-4" />Copied to {done.class.name}: {done.students} students, due {done.assignment.dueLabel}.</p>
+          <div className="flex justify-end gap-2"><Button variant="ghost" onClick={close}>Close</Button><Link href={`/teacher/assignments/${encodeURIComponent(done.assignment.id)}?class=${done.class.id}`} className="inline-flex h-10 items-center rounded-full bg-[var(--deep)] px-4 text-sm font-medium text-white" onClick={close}>Open it</Link></div>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-[var(--text-muted)]">Same instructions, slides and files, links, rubric and photo setting. Murshid replans each student's week in the other class too.</p>
+          {!others.length && me.data ? <p className="mt-4 text-sm">You don't teach another class.</p> : (
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="field"><span>Class</span><select aria-label="Class" className="input" value={to} onChange={(e) => setTo(e.target.value)}>{others.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.students})</option>)}</select></label>
+              <label className="field"><span>Due</span><input aria-label="Due" type="date" className="input" value={due} onChange={(e) => setDue(e.target.value)} /></label>
+            </div>
+          )}
+          {err && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{err}</p>}
+          <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" onClick={close}>Cancel</Button><Button onClick={() => void send()} disabled={busy || !to}><Copy />{busy ? 'Copying…' : 'Copy'}</Button></div>
+        </>
+      )}
     </Modal>
   );
 }

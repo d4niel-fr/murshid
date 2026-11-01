@@ -8,6 +8,16 @@ export function drawPaper(ctx: CanvasRenderingContext2D, paper: Paper, dark: boo
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
   const line = dark ? 'rgba(148,163,184,0.22)' : 'rgba(15,47,99,0.13)';
   ctx.strokeStyle = line; ctx.fillStyle = line; ctx.lineWidth = 1.2;
+  if (paper === 'cornell') {
+    for (let y = 160; y < PAGE_H - 300; y += 40) { ctx.beginPath(); ctx.moveTo(300, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
+    ctx.strokeStyle = dark ? 'rgba(148,163,184,0.5)' : 'rgba(15,47,99,0.32)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(40, 120); ctx.lineTo(PAGE_W - 40, 120); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(280, 120); ctx.lineTo(280, PAGE_H - 280); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(40, PAGE_H - 280); ctx.lineTo(PAGE_W - 40, PAGE_H - 280); ctx.stroke();
+    ctx.fillStyle = dark ? 'rgba(148,163,184,0.55)' : 'rgba(15,47,99,0.4)'; ctx.font = '500 22px system-ui, sans-serif';
+    ctx.fillText('CUES', 56, 156); ctx.fillText('NOTES', 316, 156); ctx.fillText('SUMMARY', 56, PAGE_H - 244);
+    return;
+  }
   if (paper === 'lined') {
     for (let y = 120; y < PAGE_H - 40; y += 40) { ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
     ctx.strokeStyle = dark ? 'rgba(248,113,113,0.35)' : 'rgba(220,38,38,0.28)';

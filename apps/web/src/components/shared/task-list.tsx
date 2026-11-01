@@ -12,10 +12,10 @@ import { cn } from '@/lib/utils';
 
 const AREA_LABEL: Record<Task['area'], { en: string; ar: string; tone: string }> = {
   academics: { en: 'Study', ar: 'دراسة', tone: 'text-[var(--chart-1)]' },
-  extracurriculars: { en: 'Activity', ar: 'نشاط', tone: 'text-[var(--chart-2)]' },
-  goals: { en: 'Goal', ar: 'هدف', tone: 'text-[var(--chart-3)]' },
-  wellbeing: { en: 'Wellbeing', ar: 'العافية', tone: 'text-[var(--chart-3)]' },
-  applications: { en: 'Applications', ar: 'الطلبات', tone: 'text-[var(--chart-4)]' },
+  extracurriculars: { en: 'Activity', ar: 'نشاط', tone: 'text-[color-mix(in_oklab,var(--chart-2)_62%,var(--text))]' },
+  goals: { en: 'Goal', ar: 'هدف', tone: 'text-[color-mix(in_oklab,var(--chart-3)_70%,var(--text))]' },
+  wellbeing: { en: 'Wellbeing', ar: 'العافية', tone: 'text-[color-mix(in_oklab,var(--chart-3)_70%,var(--text))]' },
+  applications: { en: 'Applications', ar: 'الطلبات', tone: 'text-[color-mix(in_oklab,var(--chart-4)_50%,var(--text))]' },
 };
 
 function Burst() {

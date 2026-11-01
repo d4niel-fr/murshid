@@ -13,9 +13,11 @@ import { fromCanvas, type Prepared } from '@/lib/upload';
 import { cn } from '@/lib/utils';
 
 /** Pick pages from the student's handwritten notebooks; each page is rendered to a JPEG and handed back. */
-export function NotebookPicker({ open, onOpenChange, onPick }: { open: boolean; onOpenChange: (o: boolean) => void; onPick: (files: Prepared[]) => void }) {
+export function NotebookPicker({ open, onOpenChange, onPick, assignmentId }: { open: boolean; onOpenChange: (o: boolean) => void; onPick: (files: Prepared[]) => void; assignmentId?: string }) {
   const { tx } = useApp();
-  const { notebooks } = useNotebooks();
+  const { notebooks: all } = useNotebooks();
+  // the notebook kept for this assignment comes first
+  const notebooks = useMemo(() => [...all].sort((x, y) => Number(y.assignmentId === assignmentId) - Number(x.assignmentId === assignmentId)), [all, assignmentId]);
   const [nb, setNb] = useState<Notebook | null>(null);
   const [chosen, setChosen] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
@@ -47,6 +49,7 @@ export function NotebookPicker({ open, onOpenChange, onPick }: { open: boolean; 
                 <button type="button" onClick={() => setNb(n)} className="flex w-full flex-col gap-2 rounded-2xl border border-border p-2 text-start transition-colors hover:bg-surface">
                   <span className="grid aspect-[3/4] w-full place-items-end rounded-xl p-2.5 text-xs font-medium text-white" style={{ background: n.cover }}>{n.pages.length} {n.pages.length === 1 ? tx('page', 'صفحة') : tx('pages', 'صفحات')}</span>
                   <span className="truncate px-1 text-sm font-medium">{n.title}</span>
+                  {assignmentId && n.assignmentId === assignmentId && <span className="px-1 text-xs text-primary">{tx('For this assignment', 'لهذا الواجب')}</span>}
                 </button>
               </li>
             ))}

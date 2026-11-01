@@ -237,3 +237,19 @@ describe('reminders, announcements and access', () => {
     expect(r.status).toBe(201);
   });
 });
+
+describe('copying an assignment to another class', () => {
+  it('keeps the slides, rubric and photo setting, and lands with the other class', async () => {
+    const { upload, post, req } = await setup();
+    const slides = (await upload(THOMAS, 'Lesson 4.pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', PPTX)).body;
+    const a = await post({ attachmentIds: [slides.id], photosRequired: true, rubric: [{ label: 'Key points', points: 10 }] });
+    const r = await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/copy`, THOMAS, { toClassId: 'cls-eng-12' });
+    expect(r.status).toBe(201);
+    expect(r.body.class.id).toBe('cls-eng-12');
+    expect(r.body.students).toBe(58);
+    expect(r.body.assignment).toMatchObject({ title: a.title, photosRequired: true, rubric: [{ id: 'c1', label: 'Key points', points: 10 }] });
+    expect(r.body.assignment.attachments[0].id).toBe(slides.id);
+    expect((await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/copy`, THOMAS, { toClassId: CLASS })).body.code).toBe('same_class');
+    expect((await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/copy`, THOMAS, { toClassId: 'cls-math-10ab' })).status).toBe(403);
+  });
+});

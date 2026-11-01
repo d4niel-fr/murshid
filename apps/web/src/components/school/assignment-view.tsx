@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Camera, CheckCircle2, Clock3, Link2, Loader2, MessageCircle, NotebookPen, Paperclip, RotateCcw, Send, Undo2 } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle2, Clock3, Link2, Loader2, MessageCircle, NotebookPen, Paperclip, PenLine, RotateCcw, Send, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Page } from '@/components/shared/page';
@@ -14,6 +15,7 @@ import { Textarea } from '@/components/ui/input';
 import { friendlyDates } from '@/lib/friendly-dates';
 import { ApiError, newIdempotencyKey } from '@/lib/http';
 import { getAssignment, handIn, sendMessage, undoHandIn, uploadFile, type AssignmentDetail, type FileRef, type Message } from '@/lib/school-api';
+import { notebooks } from '@/lib/notebook';
 import { ACCEPT_HANDIN, prepareFile, UploadError, type Prepared } from '@/lib/upload';
 import { useAutosave } from '@/lib/use-autosave';
 import { cn } from '@/lib/utils';
@@ -106,6 +108,7 @@ export function AssignmentView({ id }: { id: string }) {
           <Card>
             <CardHeader title={tx('Instructions', 'التعليمات')} />
             <p className="whitespace-pre-wrap text-[0.9375rem] leading-relaxed [overflow-wrap:anywhere]">{a.instructions ? friendlyDates(a.instructions, locale) : tx('No written instructions. Check the attachments or ask your teacher below.', 'لا تعليمات مكتوبة. راجع المرفقات أو اسأل معلمك أدناه.')}</p>
+            {a.format === 'task' && <NotesButton id={a.id} title={a.title} subject={a.subject} />}
             {a.photosRequired && (
               <p className="mt-4 flex items-start gap-2.5 rounded-xl bg-[color-mix(in_oklab,var(--deep)_7%,transparent)] px-3.5 py-3 text-sm"><Camera className="mt-0.5 size-4 shrink-0" />{tx('Hand in photos of your notes. Take them with your camera, or add pages from your Murshid notebook.', 'سلّم صوراً لملاحظاتك. التقطها بالكاميرا أو أضف صفحات من دفتر مرشد.')}</p>
             )}
@@ -144,6 +147,17 @@ export function AssignmentView({ id }: { id: string }) {
         </div>
       </div>
     </Page>
+  );
+}
+
+/** Opens (or creates) a Cornell-paper notebook for this assignment; its pages come back here to hand in. */
+function NotesButton({ id, title, subject }: { id: string; title: string; subject: string }) {
+  const { tx } = useApp();
+  const router = useRouter();
+  return (
+    <Button variant="secondary" size="sm" className="mt-4" onClick={() => router.push(`/app/study/notebook/${notebooks.forAssignment(id, title, subject)}`)}>
+      <PenLine />{tx('Take notes in my notebook', 'دوّن الملاحظات في دفتري')}
+    </Button>
   );
 }
 
@@ -209,7 +223,7 @@ function HandInCard({ data, onChange }: { data: AssignmentDetail; onChange: (d: 
           <Button variant="secondary" size="sm" onClick={() => picker2.current?.click()}><Paperclip />{tx('Add files', 'أضف ملفات')}</Button>
         </div>
       )}
-      <NotebookPicker open={picker} onOpenChange={setPicker} onPick={(list) => add(list)} />
+      <NotebookPicker open={picker} onOpenChange={setPicker} onPick={(list) => add(list)} assignmentId={a.id} />
 
       {(files.length > 0 || up.pending.length > 0) && (
         <div className="mt-4 flex flex-col gap-2">
