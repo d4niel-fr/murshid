@@ -5,24 +5,18 @@ import { hits, simplify, type Stroke } from './notebook';
 const raw = (mascot: unknown) => serializePrefs({ ...parsePrefs(null), mascot } as never);
 
 describe('mascot prefs', () => {
-  it('defaults to a navy Murshid bot', () => {
+  it('defaults to a Murshid-blue orb with white eyes, called Murshid', () => {
     expect(parsePrefs(null).mascot).toEqual(DEFAULT_MASCOT);
-    expect(DEFAULT_MASCOT).toEqual({ shape: 'orb', face: 'round', color: 'navy', glow: 'sky', accessory: 'antenna' });
+    expect(DEFAULT_MASCOT).toEqual({ shape: 'orb', face: 'tall', color: 'royal', glow: 'white' });
     expect(MASCOT_NAME).toEqual({ en: 'Murshid', ar: 'مرشد' });
   });
-  it('keeps the colour and accessory from older settings, and drops anything human or renamed', () => {
-    const m = parsePrefs(raw({ kind: 'guide', color: 'teal', accessory: 'headphones', skin: 'deep', hair: 'curly', name: 'Rashid' })).mascot;
-    expect(m).toEqual({ shape: 'orb', face: 'round', color: 'teal', glow: 'sky', accessory: 'headphones' });
+  it('keeps every choice the bot still has', () => {
+    expect(parsePrefs(raw({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime' })).mascot).toEqual({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime' });
   });
-  it('turns the old star character into the star shape', () => {
-    expect(parsePrefs(raw({ kind: 'star', color: 'royal', accessory: 'bow', name: 'Nour' })).mascot).toMatchObject({ shape: 'star', color: 'royal', accessory: 'bow' });
-  });
-  it('drops accessories the bot no longer has', () => {
-    expect(parsePrefs(raw({ color: 'navy', accessory: 'glasses' })).mascot?.accessory).toBe('none');
-  });
-  it('keeps every bot choice and rejects unknown values', () => {
-    expect(parsePrefs(raw({ shape: 'capsule', face: 'mono', color: 'violet', glow: 'mint', accessory: 'cap' })).mascot).toEqual({ shape: 'capsule', face: 'mono', color: 'violet', glow: 'mint', accessory: 'cap' });
-    expect(parsePrefs(raw({ shape: 'human', face: 'smile', glow: 'rainbow', accessory: 'wig' })).mascot).toEqual({ ...DEFAULT_MASCOT, accessory: 'antenna' });
+  it('carries older looks over where they still exist, and drops the rest', () => {
+    // star shape, mint eyes and accessories are gone; the colour stays
+    expect(parsePrefs(raw({ shape: 'star', face: 'round', color: 'teal', glow: 'mint', accessory: 'antenna' })).mascot).toEqual({ shape: 'orb', face: 'round', color: 'teal', glow: 'white' });
+    expect(parsePrefs(raw({ kind: 'guide', skin: 'deep', hair: 'curly', name: 'Rashid' })).mascot).toEqual(DEFAULT_MASCOT);
   });
 });
 
@@ -43,7 +37,7 @@ describe('notebook geometry', () => {
 });
 
 describe('mascot prefs without a saved mascot', () => {
-  it('uses the default bot, antenna included', () => {
+  it('uses the default bot', () => {
     const raw = encodeURIComponent(JSON.stringify({ band: 'g11-12', companion: true }));
     expect(parsePrefs(raw).mascot).toEqual(DEFAULT_MASCOT);
   });

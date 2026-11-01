@@ -7,21 +7,19 @@ export type TextSize = 'sm' | 'md' | 'lg' | 'xl';
 export const TEXT_SIZES: TextSize[] = ['sm', 'md', 'lg', 'xl'];
 
 /**
- * The mascot: Murshid, a small companion bot (not a person). Students shape it: the shell (orb, cube, capsule or the
- * Murshid star), the eyes on its screen, the shell colour, the glow colour and an accessory. It is always called Murshid.
+ * The mascot: Murshid, a small companion bot with a soft matte head and two eyes (no human features). Students shape
+ * it: the head (orb, pebble, cube or capsule), the eyes, the body colour and the eye colour. It is always called Murshid.
  */
-export type MascotShape = 'orb' | 'cube' | 'capsule' | 'star';
-export type MascotFace = 'round' | 'tall' | 'wide' | 'mono';
-export type MascotColor = 'navy' | 'royal' | 'teal' | 'lime' | 'coral' | 'violet';
-export type MascotGlow = 'sky' | 'lime' | 'mint' | 'white' | 'coral';
-export type MascotAccessory = 'none' | 'antenna' | 'headphones' | 'cap' | 'bow';
-export interface MascotPrefs { shape: MascotShape; face: MascotFace; color: MascotColor; glow: MascotGlow; accessory: MascotAccessory }
-export const MASCOT_SHAPES: MascotShape[] = ['orb', 'cube', 'capsule', 'star'];
-export const MASCOT_FACES: MascotFace[] = ['round', 'tall', 'wide', 'mono'];
-export const MASCOT_COLORS: MascotColor[] = ['navy', 'royal', 'teal', 'lime', 'coral', 'violet'];
-export const MASCOT_GLOWS: MascotGlow[] = ['sky', 'lime', 'mint', 'white', 'coral'];
-export const MASCOT_ACCESSORIES: MascotAccessory[] = ['none', 'antenna', 'headphones', 'cap', 'bow'];
-export const DEFAULT_MASCOT: MascotPrefs = { shape: 'orb', face: 'round', color: 'navy', glow: 'sky', accessory: 'antenna' };
+export type MascotShape = 'orb' | 'pebble' | 'cube' | 'capsule';
+export type MascotFace = 'tall' | 'round' | 'wide' | 'mono';
+export type MascotColor = 'royal' | 'navy' | 'sky' | 'teal' | 'violet' | 'coral' | 'lime' | 'graphite';
+export type MascotGlow = 'white' | 'ink' | 'sky' | 'lime';
+export interface MascotPrefs { shape: MascotShape; face: MascotFace; color: MascotColor; glow: MascotGlow }
+export const MASCOT_SHAPES: MascotShape[] = ['orb', 'pebble', 'cube', 'capsule'];
+export const MASCOT_FACES: MascotFace[] = ['tall', 'round', 'wide', 'mono'];
+export const MASCOT_COLORS: MascotColor[] = ['royal', 'navy', 'sky', 'teal', 'violet', 'coral', 'lime', 'graphite'];
+export const MASCOT_GLOWS: MascotGlow[] = ['white', 'ink', 'sky', 'lime'];
+export const DEFAULT_MASCOT: MascotPrefs = { shape: 'orb', face: 'tall', color: 'royal', glow: 'white' };
 export const MASCOT_NAME = { en: 'Murshid', ar: 'مرشد' } as const;
 
 export interface Prefs {
@@ -50,15 +48,14 @@ export const DEFAULT_PREFS: Prefs = { band: 'g9-10', locale: 'en', theme: 'light
 
 function parseMascot(x: unknown): MascotPrefs {
   if (!x || typeof x !== 'object') return DEFAULT_MASCOT; // nothing saved yet: the default bot
-  const m = x as Partial<MascotPrefs> & { kind?: string };
+  const m = x as Partial<Record<keyof MascotPrefs, unknown>>;
   const pick = <T extends string>(list: readonly T[], v: unknown, fallback: T): T => (list.includes(v as T) ? (v as T) : fallback);
+  // older looks carry over where they still exist (the star and cube shapes, mint or coral eyes, and so on fall back)
   return {
-    // saved when the mascot could be the star character: keep the star shape
-    shape: pick(MASCOT_SHAPES, m.shape, m.kind === 'star' ? 'star' : DEFAULT_MASCOT.shape),
+    shape: pick(MASCOT_SHAPES, m.shape, DEFAULT_MASCOT.shape),
     face: pick(MASCOT_FACES, m.face, DEFAULT_MASCOT.face),
     color: pick(MASCOT_COLORS, m.color, DEFAULT_MASCOT.color),
     glow: pick(MASCOT_GLOWS, m.glow, DEFAULT_MASCOT.glow),
-    accessory: pick(MASCOT_ACCESSORIES, m.accessory, m.shape ? DEFAULT_MASCOT.accessory : 'none'),
   };
 }
 export const PREFS_COOKIE = 'murshid_prefs';
