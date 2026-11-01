@@ -36,7 +36,7 @@ export default function SurveyResults() {
       <ErrorBox error={r.error} />
       {d && (
         <>
-          <div className="mb-5 grid grid-cols-4 gap-3">
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Responses" value={d.total} sub={d.store === 'supabase' ? 'Stored in Supabase' : 'In memory (resets on restart)'} />
             <Stat label="Students" value={d.byVersion.student} sub="Target: 20+" />
             <Stat label="Teachers / counsellors" value={d.byVersion.teacher} sub="Target: 3+ teachers, 1 counsellor" />

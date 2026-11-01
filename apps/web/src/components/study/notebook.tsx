@@ -1,8 +1,10 @@
 'use client';
 
+import { drawPaper, drawStroke, pageCanvas } from './notebook-render';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Download, Eraser, FilePlus2, Hand, Highlighter, PenLine, Plus, Redo2, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Download, Eraser, FilePlus2, Hand, Highlighter, PenLine, Plus, Printer, Redo2, Send, Trash2, Undo2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Page, PageHeader } from '@/components/shared/page';
@@ -10,58 +12,14 @@ import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input, Select } from '@/components/ui/input';
-import { HIGHLIGHT, hits, INK, notebooks, PAGE_H, PAGE_W, simplify, useNotebooks, widthAt, type Notebook, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
+import { HIGHLIGHT, hits, INK, notebooks, PAGE_H, PAGE_W, simplify, useNotebooks, type Notebook, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
 import { SUBJECTS } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { Ago } from '@/components/shared/ago';
 
 /* ------------------------------------------------------------------ drawing */
-const PAPER_LABEL: Record<Paper, [string, string]> = { lined: ['Lined', 'مسطّر'], grid: ['Grid', 'مربعات'], dotted: ['Dotted', 'منقّط'], blank: ['Blank', 'فارغ'] };
+const PAPER_LABEL: Record<Paper, [string, string]> = { lined: ['Lined', 'مسطّر'], cornell: ['Cornell', 'كورنيل'], grid: ['Grid', 'مربعات'], dotted: ['Dotted', 'منقّط'], blank: ['Blank', 'فارغ'] };
 
-function drawPaper(ctx: CanvasRenderingContext2D, paper: Paper, dark: boolean) {
-  ctx.fillStyle = dark ? '#0b1626' : '#ffffff';
-  ctx.fillRect(0, 0, PAGE_W, PAGE_H);
-  const line = dark ? 'rgba(148,163,184,0.22)' : 'rgba(15,47,99,0.13)';
-  ctx.strokeStyle = line; ctx.fillStyle = line; ctx.lineWidth = 1.2;
-  if (paper === 'lined') {
-    for (let y = 120; y < PAGE_H - 40; y += 40) { ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
-    ctx.strokeStyle = dark ? 'rgba(248,113,113,0.35)' : 'rgba(220,38,38,0.28)';
-    ctx.beginPath(); ctx.moveTo(110, 40); ctx.lineTo(110, PAGE_H - 40); ctx.stroke();
-  } else if (paper === 'grid') {
-    for (let x = 40; x <= PAGE_W - 40; x += 40) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, PAGE_H - 40); ctx.stroke(); }
-    for (let y = 40; y <= PAGE_H - 40; y += 40) { ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
-  } else if (paper === 'dotted') {
-    for (let x = 40; x <= PAGE_W - 40; x += 40) for (let y = 40; y <= PAGE_H - 40; y += 40) { ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill(); }
-  }
-}
-
-function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
-  const pts = s.points;
-  if (!pts.length) return;
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = s.color; ctx.fillStyle = s.color;
-  if (s.tool === 'highlighter') {
-    ctx.globalAlpha = 0.38; ctx.globalCompositeOperation = 'multiply'; ctx.lineWidth = s.size;
-    ctx.beginPath(); ctx.moveTo(pts[0]![0], pts[0]![1]);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
-    ctx.stroke();
-  } else if (pts.length === 1) {
-    ctx.beginPath(); ctx.arc(pts[0]![0], pts[0]![1], widthAt(s, pts[0]![2]) / 2, 0, Math.PI * 2); ctx.fill();
-  } else {
-    // a quadratic curve through the midpoints, with the width following pressure
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1]!; const b = pts[i]!;
-      const pa = i === 1 ? a : ([(pts[i - 2]![0] + a[0]) / 2, (pts[i - 2]![1] + a[1]) / 2] as const);
-      const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as const;
-      ctx.lineWidth = widthAt(s, (a[2] + b[2]) / 2);
-      ctx.beginPath(); ctx.moveTo(pa[0], pa[1]); ctx.quadraticCurveTo(a[0], a[1], mid[0], mid[1]); ctx.stroke();
-    }
-    const last = pts[pts.length - 1]!; const prev = pts[pts.length - 2]!;
-    ctx.lineWidth = widthAt(s, last[2]);
-    ctx.beginPath(); ctx.moveTo((prev[0] + last[0]) / 2, (prev[1] + last[1]) / 2); ctx.lineTo(last[0], last[1]); ctx.stroke();
-  }
-  ctx.restore();
-}
 
 /* ------------------------------------------------------------------ list */
 export function NotebookList() {
@@ -103,7 +61,7 @@ export function NotebookList() {
             <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Title', 'العنوان')}<Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Chemistry: moles', 'مثال: الكيمياء: المول')} autoFocus /></label>
             <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Subject', 'المادة')}<Select value={subject} onChange={(e) => setSubject(e.target.value)}>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</Select></label>
             <fieldset><legend className="mb-1.5 text-sm font-medium">{tx('Paper', 'الورق')}</legend>
-              <div className="grid grid-cols-4 gap-2">{(Object.keys(PAPER_LABEL) as Paper[]).map((p) => (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">{(Object.keys(PAPER_LABEL) as Paper[]).map((p) => (
                 <button key={p} type="button" onClick={() => setPaper(p)} aria-pressed={paper === p} className={cn('h-11 rounded-[14px] border text-sm transition-colors', paper === p ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border hover:border-foreground/40')}>{tx(...PAPER_LABEL[p])}</button>
               ))}</div>
             </fieldset>
@@ -257,6 +215,17 @@ export function NotebookEditor({ id }: { id: string }) {
       a.href = url; a.download = `${nb.title.replace(/[^\w]+/g, '-').toLowerCase()}-page-${index + 1}.png`; a.click(); URL.revokeObjectURL(url);
     }, 'image/png');
   };
+  /** Every page, one per sheet, through the browser's print dialog ("Save as PDF" works everywhere). */
+  const printAll = () => {
+    if (!nb) return;
+    const imgs = nb.pages.map((_, i) => pageCanvas(nb, i, 1.4).toDataURL('image/jpeg', 0.9));
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(nb.title)}</title><style>@page{size:A4;margin:0}body{margin:0}img{display:block;width:100%;height:auto;page-break-after:always}img:last-child{page-break-after:auto}</style></head><body>${imgs.map((src, i) => `<img src="${src}" alt="Page ${i + 1}">`).join('')}</body></html>`);
+    w.document.close();
+    w.onload = () => { w.focus(); w.print(); };
+  };
 
   if (!mounted) return <Page><h1 className="sr-only">{tx('Notebook', 'الدفتر')}</h1></Page>;
   if (!nb || !page) {
@@ -280,6 +249,13 @@ export function NotebookEditor({ id }: { id: string }) {
         <Link href="/app/study/notebook" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{tx('Notebooks', 'الدفاتر')}</Link>
         <input aria-label={tx('Notebook title', 'عنوان الدفتر')} defaultValue={nb.title} onBlur={(e) => notebooks.rename(nb.id, e.target.value)} className="min-w-0 flex-1 truncate rounded-[10px] bg-transparent px-2 py-1.5 text-[0.9375rem] font-medium outline-none hover:bg-surface focus:bg-surface" />
       </div>
+      {nb.assignmentId && (
+        <Link href={`/app/school/assignments/${encodeURIComponent(nb.assignmentId)}`} className="mb-3 flex items-center gap-3 rounded-2xl bg-[color-mix(in_oklab,var(--deep)_7%,transparent)] px-4 py-3 text-sm hover:bg-[color-mix(in_oklab,var(--deep)_11%,transparent)]">
+          <Send className="size-4 shrink-0 rtl:-scale-x-100" />
+          <span className="min-w-0 flex-1">{tx('Notes for a school assignment. When you’re done, hand the pages in.', 'ملاحظات لواجب مدرسي. عندما تنتهي، سلّم الصفحات.')}</span>
+          <span className="shrink-0 font-medium">{tx('Hand in', 'سلّم')}</span>
+        </Link>
+      )}
       {/* toolbar: sticky, scrolls sideways on a phone */}
       <div role="toolbar" aria-label={tx('Writing tools', 'أدوات الكتابة')} className="no-scrollbar sticky top-[calc(var(--topbar-h)+0.5rem)] z-20 mb-3 flex items-center gap-1 overflow-x-auto rounded-full border border-border bg-[color-mix(in_oklab,var(--bg)_92%,transparent)] p-1 backdrop-blur">
         {toolBtn('pen', PenLine, tx('Pen', 'قلم'))}
@@ -305,6 +281,7 @@ export function NotebookEditor({ id }: { id: string }) {
           {(Object.keys(PAPER_LABEL) as Paper[]).map((p) => <option key={p} value={p}>{tx(...PAPER_LABEL[p])}</option>)}
         </Select>
         {iconBtn(exportPng, Download, tx('Save page as image', 'حفظ الصفحة كصورة'))}
+        {iconBtn(printAll, Printer, tx('Print or save as PDF', 'طباعة أو حفظ PDF'))}
       </div>
 
       <div ref={wrap} className="relative w-full overflow-hidden rounded-[14px] shadow-[0_1px_3px_rgb(0_0_0/0.08),0_8px_24px_-12px_rgb(15_47_99/0.18)]" style={{ aspectRatio: `${PAGE_W} / ${PAGE_H}` }}>

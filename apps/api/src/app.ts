@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import { readConfig, type AppEnv, type Config, type Deps } from './lib/context';
 import { Api } from './lib/router';
@@ -57,7 +58,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
     ...(env.CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   ]);
   app.use('*', cors({
-    origin: (origin) => (origin && allowed.has(origin) ? origin : '*'),
+    // only listed origins (the apps themselves are same-origin); anything else gets no CORS header at all
+    origin: (origin) => (origin && allowed.has(origin) ? origin : null),
     allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['x-request-id', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset', 'idempotent-replayed'],
@@ -67,6 +69,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
   app.use('*', requestId());
   const limitsOn = opts.rateLimit !== false && (opts.rateLimit !== undefined || (env.NODE_ENV !== 'test' && env.RATE_LIMIT !== 'off'));
   if (limitsOn) app.use('*', rateLimit({ ...DEFAULT_LIMITS, ...(opts.rateLimit || {}) }));
+  // request bodies: 5 MB at most (a 3 MB file upload is ~4.2 MB of base64); bigger is a clear 413
+  app.use('*', bodyLimit({ maxSize: 5 * 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too big. Files can be up to 3 MB.', code: 'too_large', requestId: c.get('requestId') }, 413) }));
   app.use('*', idempotency());
   app.use('*', timeout(opts.timeoutMs ?? Number(env.REQUEST_TIMEOUT_MS ?? 15_000)));
   app.use('*', async (c, next) => { c.set('deps', deps); await next(); });
@@ -102,7 +106,18 @@ export function buildApi(opts: CreateAppOptions = {}) {
     console.error(`[${requestId}]`, err);
     return c.json({ error: 'Something went wrong on our side. Please try again.', code: 'internal', requestId }, 500);
   });
-  app.notFound((c) => c.json({ error: 'route not found', code: 'not_found', requestId: c.get('requestId') }, 404));
+  // a known path with the wrong method is a 405 (with the methods it does take), not "route not found"
+  let known: { method: string; re: RegExp }[] | null = null;
+  app.notFound((c) => {
+    known ??= api.routes.map((r) => ({ method: r.method.toUpperCase(), re: new RegExp(`^${r.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z]+/g, '[^/]+')}/?$`) }));
+    const path = new URL(c.req.url).pathname;
+    const allow = [...new Set(known.filter((r) => r.re.test(path)).map((r) => r.method))];
+    if (allow.length && c.req.method !== 'OPTIONS') {
+      c.header('Allow', allow.join(', '));
+      return c.json({ error: `this route takes ${allow.join(' or ')}, not ${c.req.method}`, code: 'method_not_allowed', allow, requestId: c.get('requestId') }, 405);
+    }
+    return c.json({ error: 'route not found', code: 'not_found', requestId: c.get('requestId') }, 404);
+  });
 
   const api = new Api(app);
   const store = opts.store ?? new DemoStore();

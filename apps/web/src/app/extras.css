@@ -2,6 +2,10 @@
 
 /* ---------------------------------------------------------------- mascot */
 .mascot .mascot-body { transform-box: view-box; transform-origin: 60px 108px; }
+.mascot .mascot-rim { stroke: transparent; }
+.dark .mascot .mascot-rim { stroke: rgb(255 255 255 / 0.15); }
+/* on the dark theme a black ground shadow disappears: a soft blue glow sits under the bot instead */
+.dark .mascot .mascot-ground-stop { stop-color: #5790e6; }
 /* idle and sleepy stay still (a loop on something always on screen is noise); the rest show what the mascot is doing */
 .mascot-listening .mascot-body { animation: mascot-lean 2.2s ease-in-out infinite; }
 .mascot-thinking .mascot-body { animation: mascot-tilt 2.6s ease-in-out infinite; }
@@ -14,12 +18,6 @@
 @keyframes mascot-tilt { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-2deg) translateY(-3px); } }
 @keyframes mascot-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015, 0.985); } }
 @keyframes mascot-hop { 0%, 60%, 100% { transform: translateY(0) scale(1); } 20% { transform: translateY(-9px) scale(0.98, 1.03); } 40% { transform: translateY(0) scale(1.04, 0.96); } }
-/* the bot's eyes: follow the pointer (CSS variables set by the mascot), blink by attribute, talk by animation */
-.mascot .mascot-gaze { transform: translate(calc(var(--lx, 0) * 2.6px), calc(var(--ly, 0) * 2.2px)); transition: transform 160ms ease-out; }
-.mascot .mascot-lids { transition: transform 90ms ease-out; }
-.mascot[data-blink] .mascot-lids { transform: scaleY(0.12); }
-.mascot-talking .mascot-mouth-talk { animation: mascot-talk 0.3s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
-@keyframes mascot-talk { from { transform: scaleY(0.35) scaleX(0.9); } to { transform: scaleY(1.15) scaleX(1); } }
 @keyframes mascot-dot { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
 
 /* the companion's speech bubble */
@@ -54,7 +52,7 @@
 .flip[data-flipped='true'] .flip-inner { transform: rotateY(180deg); }
 .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flip-back { transform: rotateY(180deg); }
-@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } .mascot .mascot-body, .mascot .mascot-mouth-talk { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } .mascot .mascot-body { animation: none !important; } }
 
 /* ---------------------------------------------------------------- loading */
 .skeleton { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface); }

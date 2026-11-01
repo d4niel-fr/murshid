@@ -46,7 +46,7 @@ export function createClient(opts: ClientOptions) {
   // generous: a serverless API can take a few seconds to wake up, and giving up early shows demo data instead of live
   const { band, locale = 'en', mode = 'auto', baseUrl = API_BASE, timeoutMs = 8000, now } = opts;
   const f = opts.fetchImpl ?? (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : undefined);
-  const world = opts.world ?? (() => mockWorld(band, now));
+  const world = opts.world ?? (() => mockWorld(band, now, opts.persona));
 
   const devUser = opts.persona || DEV_USER_OVERRIDE || demoStudents[band]?.id || 'demo-g9';
   const chatTimeoutMs = opts.chatTimeoutMs ?? 180_000;
@@ -75,16 +75,19 @@ export function createClient(opts: ClientOptions) {
   return {
     band,
     getDashboard: () => call('/dashboard', (x) => toDashboard(x, locale), () => world().dashboard),
-    getProgress: (area: string, range: ChartRange, type?: ChartType) =>
-      call(`/progress?area=${encodeURIComponent(area)}&range=${range}${type ? `&type=${type}` : ''}`, toChartSpec, () => buildChartSpec(world(), { area, range, type, locale })),
-    getAcademics: () => call('/app/academics', toAcademics, () => world().academics),
+    getProgress: async (area: string, range: ChartRange, type?: ChartType) => {
+      const r = await call(`/progress?area=${encodeURIComponent(area)}&range=${range}${type ? `&type=${type}` : ''}`, toChartSpec, () => buildChartSpec(world(), { area, range, type, locale }));
+      // the API writes chart sentences in English; in Arabic, draw the same student's chart with Arabic text
+      return locale === 'ar' && r.source === 'api' ? { ...r, data: buildChartSpec(world(), { area, range, type, locale }) } : r;
+    },
+    getAcademics: () => call('/academics', toAcademics, () => world().academics),
     /** Live payload is only used to confirm availability; the web keeps the richer session-level mock for charts. */
-    getExtracurriculars: () => call('/app/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
-    getProfileLinks: () => call('/app/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
+    getExtracurriculars: () => call('/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
+    getProfileLinks: () => call('/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
     putProfileLinks: (links: ProfileLinks) => {
       linkOverrides.set(band, links);
       const body = { linkedin: links.linkedin, github: links.github, instagram: links.instagram, portfolio: links.portfolio };
-      return call('/app/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
+      return call('/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
     },
     /** LinkedIn pack + PDF (student API); null when the API is down. */
     async getLinkedIn(): Promise<Record<string, unknown> | null> {
@@ -124,6 +127,12 @@ export function createClient(opts: ClientOptions) {
       const buddyOffline = (): ChatReply => ({ text: locale === 'ar' ? 'وضع رفيق الدراسة يحتاج إلى خادم مرشد، وهو غير متاح الآن. يمكن للمعلّم مساعدتك.' : "Study buddy mode needs the Murshid server, which isn't reachable right now. Switch to Tutor and I'll help from your saved data.", toolCalls: [], persona: 'buddy', generatedBy: 'rules' });
       const fallback = () => (opts.persona === 'buddy' ? buddyOffline() : withOfflineTrace(mockChatReply(message, world(), { locale }), message));
       if (mode === 'mock' || !f) return { data: fallback(), source: 'mock' };
+      // the API takes up to 2,000 characters: say so plainly instead of answering something else
+      if (message.length > 2000) {
+        return { data: { text: locale === 'ar'
+          ? `رسالتك طويلة (${message.length.toLocaleString('ar-AE')} حرفاً). الحد هو 2000 حرف: أرسلها على أجزاء، أو الصق الفقرة التي تريد أن أساعدك فيها.`
+          : `That message is ${message.length.toLocaleString('en-GB')} characters, and the limit is 2,000. Send it in parts, or paste just the paragraph you want help with.` } as ChatReply, source: 'api' };
+      }
       const ctrl = new AbortController();
       // short timeout until the response starts, then the long model timeout
       let timer = setTimeout(() => ctrl.abort(), Math.max(20_000, timeoutMs * 2));
@@ -134,6 +143,11 @@ export function createClient(opts: ClientOptions) {
           headers: { 'content-type': 'application/json', accept: 'text/event-stream', 'x-dev-user-id': devUser, 'x-dev-user': devUser },
           body: JSON.stringify({ message, band, locale, ...(opts.history?.length ? { history: opts.history.slice(-10).map((m) => ({ role: m.role, content: m.content.slice(0, 4000) })) } : {}), ...(opts.persona === 'buddy' ? { persona: 'buddy' } : {}) }),
         });
+        if (res.status === 400 || res.status === 413) {
+          // a request the API refused (not an outage): explain instead of falling back to bundled answers
+          const err = await res.json().catch(() => null) as { error?: string } | null;
+          return { data: { text: locale === 'ar' ? 'لم أستطع إرسال هذه الرسالة. جرّب صياغة أقصر.' : `I couldn't send that message${err?.error ? ` (${err.error})` : ''}. Try a shorter one.` } as ChatReply, source: 'api' };
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         clearTimeout(timer);
         timer = setTimeout(() => ctrl.abort(), chatTimeoutMs);

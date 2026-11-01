@@ -20,7 +20,7 @@ export function DialogContent({ title, description, children, className, side, i
           'fixed z-50 bg-popover shadow-lift outline-none',
           side === 'start'
             ? 'inset-y-2 start-2 w-[300px] rounded-[var(--radius-band)] p-4 data-[state=open]:animate-in data-[state=open]:slide-in-from-left rtl:data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:fade-out-0'
-            : cn('start-1/2 top-1/2 w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 rtl:translate-x-1/2 rounded-[28px] p-6 sm:p-7', !instant && 'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98] data-[state=closed]:animate-out data-[state=closed]:fade-out-0'),
+            : cn('start-1/2 top-1/2 max-h-[calc(100dvh-1.5rem)] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rtl:translate-x-1/2 rounded-[28px] p-6 sm:p-7', !instant && 'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98] data-[state=closed]:animate-out data-[state=closed]:fade-out-0'),
           className,
         )}
       >

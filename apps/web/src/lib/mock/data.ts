@@ -2,7 +2,7 @@
  * Bundled mock "world" for one demo student. Same shapes as the Logic team's API.
  * Deterministic: a seeded RNG per student/activity, dates relative to `today` (Asia/Dubai).
  */
-import { BANDS, demoStudents, type BandId, type DemoActivity } from '../bands';
+import { BANDS, demoPersonas, demoStudents, type BandId, type DemoActivity } from '../bands';
 import { addDays, resolveDate, todayISO } from '../dates';
 import type {
   Academics, Activity, Application, Dashboard, Extracurriculars, Goal, Opportunity, ProfileLinks,
@@ -147,9 +147,20 @@ const TASKS: Record<BandId, Omit<Task, 'id' | 'done'>[]> = {
   ],
 };
 
-export function buildMockWorld(band: BandId, now: Date = new Date()): MockWorld {
+/** Today's list for the flagship persona (CBSE, football, swimming, a small business). */
+const IDEAL_TASKS: (typeof TASKS)[BandId] = [
+  { title: 'Economics: elasticity questions 1–8', area: 'academics', minutes: 45 },
+  { title: 'Physics: kinematics numericals (ch. 3)', area: 'academics', minutes: 40 },
+  { title: 'Swim squad: 3.8 km set', area: 'extracurriculars', minutes: 75, due: '17:30' },
+  { title: 'Tideline: reply to two school club orders', area: 'applications', minutes: 20 },
+  { title: 'UCAS statement: paragraph 2', area: 'applications', minutes: 30 },
+];
+
+export function buildMockWorld(band: BandId, now: Date = new Date(), persona?: string | null): MockWorld {
   const today = todayISO(now);
-  const s = demoStudents[band];
+  // a named persona (e.g. the flagship demo-ideal) replaces the band's default student when it belongs to this band
+  const p = persona ? demoPersonas[persona] : undefined;
+  const s = p && p.band === band ? p : demoStudents[band];
   const r = rng(hash(s.id));
 
   const activities: Activity[] = s.activities.map((a) => {
@@ -180,7 +191,7 @@ export function buildMockWorld(band: BandId, now: Date = new Date()): MockWorld 
     .map((u) => ({ ...u, date: resolveDate(u.date, today) }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const today_: Task[] = TASKS[band].map((t, i) => ({ ...t, id: `t-${band}-${i}`, done: i === 0 && band !== 'g5-6' }));
+  const today_: Task[] = (s.id === 'demo-ideal' ? IDEAL_TASKS : TASKS[band]).map((t, i) => ({ ...t, id: `t-${band}-${i}`, done: i === 0 && band !== 'g5-6' }));
 
   const last28 = addDays(today, -27);
   const recentMin = activities.reduce((m, a) => m + a.sessions.filter((x) => x.date >= last28).reduce((k, x) => k + Math.min(x.minutes, 180), 0), 0);
@@ -237,9 +248,9 @@ export function buildMockWorld(band: BandId, now: Date = new Date()): MockWorld 
 }
 
 const cache = new Map<string, MockWorld>();
-export function mockWorld(band: BandId, now: Date = new Date()): MockWorld {
-  const key = `${band}:${todayISO(now)}`;
+export function mockWorld(band: BandId, now: Date = new Date(), persona?: string | null): MockWorld {
+  const key = `${band}:${todayISO(now)}:${persona ?? ''}`;
   let w = cache.get(key);
-  if (!w) { w = buildMockWorld(band, now); cache.set(key, w); }
+  if (!w) { w = buildMockWorld(band, now, persona); cache.set(key, w); }
   return w;
 }

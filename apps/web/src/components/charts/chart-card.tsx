@@ -25,9 +25,9 @@ export function ChartCard({ spec, height = 220, range, onRange, allowedRanges, a
   const { dir, tx } = useApp();
   return (
     <motion.div {...(inline ? messageIn : {})} className={cn('card p-5', className)}>
-      <div className="mb-1 flex items-start justify-between gap-3">
-        <p className="card-title pt-1">{spec.title}</p>
-        <div className="flex items-center gap-2">
+      <div className="mb-1 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <p className="card-title min-w-0 pt-1">{spec.title}</p>
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           {actions}
           {range && onRange && <RangeToggle value={range} onChange={onRange} allowed={allowedRanges} />}
         </div>

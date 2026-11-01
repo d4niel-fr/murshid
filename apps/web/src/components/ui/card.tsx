@@ -21,8 +21,8 @@ export function Card({ className, interactive, children, ...props }: HTMLMotionP
 
 export function CardHeader({ title, action, icon, className }: { title: ReactNode; action?: ReactNode; icon?: ReactNode; className?: string }) {
   return (
-    <div className={cn('mb-5 flex min-h-8 items-center justify-between gap-3', className)}>
-      <div className="flex min-w-0 items-center gap-2">
+    <div className={cn('mb-5 flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-2', className)}>
+      <div className="flex min-w-0 max-w-full items-center gap-2">
         {icon && <span className="text-muted-foreground [&_svg]:size-4">{icon}</span>}
         <h2 className="card-title truncate">{title}</h2>
       </div>

@@ -56,7 +56,24 @@ export function ProgressTable({ report, subjectName, classId }: { report: any; s
   return (
     <Card pad={false} title={<span>Class progress <span className="hidden font-normal text-[var(--text-muted)] xl:inline">&middot; {subjectName} work, with each student&rsquo;s whole week in view</span></span>}
       action={<div className="tabs-scroll flex max-w-[calc(100vw-5rem)] gap-0.5 overflow-x-auto rounded-full bg-[var(--surface-2)] p-1">{chip('all', 'All', s.students)}{chip('at_risk', 'At risk', s.atRisk)}{chip('watch', 'Keep an eye', s.watch)}{chip('on_track', 'On track', s.onTrack)}{chip('ahead', 'Ahead', s.ahead)}</div>}>
-      <table className="tbl min-w-[920px]">
+      {/* phones: one card per student */}
+      <ul className="divide-y divide-[var(--border)] md:hidden">
+        {rows.map((r: any) => {
+          const inner = (
+            <>
+              <Avatar initials={r.initials} app={Boolean(r.appId)} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2"><span className="truncate font-medium">{r.name}</span><span className="shrink-0 text-xs text-[var(--text-muted)]">{r.section}</span></span>
+                <span className="mt-0.5 block text-xs text-[var(--text-muted)]">{r.subject.completion}% handed in{r.subject.avgGrade !== null ? ` · avg ${r.subject.avgGrade}%` : ''}{r.subject.overdue ? ` · ${r.subject.overdue} overdue` : ''} · week {r.all.loadPct}% full</span>
+                {r.flags.length > 0 && <span className="mt-1 line-clamp-2 block text-xs text-[var(--text-muted)]">{r.flags.slice(0, 2).join(' · ')}</span>}
+              </span>
+              <Badge tone={STATUS_TONE[r.status]}>{r.statusLabel}</Badge>
+            </>
+          );
+          return <li key={r.id}>{classId ? <Link href={`/teacher/students/${r.id}?class=${classId}`} className="flex items-start gap-3 px-4 py-3 active:bg-[var(--surface)]">{inner}</Link> : <div className="flex items-start gap-3 px-4 py-3">{inner}</div>}</li>;
+        })}
+      </ul>
+      <table className="tbl hidden min-w-[920px] md:table">
         <thead><tr><th>Student</th><th>Status</th><th>Handed in</th><th>Avg</th><th>Still to do</th><th>Next 7 days</th><th className="w-[30%]">Why</th></tr></thead>
         <tbody>
           {rows.map((r: any) => (
@@ -106,7 +123,7 @@ export function Delegation({ rec }: { rec: any }) {
         <Info className="mt-0.5 size-4 shrink-0 text-[var(--info)]" />
         <div className="text-sm"><span className="font-medium">For the next task: </span>{rec.summary}</div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {rec.groups.map((g: any) => {
           const st = GROUP_STYLE[g.id]!;
           const Icon = st.icon;
@@ -123,7 +140,7 @@ export function Delegation({ rec }: { rec: any }) {
           );
         })}
       </div>
-      <div className="grid grid-cols-[1.3fr_1fr] gap-4">
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card title="Peer partners">
           {rec.pairs.length ? (
             <ul className="space-y-2.5">
@@ -238,7 +255,7 @@ export function WeeklyReports({ w, week, onWeek }: { w: any; week: 'current' | '
           Week of {shortDate(w.weekStart)} &middot; {w.status === 'submitted' ? <span className="font-medium text-[var(--success)]">submitted automatically {shortDate(w.weekEnd)}, 4:00 PM</span> : <span>drafts &middot; each student&rsquo;s report sends itself on {shortDate(w.weekEnd)} at 4:00 PM</span>}
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card p-6"><div className="eyebrow">Reports in</div><div className="figure mt-4 text-[2.25rem]">{r.submitted}/{r.students}</div></div>
         <div className="card p-6"><div className="eyebrow">Work handed in (all subjects)</div><div className="figure mt-4 text-[2.25rem]">{r.avgCompletion}%</div></div>
         <div className="card p-6"><div className="eyebrow">Students with overdue work</div><div className="figure mt-4 text-[2.25rem]">{r.withOverdue}</div></div>

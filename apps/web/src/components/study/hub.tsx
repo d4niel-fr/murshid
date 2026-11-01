@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { fadeUp, stagger } from '@/lib/motion';
 import { isDue, studyStreak, useStudy, weekFocusMinutes } from '@/lib/study';
 import { cn } from '@/lib/utils';
-import { count } from '@/lib/plural';
+import { count, countAr } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
 import { useNotebooks } from '@/lib/notebook';
 
@@ -28,6 +28,8 @@ export function StudyHub() {
   const decksDue = s.decks.map((d) => ({ d, n: s.cards.filter((c) => c.deckId === d.id && isDue(c, now)).length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
   const notes = [...s.notes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
   const first = world.dashboard.student.firstName;
+  // Arabic copy uses the Arabic first name when the student has one
+  const firstAr = world.dashboard.student.nameAr?.trim().split(/\s+/)[0] || first;
 
   const stats: [string, string | number, string][] = [
     [tx('Cards due', 'بطاقات مستحقة'), due, tx('ready to review', 'جاهزة للمراجعة')],
@@ -56,7 +58,7 @@ export function StudyHub() {
             <div>
               <p className="eyebrow">{name}</p>
               <p className="mt-1.5 text-[1.0625rem] leading-snug">
-                {due > 0 ? tx(`${due === 1 ? '1 card is' : `${due} cards are`} ready, ${first}. Ten minutes now saves an hour later.`, `${due} بطاقة جاهزة يا ${first}. عشر دقائق الآن توفّر ساعة لاحقاً.`) : tx(`All caught up, ${first}. Nice work.`, `أنهيت كل شيء يا ${first}. عمل رائع.`)}
+                {due > 0 ? tx(`${due === 1 ? '1 card is' : `${due} cards are`} ready, ${first}. Ten minutes now saves an hour later.`, `${countAr(due, { one: 'بطاقة واحدة جاهزة', two: 'بطاقتان جاهزتان', few: 'بطاقات جاهزة', many: 'بطاقةً جاهزة', other: 'بطاقة جاهزة' })} يا ${firstAr}. عشر دقائق الآن توفّر ساعة لاحقاً.`) : tx(`All caught up, ${first}. Nice work.`, `أنهيت كل شيء يا ${firstAr}. عمل رائع.`)}
               </p>
             </div>
           </motion.div>

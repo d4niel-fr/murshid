@@ -11,12 +11,12 @@ export const PAGE_W = 1000;
 export const PAGE_H = 1414;
 
 export type Tool = 'pen' | 'highlighter' | 'eraser';
-export type Paper = 'lined' | 'grid' | 'dotted' | 'blank';
+export type Paper = 'lined' | 'cornell' | 'grid' | 'dotted' | 'blank';
 /** [x, y, pressure 0..100] */
 export type Pt = [number, number, number];
 export interface Stroke { id: string; tool: 'pen' | 'highlighter'; color: string; size: number; points: Pt[] }
 export interface NotePage { id: string; strokes: Stroke[] }
-export interface Notebook { id: string; title: string; subject: string; paper: Paper; cover: string; pages: NotePage[]; createdAt: number; updatedAt: number }
+export interface Notebook { id: string; title: string; subject: string; paper: Paper; cover: string; pages: NotePage[]; createdAt: number; updatedAt: number; /** the school assignment these notes are for */ assignmentId?: string }
 export interface NotebookState { notebooks: Notebook[] }
 
 export const INK = ['#111827', '#0f2f63', '#2563c9', '#c2410c', '#15803d', '#7c3aed'] as const;
@@ -39,11 +39,16 @@ const touch = (id: string, fn: (n: Notebook) => Notebook) =>
   notebookStore.set((s) => ({ notebooks: s.notebooks.map((n) => (n.id === id ? { ...fn(n), updatedAt: Date.now() } : n)) }));
 
 export const notebooks = {
-  create(title: string, subject: string, paper: Paper): string {
+  create(title: string, subject: string, paper: Paper, assignmentId?: string): string {
     const id = uid('nb_'); const now = Date.now();
     const cover = COVERS[notebookStore.get().notebooks.length % COVERS.length]!;
-    notebookStore.set((s) => ({ notebooks: [{ id, title: title.trim() || 'Untitled notebook', subject, paper, cover, pages: [page()], createdAt: now, updatedAt: now }, ...s.notebooks] }));
+    notebookStore.set((s) => ({ notebooks: [{ id, title: title.trim() || 'Untitled notebook', subject, paper, cover, pages: [page()], createdAt: now, updatedAt: now, ...(assignmentId ? { assignmentId } : {}) }, ...s.notebooks] }));
     return id;
+  },
+  /** The notebook kept for a school assignment, created on first use (Cornell paper: cues, notes, summary). */
+  forAssignment(assignmentId: string, title: string, subject: string): string {
+    const found = notebookStore.get().notebooks.find((n) => n.assignmentId === assignmentId);
+    return found ? found.id : notebooks.create(title, subject, 'cornell', assignmentId);
   },
   rename(id: string, title: string) { touch(id, (n) => ({ ...n, title: title.trim() || n.title })); },
   setPaper(id: string, paper: Paper) { touch(id, (n) => ({ ...n, paper })); },

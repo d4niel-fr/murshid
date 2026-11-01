@@ -57,7 +57,7 @@ export function LogSessionDialog({ trigger, activityId, open: openProp, onOpenCh
           </div>
           {lastMetric && (
             <div>
-              <Label htmlFor="ls-metric">{lastMetric.name} ({lastMetric.unit}) <span className="font-normal text-muted-foreground">· {tx('optional, last', 'اختياري، آخر قيمة')} {lastMetric.value}</span></Label>
+              <Label htmlFor="ls-metric">{lastMetric.name}{lastMetric.unit.toLowerCase() !== lastMetric.name.toLowerCase() ? ` (${lastMetric.unit})` : ''} <span className="font-normal text-muted-foreground">· {tx('optional, last', 'اختياري، آخر قيمة')} {lastMetric.value}</span></Label>
               <Input id="ls-metric" inputMode="decimal" type="number" step="any" value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={String(lastMetric.value)} />
             </div>
           )}

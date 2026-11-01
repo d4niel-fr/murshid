@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { billing, price, useBilling } from '@/lib/billing';
 import { ApiError, newIdempotencyKey } from '@/lib/http';
 import { cancelPlan } from '@/lib/school-api';
-import { DEFAULT_MASCOT, MASCOT_ACCESSORIES, MASCOT_COLORS, MASCOT_FACES, MASCOT_GLOWS, MASCOT_SHAPES, type MascotAccessory, type MascotColor, type MascotFace, type MascotGlow, type MascotShape, type TextSize } from '@/lib/prefs';
+import { DEFAULT_MASCOT, MASCOT_COLORS, MASCOT_FACES, MASCOT_GLOWS, MASCOT_SHAPES, type MascotColor, type MascotFace, type MascotGlow, type MascotShape, type TextSize } from '@/lib/prefs';
 import { MASCOT_FILL, MASCOT_GLOW } from '@/components/mascot/mascot';
+import { shadeOf } from '@/components/mascot/bot-face';
 import { cn } from '@/lib/utils';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '@/components/providers/app-provider';
@@ -66,7 +67,17 @@ export default function SettingsPage() {
       : { title: tx('API not reachable, using demo data', 'الواجهة غير متاحة، تُستخدم بيانات تجريبية'), description: API_BASE, tone: 'info' });
   };
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), band, student: world.dashboard.student, localState: user, privacy }, null, 2)], { type: 'application/json' });
+    // everything Murshid keeps on this device: notes, decks, notebooks, focus sessions, saved items, drafts, preferences
+    const device: Record<string, unknown> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k?.startsWith('murshid:') || k === 'murshid:admin-passcode') continue;
+        const raw = localStorage.getItem(k) ?? '';
+        try { device[k.slice('murshid:'.length)] = JSON.parse(raw); } catch { device[k.slice('murshid:'.length)] = raw; }
+      }
+    } catch { /* storage off: export what is in memory */ }
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), band, student: world.dashboard.student, localState: user, privacy, prefs, device }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `murshid-${band}-data.json`;
@@ -144,16 +155,16 @@ export default function SettingsPage() {
         <Card className="col-span-12 lg:col-span-6">
           <CardHeader title={tx('Privacy', 'الخصوصية')} icon={<Shield />} />
           <Row title={tx('Weekly digest to guardian', 'ملخص أسبوعي لولي الأمر')} desc={g ? tx(`Your band's guardian view: ${g.level}. Chats are ${g.seesChatTranscripts ? 'visible' : 'never shared'}.`, `عرض ولي الأمر لمرحلتك: ${g.level}. المحادثات ${g.seesChatTranscripts ? 'مرئية' : 'لا تُشارك أبداً'}.`) : undefined}>
-            <Switch checked={privacy.shareDigest} onCheckedChange={(v) => setP('shareDigest', v)} aria-label="digest" />
+            <Switch checked={privacy.shareDigest} onCheckedChange={(v) => setP('shareDigest', v)} aria-label={tx('Weekly digest to guardian', 'ملخص أسبوعي لولي الأمر')} />
           </Row>
           <Row title={tx('Personalised opportunities', 'فرص مخصصة')} desc={tx('Use your subjects and activities to rank opportunities.', 'استخدم موادك وأنشطتك لترتيب الفرص.')}>
-            <Switch checked={privacy.personalisedOpps} onCheckedChange={(v) => setP('personalisedOpps', v)} aria-label="opps" />
+            <Switch checked={privacy.personalisedOpps} onCheckedChange={(v) => setP('personalisedOpps', v)} aria-label={tx('Personalised opportunities', 'فرص مخصصة')} />
           </Row>
           <Row title={tx('Public profile', 'ملف عام')} desc={bandConfig.features.publicProfile ? tx('Let programmes view a read-only summary.', 'اسمح للبرامج برؤية ملخص للقراءة فقط.') : tx('Not available for your grade band.', 'غير متاح لمرحلتك.')}>
-            <Switch checked={privacy.publicProfile && bandConfig.features.publicProfile} disabled={!bandConfig.features.publicProfile} onCheckedChange={(v) => setP('publicProfile', v)} aria-label="public" />
+            <Switch checked={privacy.publicProfile && bandConfig.features.publicProfile} disabled={!bandConfig.features.publicProfile} onCheckedChange={(v) => setP('publicProfile', v)} aria-label={tx('Public profile', 'ملف عام')} />
           </Row>
           <Row title={tx('Anonymous usage analytics', 'إحصاءات استخدام مجهولة')} desc={tx('Counts which screens are used, never what you type or your name. Off by default; nothing is sent in this demo.', 'نحصي الشاشات المستخدمة فقط، لا ما تكتبه ولا اسمك. متوقف افتراضياً؛ لا يُرسل شيء في هذا العرض.')}>
-            <Switch checked={privacy.analytics} onCheckedChange={(v) => setP('analytics', v)} aria-label="analytics" />
+            <Switch checked={privacy.analytics} onCheckedChange={(v) => setP('analytics', v)} aria-label={tx('Anonymous usage analytics', 'إحصاءات استخدام مجهولة')} />
           </Row>
         </Card>
 
@@ -244,32 +255,30 @@ function saveDemoPasscode(code: string | null) {
   try { if (code) localStorage.setItem(DEMO_PASSCODE_KEY, code); else localStorage.removeItem(DEMO_PASSCODE_KEY); } catch { /* private mode */ }
 }
 
-/** The mascot: one character, customised by the student (name, colour, accessory), plus companion mode. */
+/** The Murshid bot, shaped by the student (head, eyes, colours), plus companion mode. */
 function MascotCard() {
   const { prefs, setPrefs, tx } = useApp();
   const m = prefs.mascot ?? DEFAULT_MASCOT;
   const set = (patch: Partial<typeof m>) => setPrefs({ mascot: { ...m, ...patch } });
-  const SHAPE: Record<MascotShape, string> = { orb: tx('Orb', 'كرة'), cube: tx('Cube', 'مكعب'), capsule: tx('Capsule', 'كبسولة'), star: tx('Star', 'نجمة') };
-  const FACE: Record<MascotFace, string> = { round: tx('Round', 'دائرية'), tall: tx('Tall', 'طويلة'), wide: tx('Wide', 'عريضة'), mono: tx('Single', 'واحدة') };
-  const ACC: Record<MascotAccessory, string> = { none: tx('None', 'بدون'), antenna: tx('Antenna', 'هوائي'), headphones: tx('Headphones', 'سماعات'), cap: tx('Grad cap', 'قبعة تخرج'), bow: tx('Bow', 'فيونكة') };
-  const COL: Record<MascotColor, string> = { navy: tx('Navy', 'كحلي'), royal: tx('Royal blue', 'أزرق ملكي'), teal: tx('Teal', 'تركوازي'), lime: tx('Lime', 'ليموني'), coral: tx('Coral', 'مرجاني'), violet: tx('Violet', 'بنفسجي') };
-  const GLOW: Record<MascotGlow, string> = { sky: tx('Sky', 'سماوي'), lime: tx('Lime', 'ليموني'), mint: tx('Mint', 'نعناعي'), white: tx('White', 'أبيض'), coral: tx('Coral', 'مرجاني') };
+  const SHAPE: Record<MascotShape, string> = { orb: tx('Orb', 'كرة'), pebble: tx('Pebble', 'حصاة'), cube: tx('Cube', 'مكعب'), capsule: tx('Capsule', 'كبسولة') };
+  const FACE: Record<MascotFace, string> = { tall: tx('Tall', 'طويلة'), round: tx('Round', 'دائرية'), wide: tx('Wide', 'عريضة'), mono: tx('Single', 'واحدة') };
+  const COL: Record<MascotColor, string> = { royal: tx('Murshid blue', 'أزرق مرشد'), navy: tx('Navy', 'كحلي'), sky: tx('Sky', 'سماوي'), teal: tx('Teal', 'تركوازي'), violet: tx('Violet', 'بنفسجي'), coral: tx('Coral', 'مرجاني'), lime: tx('Lime', 'ليموني'), graphite: tx('Graphite', 'رمادي داكن') };
+  const GLOW: Record<MascotGlow, string> = { white: tx('White', 'أبيض'), ink: tx('Ink', 'حبر'), sky: tx('Ice blue', 'أزرق ثلجي'), lime: tx('Lime', 'ليموني') };
   const label = 'mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal';
-  const chip = (on: boolean) => cn('h-10 rounded-full px-3.5 text-[0.8125rem] font-medium transition-colors sm:h-8 sm:px-3 sm:text-xs', on ? 'bg-[var(--deep)] text-white' : 'bg-surface-2 text-muted-foreground hover:text-foreground');
   const swatch = (on: boolean) => cn('size-10 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-shadow duration-150 hover:ring-2 hover:ring-[var(--border)] active:scale-[0.95] sm:size-9', on && 'ring-2 ring-[var(--text)]');
   const tile = (on: boolean) => cn('flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1 py-2 text-[0.75rem] font-medium transition-colors active:scale-[0.98]', on ? 'border-[var(--deep)] bg-[color-mix(in_oklab,var(--deep)_6%,transparent)] text-foreground' : 'border-[var(--border)] text-muted-foreground hover:bg-surface');
   return (
     <Card id="mascot" className="col-span-12 scroll-mt-24 lg:col-span-6">
       <CardHeader title={tx('Your Murshid', 'مرشد الخاص بك')} icon={<Smile />} />
       <div className="flex flex-col items-center gap-5">
-        <div className="grid h-40 w-full max-w-[20rem] shrink-0 place-items-center rounded-[28px] bg-surface text-[var(--deep)]"><Mascot size={128} shape={m.shape} face={m.face} color={m.color} glow={m.glow} accessory={m.accessory} mood="happy" /></div>
+        <div className="grid h-44 w-full max-w-[20rem] shrink-0 place-items-center rounded-[28px] bg-surface"><Mascot size={140} shape={m.shape} face={m.face} color={m.color} glow={m.glow} mood="happy" /></div>
         <div className="flex w-full min-w-0 flex-col gap-4">
           <div>
             <p className={label}>{tx('Shape', 'الشكل')}</p>
             <div role="radiogroup" aria-label={tx('Shape', 'الشكل')} className="grid grid-cols-4 gap-2">
               {MASCOT_SHAPES.map((k) => (
                 <button key={k} type="button" role="radio" aria-checked={m.shape === k} onClick={() => set({ shape: k })} className={tile(m.shape === k)}>
-                  <span className="text-[var(--deep)]" aria-hidden><Mascot size={40} shape={k} face={m.face} color={m.color} glow={m.glow} track={false} /></span>{SHAPE[k]}
+                  <span aria-hidden><Mascot size={44} shape={k} face={m.face} color={m.color} glow={m.glow} track={false} grounded={false} /></span>{SHAPE[k]}
                 </button>
               ))}
             </div>
@@ -279,27 +288,21 @@ function MascotCard() {
             <div role="radiogroup" aria-label={tx('Eyes', 'العينان')} className="grid grid-cols-4 gap-2">
               {MASCOT_FACES.map((k) => (
                 <button key={k} type="button" role="radio" aria-checked={m.face === k} onClick={() => set({ face: k })} className={tile(m.face === k)}>
-                  <span className="text-[var(--deep)]" aria-hidden><Mascot size={40} shape={m.shape} face={k} color={m.color} glow={m.glow} track={false} /></span>{FACE[k]}
+                  <span aria-hidden><Mascot size={44} shape={m.shape} face={k} color={m.color} glow={m.glow} track={false} grounded={false} /></span>{FACE[k]}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className={label}>{tx('Shell', 'الهيكل')}</p>
-            <div role="radiogroup" aria-label={tx('Shell colour', 'لون الهيكل')} className="flex flex-wrap gap-2">
-              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={swatch(m.color === c)} style={{ background: MASCOT_FILL[c].body }} />)}
+            <p className={label}>{tx('Colour', 'اللون')}</p>
+            <div role="radiogroup" aria-label={tx('Body colour', 'لون الجسم')} className="flex flex-wrap gap-2">
+              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={swatch(m.color === c)} style={{ background: `radial-gradient(circle at 38% 30%, ${shadeOf(MASCOT_FILL[c], 0.2)}, ${MASCOT_FILL[c]} 55%, ${shadeOf(MASCOT_FILL[c], -0.35)})` }} />)}
             </div>
           </div>
           <div>
-            <p className={label}>{tx('Glow', 'التوهج')}</p>
-            <div role="radiogroup" aria-label={tx('Glow colour', 'لون التوهج')} className="flex flex-wrap gap-2">
-              {MASCOT_GLOWS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.glow === c} aria-label={GLOW[c]} title={GLOW[c]} onClick={() => set({ glow: c })} className={cn(swatch(m.glow === c), 'grid place-items-center')} style={{ background: '#0b1630' }}><span className="size-4 rounded-full" style={{ background: MASCOT_GLOW[c] }} /></button>)}
-            </div>
-          </div>
-          <div>
-            <p className={label}>{tx('Accessory', 'إكسسوار')}</p>
-            <div role="radiogroup" aria-label={tx('Accessory', 'إكسسوار')} className="flex flex-wrap gap-1.5">
-              {MASCOT_ACCESSORIES.map((a) => <button key={a} type="button" role="radio" aria-checked={m.accessory === a} onClick={() => set({ accessory: a })} className={chip(m.accessory === a)}>{ACC[a]}</button>)}
+            <p className={label}>{tx('Eye colour', 'لون العينين')}</p>
+            <div role="radiogroup" aria-label={tx('Eye colour', 'لون العينين')} className="flex flex-wrap gap-2">
+              {MASCOT_GLOWS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.glow === c} aria-label={GLOW[c]} title={GLOW[c]} onClick={() => set({ glow: c })} className={cn(swatch(m.glow === c), 'grid place-items-center')} style={{ background: MASCOT_FILL[m.color] }}><span className="h-4 w-2 rounded-full" style={{ background: MASCOT_GLOW[c] }} /></button>)}
             </div>
           </div>
         </div>

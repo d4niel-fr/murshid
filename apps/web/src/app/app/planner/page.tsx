@@ -3,8 +3,9 @@
 import { Dialog as D } from 'radix-ui';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { useApp } from '@/components/providers/app-provider';
+import { useEffect, useMemo, useState } from 'react';
+import { useApp, useEndpoint } from '@/components/providers/app-provider';
+import { applyTaskState } from '@/lib/merge';
 import { Page, PageHeader } from '@/components/shared/page';
 import { TaskList } from '@/components/shared/task-list';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Input, Label, Select } from '@/components/ui/input';
 import { addDays, formatDate, startOfWeek } from '@/lib/dates';
 import type { PlannerBlock } from '@/lib/merge';
 import { stagger, fadeUp } from '@/lib/motion';
-import type { Task } from '@/lib/types';
+import type { Dashboard, Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const AREA_COLOR: Record<Task['area'], string> = {
@@ -30,8 +31,12 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
   const [start, setStart] = useState('17:00');
   const [minutes, setMinutes] = useState('45');
   const [area, setArea] = useState<Task['area']>('academics');
+  // the day resets every time the dialog opens (however it was opened)
+  useEffect(() => { if (open) setDate(defaultDate); }, [open, defaultDate]);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const timeOk = /^\d{2}:\d{2}$/.test(start);
   const save = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !dateOk || !timeOk) return;
     const b: PlannerBlock = { id: `pb-${Date.now()}`, title: title.trim(), date, start, minutes: Number(minutes) || 30, area };
     update((u) => ({ ...u, planner: [...u.planner, b] }));
     toast({ title: tx('Added to your week', 'أضيف إلى أسبوعك'), description: `${b.title} · ${formatDate(b.date, 'en', { weekday: 'short' })} ${b.start}` });
@@ -43,7 +48,7 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
         <form onSubmit={(e) => { e.preventDefault(); save(); }} className="grid gap-4">
           <div><Label htmlFor="pb-t">{tx('What', 'ماذا')}</Label><Input id="pb-t" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Physics revision: waves', 'مثلاً: مراجعة الفيزياء')} /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><Label htmlFor="pb-d">{tx('Day', 'اليوم')}</Label><Input id="pb-d" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div><Label htmlFor="pb-d">{tx('Day', 'اليوم')}</Label><Input id="pb-d" type="date" required value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!dateOk} />{!dateOk && <p className="mt-1 text-xs text-danger">{tx('Pick a day.', 'اختر يوماً.')}</p>}</div>
             <div><Label htmlFor="pb-s">{tx('Start', 'البداية')}</Label><Input id="pb-s" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></div>
             <div><Label htmlFor="pb-m">{tx('Minutes', 'الدقائق')}</Label><Input id="pb-m" type="number" min={10} max={300} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></div>
           </div>
@@ -52,7 +57,7 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
               <option value="academics">{tx('Study', 'دراسة')}</option><option value="extracurriculars">{tx('Activity', 'نشاط')}</option>
               <option value="wellbeing">{tx('Wellbeing', 'العافية')}</option><option value="applications">{tx('Applications', 'الطلبات')}</option>
             </Select></div>
-          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim()}>{tx('Add', 'إضافة')}</Button></div>
+          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim() || !dateOk || !timeOk}>{tx('Add', 'إضافة')}</Button></div>
         </form>
       </DialogContent>
     </D.Root>
@@ -60,7 +65,10 @@ function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: b
 }
 
 export default function PlannerPage() {
-  const { world, tx, locale, user, update } = useApp();
+  const { world, tx, locale, user, update, band } = useApp();
+  // the same live "today" and "coming up" as the dashboard (API when available), with local ticks on top
+  const { data: raw } = useEndpoint<Dashboard>(`dashboard:${band}`, (c) => c.getDashboard(), world.dashboard);
+  const dash: Dashboard = raw === world.dashboard ? raw : { ...raw, today: applyTaskState(raw.today, user) };
   const [offset, setOffset] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(world.today);
@@ -70,10 +78,10 @@ export default function PlannerPage() {
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {};
     for (const d of days) m[d] = [];
-    for (const u of world.dashboard.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)' });
+    for (const u of dash.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)' });
     for (const b of user.planner) if (m[b.date]) m[b.date]!.push({ id: b.id, kind: 'block', title: b.title, time: b.start, minutes: b.minutes, color: AREA_COLOR[b.area], done: !!user.plannerDone[b.id] });
     // today's tasks (incl. ones teachers set) sit in today's column too, so the week never looks empty next to the task list
-    if (m[world.today]) for (const t of world.dashboard.today) {
+    if (m[world.today]) for (const t of dash.today) {
       const time = t.due && /^\d{2}:\d{2}$/.test(t.due) ? t.due : undefined;
       m[world.today]!.push({ id: `task-${t.id}`, kind: 'task', title: t.title, time, minutes: t.minutes, color: AREA_COLOR[t.area] ?? 'var(--chart-1)', done: !!(t.id in user.taskDone ? user.taskDone[t.id] : t.done) });
     }
@@ -81,7 +89,7 @@ export default function PlannerPage() {
     for (const d of days) m[d]!.sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, world, user]);
+  }, [weekStart, world, user, dash]);
 
   const label = `${formatDate(days[0]!, locale, { day: 'numeric', month: 'short' })} – ${formatDate(days[6]!, locale, { day: 'numeric', month: 'short' })}`;
   return (
@@ -99,8 +107,8 @@ export default function PlannerPage() {
           <Button onClick={() => { setAddDate(world.today >= days[0]! && world.today <= days[6]! ? world.today : days[0]!); setAddOpen(true); }}><Plus />{tx('Plan a block', 'خطط لوقت')}</Button>
         </>}
       />
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-        <motion.div key={weekStart} initial="hidden" animate="show" variants={stagger} className="grid grid-cols-2 gap-2.5 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <motion.div key={weekStart} initial="hidden" animate="show" variants={stagger} className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-4 lg:grid-cols-7">
           {days.map((d) => {
             const isToday = d === world.today;
             return (
@@ -132,7 +140,7 @@ export default function PlannerPage() {
         </motion.div>
         <div className="card h-fit p-5">
           <p className="card-title mb-3">{tx("Today's tasks", "مهام اليوم")}</p>
-          <TaskList tasks={world.dashboard.today} />
+          <TaskList tasks={dash.today} />
         </div>
       </div>
       <AddBlock key={addDate} defaultDate={addDate} open={addOpen} setOpen={setAddOpen} />

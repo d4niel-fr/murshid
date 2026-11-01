@@ -89,7 +89,7 @@ export function AppProvider({ initialPrefs, children }: { initialPrefs: Prefs; c
   // Persona override (e.g. the flagship demo-ideal student): the shell, greetings and chat use the persona's own
   // identity from GET /dashboard instead of the band's bundled demo student.
   const [personaStudent, setPersonaStudent] = useState<{ id: string; who: Pick<MockWorld['dashboard']['student'], 'firstName' | 'lastName' | 'nameAr' | 'classLabel' | 'school' | 'grade'> } | null>(null);
-  const baseWorld = useMemo(() => mergeWorld(mockWorld(band), user), [band, user]);
+  const baseWorld = useMemo(() => mergeWorld(mockWorld(band, undefined, prefs.persona), user), [band, user, prefs.persona]);
   const world = useMemo<MockWorld>(() => {
     if (!prefs.persona || personaStudent?.id !== prefs.persona) return baseWorld;
     return { ...baseWorld, dashboard: { ...baseWorld.dashboard, student: { ...baseWorld.dashboard.student, ...personaStudent.who } } };

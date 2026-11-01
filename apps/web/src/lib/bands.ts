@@ -4,7 +4,7 @@
  * switch this line to `export * from './bands-fallback';` (same names, structural subset).
  */
 export {
-  BANDS, BAND_IDS, bandForGrade, demoStudents, visibleNav, visibleWidgets, t, greetingKey,
+  BANDS, BAND_IDS, bandForGrade, demoPersonas, demoStudents, visibleNav, visibleWidgets, t, greetingKey,
 } from '@murshid/grade-bands';
 export type {
   BandId, BandConfig, WidgetId, FeatureId, NavItem, NavId, DemoStudent, DemoActivity, DemoSession, DemoSubject, Localized,

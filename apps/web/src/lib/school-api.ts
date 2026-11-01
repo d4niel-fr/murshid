@@ -5,9 +5,9 @@ import { API_BASE } from './api';
 import { request } from './http';
 
 // timeouts, retries for safe requests, readable errors (see lib/http.ts)
-function req<T>(path: string, init: { method?: string; body?: unknown; devUser?: string; idempotencyKey?: string } = {}): Promise<T> {
+function req<T>(path: string, init: { method?: string; body?: unknown; devUser?: string; idempotencyKey?: string; timeoutMs?: number } = {}): Promise<T> {
   return request<T>(path, {
-    method: (init.method ?? 'GET') as 'GET' | 'POST', body: init.body, idempotencyKey: init.idempotencyKey,
+    method: (init.method ?? 'GET') as 'GET' | 'POST' | 'DELETE', body: init.body, idempotencyKey: init.idempotencyKey, timeoutMs: init.timeoutMs,
     headers: init.devUser ? { 'x-dev-user': init.devUser, 'x-dev-user-id': init.devUser } : undefined,
   });
 }
@@ -42,3 +42,33 @@ export const answerForm = (devUser: string, assignmentId: string, answers: Recor
 /** Cancel the Single plan on the server (it stays usable until the renewal date). */
 export const cancelPlan = (orderId: string, email: string, idempotencyKey: string) =>
   req<{ orderId: string; status: 'canceled' }>('/billing/cancel', { method: 'POST', body: { orderId, email }, idempotencyKey });
+
+/* ---------- classroom: files, hand-ins, messages, stream ---------- */
+export type FileKind = 'image' | 'pdf' | 'slides' | 'doc' | 'sheet' | 'text';
+export interface FileRef { id: string; name: string; mime: string; kind: FileKind; size: number; url: string }
+export interface HandIn { text: string; files: FileRef[]; state: 'handed_in' | 'returned' | 'marked'; late: boolean; submittedAt: string; updatedAt: string; versions: number; grade: number | null; scores: Record<string, number> | null; feedback: string | null; reviewedAt: string | null; reviewer: string | null }
+export interface Message { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; files: FileRef[]; at: string; review?: { action: 'mark' | 'return'; grade: number | null; feedback: string } }
+export interface AssignmentCard {
+  id: string; classId: string; title: string; subject: string; teacher: string; instructions: string | null; setDate: string; dueDate: string; dueTime: string; setLabel: string; dueLabel: string; minutes: number;
+  format: 'task' | 'form' | 'google_form' | 'microsoft_form'; formUrl: string | null; questions: { id: string; type: 'short' | 'long' | 'choice'; prompt: string; options?: string[]; required: boolean }[] | null; posted: boolean;
+  attachments: FileRef[]; links: { url: string; label: string }[]; photosRequired: boolean; rubric: { id: string; label: string; points: number }[] | null;
+}
+export interface AssignmentDetail { assignment: AssignmentCard; handIn: HandIn | null; status: 'assigned' | 'overdue' | 'handed_in' | 'returned' | 'marked'; overdue: boolean; response: FormResponse | null; messages: Message[]; unread: number; reminders: Reminder[] }
+export interface Reminder { id: string; itemId: string; title: string; subject: string; teacherName: string; note: string | null; dueDate: string; at: string; dismissed: boolean }
+export interface Reply { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; at: string }
+export interface Announcement { id: string; streamId: string; authorName: string; text: string; files: FileRef[]; links: { url: string; label: string }[]; pinned: boolean; at: string; replies: Reply[]; className?: string; subject?: string }
+
+/** A file's address in the browser (the API sits behind /api). */
+export const fileUrl = (f: Pick<FileRef, 'url'>) => `${API_BASE}${f.url}`;
+const sid = (id: string) => encodeURIComponent(id);
+export const uploadFile = (devUser: string, file: { name: string; mime: string; data: string }) => req<FileRef>('/files', { method: 'POST', body: file, devUser, timeoutMs: 60_000 });
+export const getAssignment = (devUser: string, id: string) => req<AssignmentDetail>(`/student/assignments/${sid(id)}`, { devUser });
+export const handIn = (devUser: string, id: string, body: { text: string; fileIds: string[] }, idempotencyKey: string) =>
+  req<{ assignmentId: string; handIn: HandIn; updated: boolean }>(`/student/assignments/${sid(id)}/handin`, { method: 'POST', body, devUser, idempotencyKey });
+export const undoHandIn = (devUser: string, id: string) => req<{ undone: true }>(`/student/assignments/${sid(id)}/handin`, { method: 'DELETE', devUser });
+export const sendMessage = (devUser: string, id: string, body: { text: string; fileIds: string[] }, idempotencyKey: string) =>
+  req<Message>(`/student/assignments/${sid(id)}/messages`, { method: 'POST', body, devUser, idempotencyKey });
+export const getStream = (devUser: string) => req<{ announcements: Announcement[]; reminders: Reminder[] }>('/student/stream', { devUser });
+export const replyToAnnouncement = (devUser: string, id: string, text: string, idempotencyKey: string) =>
+  req<Reply>(`/student/announcements/${sid(id)}/replies`, { method: 'POST', body: { text }, devUser, idempotencyKey });
+export const dismissReminder = (devUser: string, id: string) => req<{ dismissed: true }>(`/student/reminders/${sid(id)}/dismiss`, { method: 'POST', body: {}, devUser });

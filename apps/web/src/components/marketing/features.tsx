@@ -38,8 +38,8 @@ export function FeaturesView() {
     </> },
     { id: 'companion', title: tx('Meet Murshid, your companion', 'تعرّف على مرشد، رفيقك'), body: <>
       <div className="flex flex-col gap-[1.5rem] sm:flex-row sm:items-center">
-        <span className="grid size-[9rem] shrink-0 place-items-center rounded-[2rem] bg-[var(--surface)] text-[var(--deep)]"><Mascot size={112} mood="happy" shape="orb" face="round" color="navy" glow="sky" accessory="antenna" label="Murshid" /></span>
-        <p>{tx('Turn on companion mode and Murshid, a small bot with a screen for a face, answers beside the chat. It listens while you type, thinks while it checks your week, and can read replies aloud. Pick its shape, eyes, colours and an accessory in Settings: it’s yours.', 'فعّل وضع الرفيق ليجيبك مرشد، روبوت صغير بشاشة بدل الوجه، بجانب المحادثة. ينصت أثناء كتابتك، ويفكر بينما يراجع أسبوعك، ويمكنه قراءة الردود بصوت عالٍ. اختر شكله وعينيه وألوانه وإكسسواراً من الإعدادات: إنه لك.')}</p>
+        <span className="grid size-[9rem] shrink-0 place-items-center rounded-[2rem] bg-[var(--surface)] text-[var(--deep)]"><Mascot size={120} mood="happy" label="Murshid" /></span>
+        <p>{tx('Turn on companion mode and Murshid, a small soft bot, answers beside the chat. It listens while you type, thinks while it checks your week, and can read replies aloud. Pick its shape, its eyes and its colours in Settings: it’s yours.', 'فعّل وضع الرفيق ليجيبك مرشد، روبوت صغير ناعم، بجانب المحادثة. ينصت أثناء كتابتك، ويفكر بينما يراجع أسبوعك، ويمكنه قراءة الردود بصوت عالٍ. اختر شكله وعينيه وألوانه من الإعدادات: إنه لك.')}</p>
       </div>
     </> },
     { id: 'everyone', title: tx('Built for every student', 'مصمم لكل طالب'), body: <>

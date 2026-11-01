@@ -25,7 +25,7 @@ Built by Vardan (Sam) Kapur, Grade 11, Dubai.
 - **Ask Murshid**: plan the week in plain words. Every reply shows how it was worked out (goal, plan, tools, actions, result).
 - **Study tools** (`/app/study`): flashcard decks with spaced repetition (Again, Hard, Good, Easy) and a quiz mode; Markdown notes with checklists, tables and an outline, which turn `term :: meaning` lines into flashcards; a focus timer with a weekly chart; a topic tracker for exam revision.
 - **Saved and recently viewed** pages, smart search (`/` or Ctrl+K), keyboard shortcuts (`?`), adjustable text size, dark mode, English and Arabic (right to left).
-- **Murshid, the companion bot**: a small bot with a screen for a face. Students pick its shape (orb, cube, capsule or the Murshid star), eyes, shell and glow colours and an accessory, and it answers beside the chat in companion mode.
+- **Murshid, the companion bot**: a soft matte bot whose eyes turn with its head (a small 3D face engine drawn in SVG). Students pick its shape (orb, pebble, cube or capsule), its eyes and its colours, and it answers beside the chat in companion mode.
 - **School page**: work from teachers, including Murshid forms to answer in the app and Google Forms or Microsoft Forms links.
 
 **For teachers** (`apps/admin`)

@@ -52,6 +52,13 @@ export interface WorkItem {
   questions?: FormQuestion[];
   /** personalised work: only these students get it (null/absent = the whole class) */
   assignees?: string[] | null;
+  /** files the teacher attached (slides, PDFs, worksheets, images) and links */
+  attachments?: import('./classroom').FileRef[];
+  links?: import('./classroom').LinkRef[];
+  /** hand-in must include at least one photo (e.g. "copy the slides into your notebook and send photos") */
+  photosRequired?: boolean;
+  /** optional marking rubric; the grade is the share of points */
+  rubric?: import('./classroom').RubricCriterion[];
 }
 
 /** Whether a student gets an item: everyone in the class, unless it was set for chosen students only. */
@@ -111,10 +118,8 @@ export function submission(st: RosterStudent, item: WorkItem, today: string): Su
   const r = rng(`${st.seed ?? st.id}|${item.id}`);
   const a = r(); const b = r(); const g = r();
   const grade = (late: boolean) => clamp(Math.round(100 * (st.ability * 0.8 + 0.15) + (g - 0.5) * 14 - (late ? 6 : 0)), 35, 99);
-  if (item.posted) {
-    // just posted: nobody has handed it in yet unless it is already past due
-    if (item.dueDate >= today) return { status: 'pending', grade: null, submittedOn: null };
-  }
+  // work posted in Murshid: only real hand-ins count (they are recorded separately), so nothing is invented here
+  if (item.posted) return item.dueDate < today ? { status: 'missing', grade: null, submittedOn: null } : { status: 'pending', grade: null, submittedOn: null };
   if (item.dueDate < today) {
     const onTime = Math.min(0.98, st.diligence * 0.97 + 0.03);
     if (a < onTime) return { status: 'on_time', grade: grade(false), submittedOn: addDays(item.dueDate, -1) };
@@ -430,7 +435,8 @@ export function homeworkTiming(school: School, stream: Stream, today: string, op
 }
 
 // ---------- weekly reports ----------
-export function weeklyReport(school: School, st: RosterStudent, today: string, nowMinutes: number, weekStart?: string) {
+/** `tests`: the student's own assessment calendar when they use the app, so every page counts the same tests. */
+export function weeklyReport(school: School, st: RosterStudent, today: string, nowMinutes: number, weekStart?: string, ownTests?: { date: string; title: string }[]) {
   const mon = weekStart ?? mondayOfDate(today);
   const fri = addDays(mon, 4);
   const submittedAtDue = today > fri || (today === fri && nowMinutes >= 16 * 60);
@@ -443,18 +449,29 @@ export function weeklyReport(school: School, st: RosterStudent, today: string, n
   const onTime = dueThisWeek.filter((x) => x.sub.status === 'on_time' || x.sub.status === 'submitted').length;
   const missing = w.items.filter((x) => x.sub.status === 'missing');
   const remaining = w.items.filter((x) => x.sub.status === 'pending' && x.item.dueDate <= addDays(asOf, 7));
-  const tests = w.calendar.filter((c) => c.kind === 'test' && c.date > asOf && c.date <= addDays(asOf, 7));
+  const tests = ownTests ? ownTests.filter((c) => c.date > asOf && c.date <= addDays(asOf, 7)).sort((a, b) => a.date.localeCompare(b.date)) : w.calendar.filter((c) => c.kind === 'test' && c.date > asOf && c.date <= addDays(asOf, 7));
   const events = w.calendar.filter((c) => c.kind === 'event' && c.date >= mon && c.date <= addDays(fri, 1));
   const actMin = st.activities.reduce((t, a) => t + a.minutes * a.days.filter((d) => d >= 1 && d <= 6).length, 0) + events.reduce((t, e) => t + e.minutes, 0);
   const completion = dueThisWeek.length ? Math.round(((dueThisWeek.length - dueThisWeek.filter((x) => x.sub.status === 'missing').length) / dueThisWeek.length) * 100) : 100;
+  // the percentage and the sentence use the same numbers: work due this week that was handed in (on time or late)
+  const handedDue = dueThisWeek.length - dueThisWeek.filter((x) => x.sub.status === 'missing').length;
+  const caughtUp = Math.max(0, completed.length - handedDue);
   const first = st.name.split(' ')[0];
   const summary = [
-    `${first} handed in ${completed.length} piece${completed.length === 1 ? '' : 's'} of work this week (${onTime} of ${dueThisWeek.length} on time).`,
+    dueThisWeek.length ? `${first} handed in ${handedDue} of the ${dueThisWeek.length} piece${dueThisWeek.length === 1 ? '' : 's'} of work due this week (${onTime} on time)${caughtUp ? `, and caught up on ${caughtUp} older piece${caughtUp === 1 ? '' : 's'}` : ''}.` : `${first} had no work due this week${completed.length ? ` and handed in ${completed.length} piece${completed.length === 1 ? '' : 's'}` : ''}.`,
     missing.length ? `${missing.length} overdue (${[...new Set(missing.map((x) => x.subjectName))].join(', ')}).` : 'Nothing overdue.',
     remaining.length ? `${remaining.length} due in the next 7 days${tests.length ? ` and ${tests.length} test${tests.length > 1 ? 's' : ''}` : ''}.` : tests.length ? `${tests.length} test${tests.length > 1 ? 's' : ''} coming up.` : '',
     actMin ? `${round(actMin / 60, 1)} h of sport and activities.` : '',
   ].filter(Boolean).join(' ');
+  // the same summary in Arabic, for students and parents using the app in Arabic
+  const summaryAr = [
+    dueThisWeek.length ? `سلّم ${first} ${handedDue} من ${dueThisWeek.length} أعمال مستحقة هذا الأسبوع (${onTime} في الموعد)${caughtUp ? `، وأنجز ${caughtUp} من الأعمال الأقدم` : ''}.` : `لم يكن على ${first} أعمال مستحقة هذا الأسبوع.`,
+    missing.length ? `${missing.length} متأخرة.` : 'لا شيء متأخر.',
+    remaining.length ? `${remaining.length} مستحقة خلال الأيام السبعة القادمة${tests.length ? ` و${tests.length} ${tests.length > 1 ? 'اختبارات' : 'اختبار'}` : ''}.` : tests.length ? `${tests.length} ${tests.length > 1 ? 'اختبارات قادمة' : 'اختبار قادم'}.` : '',
+    actMin ? `${round(actMin / 60, 1)} ساعة من الرياضة والأنشطة.` : '',
+  ].filter(Boolean).join(' ');
   return {
+    summaryAr,
     studentId: st.id, name: st.name, section: st.section, appId: st.appId, weekStart: mon, weekEnd: fri,
     status: submittedAtDue ? 'submitted' as const : 'draft' as const,
     submittedAt: submittedAtDue ? `${fri}T16:00:00+04:00` : null,

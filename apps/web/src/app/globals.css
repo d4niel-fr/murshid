@@ -130,8 +130,14 @@
 .shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }
 /* full-height views (chat) fill what is left under the top bar */
 .fill-view { height: calc(100dvh - var(--topbar-h)); }
+/* a phone on its side: a slimmer top bar leaves room for the page */
+@media (max-height: 560px) { :root { --topbar-h: 3.5rem; } }
 
 /* Phones zoom into any field smaller than 16px; unlayered, so it wins over text-sm on inputs. */
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); }
 }
+
+/* A grid with no explicit columns sizes its one column to its widest content, so long text or a wide child pushes the
+   page sideways on phones. Give those grids a column that can shrink. Zero specificity: any grid-cols-* class wins. */
+:where(.grid:not([class^="grid-cols-"]):not([class*=" grid-cols-"])) { grid-template-columns: minmax(0, 1fr); }

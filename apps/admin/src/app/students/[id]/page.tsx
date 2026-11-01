@@ -62,11 +62,11 @@ export default function StudentPage() {
           <a className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 text-sm hover:bg-[var(--surface-2)]" href={studentUrl(`/student/cv/linkedin.pdf`)} onClick={(e) => { e.preventDefault(); void openPdf(id); }}><FileText className="size-4" />CV PDF</a>
           {s.createdBy === 'admin' && <Button variant="danger" onClick={() => { if (window.confirm('Delete this student?')) void api(base, { method: 'DELETE' }).then(() => router.push('/')); }}><Trash2 className="size-4" />Delete</Button>}
         </div>} />
-      <div className="mb-4 grid grid-cols-5 gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <Stat label="Average" value={s.average === null ? '—' : `${s.average}%`} sub={`${s.subjects} subjects`} />
         <Stat label="Goals" value={s.goalsProgress === null ? '—' : `${s.goalsProgress}%`} sub="average progress" />
         <Stat label="Open tasks (7 days)" value={s.openTasksWeek} sub={s.overdue ? `${s.overdue} overdue` : 'none overdue'} />
-        <Stat label="Activities" value={s.activities.length} sub={s.lastSession ? `last session ${s.lastSession}` : 'no sessions'} />
+        <Stat label="Activities" value={s.activities.length} sub={s.lastSession ? `last session ${new Date(`${s.lastSession}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}` : 'no sessions'} />
         <Stat label="Projects" value={s.projects.length} sub={s.projects.join(', ') || '—'} />
       </div>
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
@@ -76,7 +76,7 @@ export default function StudentPage() {
         {tab === 'profile' && <BuddySwitch studentId={id} />}
         {tab === 'profile' && (
           <Card title="Profile" action={<Button size="sm" variant="outline" onClick={() => open(profileForm, 'Edit profile', (b) => api(base, { method: 'PATCH', body: b }), d.profile)}><Pencil className="size-3.5" />Edit</Button>}>
-            <dl className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               {Object.entries(d.profile).map(([k, v]) => (
                 <div key={k}><dt className="eyebrow">{profileLabel(k)}</dt><dd className="mt-0.5">{Array.isArray(v) ? v.join(', ') || '—' : String(v || '—')}</dd></div>
               ))}
@@ -120,7 +120,7 @@ export default function StudentPage() {
                   <Button size="sm" onClick={() => open(sessionForm(a.metricDefs.map((m: any) => m.key)), `Log ${a.name} session`, (b) => api(`${base}/activities/${a.id}/sessions`, { method: 'POST', body: toSession(b) }), { date: d.tasks.week[0]?.date, minutes: a.minutesPerSession, type: 'training' })}><Plus className="size-3.5" />Session</Button>
                   <RowActions onEdit={() => open(activityForm, `Edit ${a.name}`, (b) => { const { kind: _k, ...rest } = b; return api(`${base}/activities/${a.id}`, { method: 'PATCH', body: rest }); }, { ...a, kind: a.id, days: a.days, minutes: a.minutesPerSession })} onDelete={() => del(`${base}/activities/${a.id}`, a.name)} />
                 </>}>
-                <div className="grid grid-cols-[1fr_1.4fr] gap-6">
+                <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <Kv k="Schedule" v={a.schedule} /><Kv k="Weekly target" v={`${a.weeklyTargetMinutes} min`} />
                     <Kv k="This week" v={`${a.totals.thisWeekMinutes} min`} /><Kv k="Year" v={`${a.totals.sessions} sessions · ${a.totals.hours} h`} />
@@ -215,11 +215,11 @@ export default function StudentPage() {
                   <Button size="sm" onClick={() => open(milestoneForm, 'Add milestone', (b) => api(`${base}/projects/${p.id}/milestones`, { method: 'POST', body: b }), { done: false })}><Plus className="size-3.5" />Milestone</Button>
                   <RowActions onEdit={() => open(projectForm, `Edit ${p.name}`, (b) => api(`${base}/projects/${p.id}`, { method: 'PATCH', body: b }), p)} onDelete={() => del(`${base}/projects/${p.id}`, p.name)} />
                 </>}>
-                <div className="grid grid-cols-[1fr_1fr] gap-6">
+                <div className="grid gap-6 md:grid-cols-2">
                   <div>
                     {p.totals ? (
                       <>
-                        <div className="mb-3 grid grid-cols-3 gap-3 text-sm"><Kv k="Revenue" v={`AED ${p.totals.revenueAed.toLocaleString()}`} /><Kv k="Orders" v={p.totals.orders} /><Kv k="Customers" v={p.totals.customers} /></div>
+                        <div className="mb-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3"><Kv k="Revenue" v={`AED ${p.totals.revenueAed.toLocaleString()}`} /><Kv k="Orders" v={p.totals.orders} /><Kv k="Customers" v={p.totals.customers} /></div>
                         <div className="eyebrow mb-1">Monthly revenue (AED)</div>
                         <MiniBars values={p.metrics.map((m: any) => m.revenue)} labels={p.metrics.map((m: any) => MONTHS[Number(m.month.slice(5)) - 1])} height={90} />
                       </>
@@ -244,7 +244,7 @@ export default function StudentPage() {
         )}
 
         {tab === 'cv' && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card title="CV fields" action={<Button size="sm" variant="outline" onClick={() => open(cvForm, 'Edit CV fields', (b) => api(`${base}/cv`, { method: 'PUT', body: b }), d.cv)}><Pencil className="size-3.5" />Edit</Button>}>
               <dl className="space-y-2.5 text-sm">
                 <Kv k="Headline" v={d.cv.headline} /><Kv k="Summary" v={d.cv.summary || '—'} /><Kv k="Email" v={d.cv.email ?? '—'} /><Kv k="Location" v={d.cv.location} />

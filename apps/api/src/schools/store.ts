@@ -4,6 +4,7 @@
  */
 import { familyOrg, DEMO_SCHOOL, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
 import type { School, WorkItem } from './engine';
+import { ClassroomStore } from './classroom';
 import { SimulatedMicrosoft365, type SchoolDirectoryConnector } from './microsoft';
 
 export interface StudentLicence {
@@ -34,6 +35,8 @@ export class SchoolStore {
   /** index: assignment id -> posted item (O(1) lookups instead of scanning every post) */
   readonly postedById = new Map<string, WorkItem>();
   readonly microsoft: SchoolDirectoryConnector;
+  /** files, hand-ins, messages, announcements and reminders (see classroom.ts) */
+  readonly classroom = new ClassroomStore();
   private seq = 0;
 
   constructor() {

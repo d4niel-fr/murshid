@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useState, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Dialog as D } from 'radix-ui';
 import { BackToTop } from '@/components/shared/page-aids';
 import { useApp } from '@/components/providers/app-provider';
@@ -24,6 +24,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (window.matchMedia('(min-width: 1280px)').matches) setPrefs({ sidebar: prefs.sidebar === 'collapsed' ? 'expanded' : 'collapsed' });
     else setOverlay((v) => !v);
   }, [prefs.sidebar, setPrefs]);
+  // resizing past a breakpoint closes what no longer belongs: the phone drawer from 1024px, the rail overlay from 1280px
+  useEffect(() => {
+    const lg = window.matchMedia('(min-width: 1024px)'); const xl = window.matchMedia('(min-width: 1280px)');
+    const sync = () => { if (lg.matches) setDrawer(false); if (xl.matches || !lg.matches) setOverlay(false); };
+    lg.addEventListener('change', sync); xl.addEventListener('change', sync);
+    return () => { lg.removeEventListener('change', sync); xl.removeEventListener('change', sync); };
+  }, []);
+  useEffect(() => {
+    if (!overlay) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOverlay(false); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [overlay]);
   useShortcuts({ onSearch: useCallback(() => setPalette((v) => !v), []), onHelp: useCallback(() => setHelp(true), []), onSidebar: toggleSidebar });
 
   return (
@@ -32,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <Sidebar overlayOpen={overlay} setOverlayOpen={setOverlay} />
         </Suspense>
-        {overlay && <button aria-label="Close menu" onClick={() => setOverlay(false)} className="fixed inset-0 z-30 hidden bg-[rgb(15_47_99/0.25)] backdrop-blur-[2px] lg:block xl:hidden" />}
+        {overlay && <button aria-label="Close menu" onClick={() => setOverlay(false)} className="fixed inset-0 z-[35] hidden bg-[rgb(15_47_99/0.25)] backdrop-blur-[2px] lg:block xl:hidden" />}
         <div className="shell-main flex min-h-dvh flex-col">
           <TopBar onMenu={() => setDrawer(true)} onSearch={() => setPalette(true)} onShortcuts={() => setHelp(true)} />
           <main id="main" tabIndex={-1} className="flex-1 pb-[var(--tabbar-h)] outline-none">{children}</main>

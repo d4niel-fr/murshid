@@ -230,8 +230,8 @@ const NAMES: [string, RosterStudent['section']][] = [
   ['Yusuf Rahman', '11A'], ['Ananya Iyer', '11A'], ['Omar Farooq', '11A'], ['Saanvi Reddy', '11B'], ['Rayan Chaudhry', '11B'],
   ['Ahamed Mehta', '11B'], ['Meera Joshi', '11B'], ['Hamdan Al Falasi', '11B'], ['Ishaan Gupta', '11B'], ['Fatima Ali', '11B'],
   ['Dev Kulkarni', '11B'], ['Noor Hassan', '11B'], ['Aditya Verma', '11B'], ['Layan Haddad', '11B'], ['Vihaan Sinha', '11B'],
-  ['Sara Abdullah', '11B'], ['Aryan Kapoor', '11B'], ['Hessa Al Nuaimi', '11C'], ['Krish Agarwal', '11C'], ['Aisha Siddiqui', '11C'],
-  ['Neel Banerjee', '11C'], ['Riya Fernandes', '11C'], ['Khalid Mansour', '11C'], ['Tara Pillai', '11C'], ['Samir Qadri', '11C'],
+  ['Sara Abdullah', '11B'], ['Aryan Kapoor', '11B'], ['Hessa Al Nuaimi', '11B'], ['Krish Agarwal', '11B'], ['Aisha Siddiqui', '11B'],
+  ['Neel Banerjee', '11B'], ['Riya Fernandes', '11B'], ['Khalid Mansour', '11B'], ['Tara Pillai', '11B'], ['Samir Qadri', '11B'],
   ['Ira Chatterjee', '11C'], ['Faris Al Zarooni', '11C'], ['Anika Bose', '11C'], ['Zayan Mirza', '11C'], ['Lina Odeh', '11C'],
   ['Rehan Shah', '11C'], ['Maya Krishnan', '11C'], ['Eshan Thakur', '11C'],
 ];

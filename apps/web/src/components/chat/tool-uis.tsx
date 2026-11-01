@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { CalendarDays, Download, FileText, ListChecks, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
+import { copyText } from '@/components/shared/actions';
 import { ChartCard } from '@/components/charts/chart-card';
 import { OpportunityCard } from '@/components/shared/opportunity-card';
 import { TaskList } from '@/components/shared/task-list';
@@ -137,7 +138,7 @@ export function ShowCvTool({ args }: ToolProps) {
       {!!a.skills?.length && <div className="mt-3 flex flex-wrap gap-1.5">{a.skills.slice(0, 12).map((s) => <span key={s} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs">{s}</span>)}</div>}
       <div className="mt-4 flex gap-2">
         <button onClick={() => void download()} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-foreground px-4 text-sm text-background"><Download className="size-4" />{tx('Download CV (PDF)', 'تنزيل السيرة (PDF)')}</button>
-        <button onClick={() => { void navigator.clipboard?.writeText(`${a.headline ?? ''}\n\n${a.about ?? ''}`); setCopied(true); }} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-sm">{copied ? tx('Copied', 'تم النسخ') : tx('Copy headline + About', 'نسخ العنوان والنبذة')}</button>
+        <button onClick={async () => setCopied(await copyText(`${a.headline ?? ''}\n\n${a.about ?? ''}`))} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-sm">{copied ? tx('Copied', 'تم النسخ') : tx('Copy headline + About', 'نسخ العنوان والنبذة')}</button>
       </div>
       <p className="mt-2 text-2xs text-muted-foreground">{tx('Synthetic demo data. Ask a parent to review before publishing.', 'بيانات تجريبية. اطلب من أحد الوالدين المراجعة قبل النشر.')}</p>
     </motion.div>

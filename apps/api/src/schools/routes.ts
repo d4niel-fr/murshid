@@ -24,9 +24,12 @@ import { DEMO_SCHOOL, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './
 import { assignedTo, classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
 import type { SchoolStore } from './store';
 import { replanForPost } from './automation';
+import { refOf } from './classroom';
+import { registerClassroom } from './classroom-routes';
 import { studentInsight, teacherStudents } from './insights';
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
+  .refine((d) => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; }, 'not a real date');
 export const SchoolSchemas = {
   Onboarding: z.union([
     z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
@@ -51,6 +54,11 @@ export const SchoolSchemas = {
     })).max(20).optional(),
     /** personalised: set it for these students only (they must be in the class); omit for the whole class */
     studentIds: z.array(z.string().min(1).max(80)).min(1).max(200).optional(),
+    /** files uploaded with POST /files by this teacher (slides, PDFs, worksheets, images) */
+    attachmentIds: z.array(z.string().min(8).max(64)).max(10).optional(),
+    links: z.array(z.object({ url: z.string().trim().url().max(500).refine((u) => /^https?:\/\//.test(u), 'links must start with http(s)://'), label: z.string().trim().max(80).default('') })).max(10).optional(),
+    photosRequired: z.boolean().default(false),
+    rubric: z.array(z.object({ label: z.string().trim().min(2).max(80), points: z.number().int().min(1).max(100) })).max(8).optional(),
   }).superRefine((b, ctx) => {
     const url = b.formUrl ?? '';
     if (b.format === 'google_form' && !FORM_HOSTS.google.test(url)) ctx.addIssue({ code: 'custom', path: ['formUrl'], message: 'Paste a Google Forms link (docs.google.com/forms/… or forms.gle/…)' });
@@ -70,7 +78,7 @@ export const FORM_HOSTS = {
   microsoft: /^https:\/\/(forms\.office\.com\/|forms\.microsoft\.com\/|forms\.cloud\.microsoft\/)/,
 };
 
-type Staff = { role: 'teacher'; teacher: Teacher; orgId: string; actor: string } | { role: 'school_admin'; orgId: string; actor: string };
+export type Staff = { role: 'teacher'; teacher: Teacher; orgId: string; actor: string } | { role: 'school_admin'; orgId: string; actor: string };
 
 const nowMinutes = (d: Date) => Math.floor(((d.getTime() + 4 * 3_600_000) % 86_400_000) / 60_000);
 
@@ -221,41 +229,35 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return c.json({ class: classCard(st), ...studentInsight(school, st, r, today(c)) });
     });
 
-  api.route({ method: 'get', path: '/teacher/classes/:id/assignments', tag: 'schools', auth: 'custom', summary: 'Assignments for the class (posted in the portal or synced from Teams) with hand-in counts' },
-    async (c) => {
-      const s = await staff(c); const st = classOf(s, c.req.param('id')!); const day = today(c);
-      const school = schools.school(s.orgId);
-      const members = (schools.members[st.id] ?? []).map((id) => school.roster.find((r) => r.id === id)!);
-      const items = streamItems(school, st, day).filter((it) => it.setDate <= day || it.posted).reverse().map((it) => {
-        const answered = schools.responses[it.id] ?? {};
-        const got = members.filter((m) => assignedTo(it, m.id));
-        const subs = got.map((m) => (answered[m.id] ? 'submitted' : submission(m, it, day).status));
-        return { ...it, format: it.format ?? 'task', setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, responses: Object.keys(answered).length, students: got.length,
-          personalised: Boolean(it.assignees), assigneeNames: it.assignees ? got.slice(0, 4).map((m) => m.name) : undefined };
-      });
-      return c.json({ class: classCard(st), items });
-    });
-
-  api.route({ method: 'post', path: '/teacher/classes/:id/assignments', tag: 'schools', auth: 'custom', body: SchoolSchemas.Post, summary: 'Post an assignment: it lands in every linked student\'s Murshid app (Today list + School page)' },
-    async (c, { body }) => {
-      const s = await staff(c); const st = classOf(s, c.req.param('id')!); const day = today(c); const now = c.get('deps').now();
-      const b = body as z.output<typeof SchoolSchemas.Post>;
+  /** Post an assignment to a class (used by POST /assignments and by copying to another class). */
+  function createPost(c: Ctx, s: Staff, st: Stream, b: z.output<typeof SchoolSchemas.Post>) {
+      const day = today(c); const now = c.get('deps').now();
       const setDate = b.setDate ?? day;
-      if (b.dueDate <= setDate) throw new HTTPException(400, { message: 'due date must be after the set date' });
+      if (b.dueDate <= setDate) throw new HTTPException(400, { message: 'due date must be after the set date', cause: [{ path: 'dueDate', message: 'must be after the set date' }] });
+      if (b.dueDate < day) throw new HTTPException(400, { message: 'the due date has already passed', cause: [{ path: 'dueDate', message: 'choose today or later' }] });
       const teacher = schools.teachers.find((t) => t.id === st.teacherId)!;
       const classMembers = schools.members[st.id] ?? [];
       const studentIds = b.studentIds ? [...new Set(b.studentIds)] : null;
       if (studentIds?.some((id) => !classMembers.includes(id))) throw new HTTPException(400, { message: 'every chosen student must be in this class', cause: { code: 'not_in_class' } });
       const targets = studentIds ?? classMembers;
+      const attachments = (b.attachmentIds ?? []).map((fid) => {
+        const f = schools.classroom.files.get(fid);
+        if (!f || f.owner !== s.actor) throw new HTTPException(400, { message: 'an attachment was not found: upload it again', cause: { code: 'attachment_not_found' } });
+        return refOf(f);
+      });
       const item: WorkItem = {
         id: schools.nextId(`${st.id}-post`), streamId: st.id, subject: st.subject, teacherId: st.teacherId, title: b.title, instructions: b.instructions,
         setDate, dueDate: b.dueDate, dueTime: b.dueTime, minutes: b.minutes ?? st.minutes, source: 'portal', posted: true, createdAt: now.toISOString(),
         format: b.format, formUrl: b.format === 'google_form' || b.format === 'microsoft_form' ? b.formUrl ?? null : null,
         questions: b.format === 'form' ? b.questions!.map((q) => ({ ...q, options: q.type === 'choice' ? q.options : undefined })) : undefined,
         assignees: studentIds,
+        attachments, links: (b.links ?? []).map((l) => ({ url: l.url, label: l.label || l.url.replace(/^https?:\/\//, '').slice(0, 60) })),
+        photosRequired: b.photosRequired,
+        rubric: b.rubric?.map((r, i) => ({ id: `c${i + 1}`, label: r.label, points: r.points })),
       };
       schools.posted.push(item); schools.postedById.set(item.id, item);
-      const how = b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '';
+      const extras = [attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'}` : '', b.photosRequired ? 'hand in photos of your notes' : ''].filter(Boolean).join(' \u00b7 ');
+      const how = (extras ? ` \u00b7 ${extras}` : '') + (b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '');
       const delivered: { studentId: string; appId: string; taskId: string }[] = [];
       for (const rid of targets) {
         const r = schools.roster.find((x) => x.id === rid);
@@ -296,7 +298,56 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         students: all.length, replanned: all.length, reminders: all.length, inApp: delivered.length, overloaded,
         featured: featured ? { studentId: featured.studentId, name: school.roster.find((r) => r.id === featured.studentId)?.name ?? '', trace: featured.trace } : null,
       };
-      return c.json({ assignment: { ...item, setLabel: shortDay(setDate), dueLabel: shortDay(b.dueDate) }, class: classCard(st), students: targets.length, personalised: Boolean(studentIds), deliveredToApp: delivered, automation }, 201);
+      return { assignment: { ...item, setLabel: shortDay(setDate), dueLabel: shortDay(b.dueDate) }, class: classCard(st), students: targets.length, personalised: Boolean(studentIds), deliveredToApp: delivered, automation };
+  }
+
+  api.route({ method: 'get', path: '/teacher/classes/:id/assignments', tag: 'schools', auth: 'custom', summary: 'Assignments for the class (posted in the portal or synced from Teams) with hand-in counts' },
+    async (c) => {
+      const s = await staff(c); const st = classOf(s, c.req.param('id')!); const day = today(c);
+      const school = schools.school(s.orgId);
+      const members = (schools.members[st.id] ?? []).map((id) => school.roster.find((r) => r.id === id)!);
+      const items = streamItems(school, st, day).filter((it) => it.setDate <= day || it.posted).reverse().map((it) => {
+        const answered = schools.responses[it.id] ?? {};
+        const hands = schools.classroom.handins[it.id] ?? {};
+        const threads = schools.classroom.threads[it.id] ?? {};
+        const got = members.filter((m) => assignedTo(it, m.id));
+        const subs = got.map((m) => (answered[m.id] || hands[m.id] ? 'submitted' : it.posted && it.dueDate >= day ? 'pending' : submission(m, it, day).status));
+        const toReview = got.filter((m) => hands[m.id]?.state === 'handed_in').length;
+        const unread = got.reduce((t, m) => { const th = threads[m.id]; return t + (th ? th.messages.slice(th.seenByTeacher).filter((x) => x.from === 'student').length : 0); }, 0);
+        return { ...it, toReview, unread, attachmentCount: it.attachments?.length ?? 0, format: it.format ?? 'task', setLabel: shortDay(it.setDate), dueLabel: shortDay(it.dueDate), handedIn: subs.filter((x) => x === 'on_time' || x === 'late' || x === 'submitted').length, missing: subs.filter((x) => x === 'missing').length, responses: Object.keys(answered).length, students: got.length,
+          personalised: Boolean(it.assignees), assigneeNames: it.assignees ? got.slice(0, 4).map((m) => m.name) : undefined };
+      });
+      return c.json({ class: classCard(st), items });
+    });
+
+  api.route({ method: 'post', path: '/teacher/classes/:id/assignments', tag: 'schools', auth: 'custom', body: SchoolSchemas.Post, summary: 'Post an assignment: it lands in every linked student\'s Murshid app (Today list + School page)' },
+    async (c, { body }) => {
+      const s = await staff(c); const st = classOf(s, c.req.param('id')!);
+      return c.json(createPost(c, s, st, body as z.output<typeof SchoolSchemas.Post>), 201);
+    });
+
+  api.route({ method: 'post', path: '/teacher/classes/:id/assignments/:itemId/copy', tag: 'schools', auth: 'custom', body: z.object({ toClassId: z.string().min(1).max(80), dueDate: isoDate.optional(), setDate: isoDate.optional() }),
+    summary: 'Copy a posted assignment to another of your classes (same instructions, attachments, links, rubric and photo setting)' },
+    async (c, { body }) => {
+      const s = await staff(c); const from = classOf(s, c.req.param('id')!); const day = today(c);
+      const b = body as { toClassId: string; dueDate?: string; setDate?: string };
+      const to = classOf(s, b.toClassId);
+      if (to.id === from.id) throw new HTTPException(400, { message: 'choose a different class', cause: { code: 'same_class' } });
+      const item = schools.postedById.get(c.req.param('itemId')!);
+      if (!item || item.streamId !== from.id) throw new HTTPException(404, { message: 'assignment not found (only work posted in Murshid can be copied)' });
+      const setDate = b.setDate ?? (item.setDate >= day ? item.setDate : day);
+      const dueDate = b.dueDate ?? (item.dueDate > setDate ? item.dueDate : null);
+      if (!dueDate) throw new HTTPException(400, { message: 'the original due date has passed: choose a new one', cause: [{ path: 'dueDate', message: 'required' }] });
+      const parsed = SchoolSchemas.Post.safeParse({
+        title: item.title, instructions: item.instructions, setDate, dueDate, dueTime: item.dueTime, minutes: item.minutes,
+        format: item.format ?? 'task', formUrl: item.formUrl ?? undefined, questions: item.questions,
+        attachmentIds: item.attachments?.map((f) => f.id), links: item.links, photosRequired: Boolean(item.photosRequired),
+        rubric: item.rubric?.map((r) => ({ label: r.label, points: r.points })),
+      });
+      if (!parsed.success) throw new HTTPException(400, { message: 'this assignment cannot be copied as it is', cause: parsed.error.issues.map((x) => ({ path: x.path.join('.'), message: x.message })) });
+      // the copy shares the original's files
+      for (const f of item.attachments ?? []) { const stored = schools.classroom.files.get(f.id); if (stored) stored.owner = s.actor; }
+      return c.json(createPost(c, s, to, parsed.data), 201);
     });
 
   // ---------- school (org) ----------
@@ -386,10 +437,18 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         .sort((a, b) => Number(b.item.posted) - Number(a.item.posted) || a.item.dueDate.localeCompare(b.item.dueDate))
         .map((x) => {
           const mine = schools.responses[x.item.id]?.[r.id];
-          return { id: x.item.id, title: x.item.title, subject: x.subjectName, teacher: x.teacherName, setDate: x.item.setDate, dueDate: x.item.dueDate, dueLabel: shortDay(x.item.dueDate), minutes: x.item.minutes, status: mine ? 'submitted' : x.sub.status, source: x.item.source, posted: x.item.posted, instructions: x.item.instructions,
+          const hand = schools.classroom.handins[x.item.id]?.[r.id];
+          const th = schools.classroom.threads[x.item.id]?.[r.id];
+          const unread = th ? th.messages.slice(th.seenByStudent).filter((m) => m.from === 'teacher').length : 0;
+          const handIn = hand ? { state: hand.state, grade: hand.state === 'marked' ? hand.grade : null, late: hand.late, files: hand.files.length, feedback: hand.state !== 'handed_in' ? hand.feedback : null } : null;
+          return { handIn, unread, attachments: x.item.attachments?.length ?? 0, photosRequired: Boolean(x.item.photosRequired), id: x.item.id, title: x.item.title, subject: x.subjectName, teacher: x.teacherName, setDate: x.item.setDate, dueDate: x.item.dueDate, dueLabel: shortDay(x.item.dueDate), minutes: x.item.minutes, status: hand ? (hand.state === 'handed_in' ? 'submitted' : hand.state) : mine ? 'submitted' : x.sub.status, source: x.item.source, posted: x.item.posted, instructions: x.item.instructions,
             format: x.item.format ?? 'task', formUrl: x.item.formUrl ?? null, questions: x.item.questions ?? null, response: mine ?? null, trace: schools.automations[x.item.id]?.[r.id]?.trace ?? null };
         });
-      return c.json({ ...base, today: day, family: null, school: { org: orgCard(org.id), section: r.section, classes, assignments, weeklyReport: weeklyReport(school, r, day, nowMinutes(v.now)) } });
+      // the app student's own tests (the same ones the dashboard counts)
+      const subjectName = new Map(v.profile.subjects.map((x) => [x.id, x.name]));
+      const ownTests = v.data.assessments.filter((a) => a.status === 'upcoming' && (a.kind === 'test' || a.kind === 'quiz' || a.kind === 'exam'))
+        .map((a) => ({ date: a.date, title: `${subjectName.get(a.subjectId) ?? ''} ${a.kind === 'quiz' ? 'quiz' : a.kind === 'exam' ? 'exam' : 'test'}: ${a.title}`.trim() }));
+      return c.json({ ...base, today: day, family: null, school: { org: orgCard(org.id), section: r.section, classes, assignments, weeklyReport: weeklyReport(school, r, day, nowMinutes(v.now), undefined, ownTests) } });
     });
 
   // ---------- built-in forms ----------
@@ -435,4 +494,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       if (!r) throw new HTTPException(404, { message: 'weekly reports come with a school licence' });
       return c.json(weeklyReport(schools.school(r.orgId), r, dubaiDate(v.now), nowMinutes(v.now)));
     });
+
+  // ---------- classroom: files, hand-ins, review, messages, reminders, announcements, inbox, gradebook ----------
+  registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
 }

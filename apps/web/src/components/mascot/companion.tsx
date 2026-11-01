@@ -45,14 +45,15 @@ export function useSpeech() {
   return { speak, stop, speaking, supported };
 }
 
-export function CompanionToggles() {
+/** Companion on/off and read-aloud. `compact` (the chat header on phones) shows the icon only. */
+export function CompanionToggles({ compact }: { compact?: boolean }) {
   const { prefs, setPrefs, tx } = useApp();
   const on = Boolean(prefs.companion);
   return (
-    <div className="flex items-center gap-1">
-      <button type="button" onClick={() => setPrefs({ companion: !on })} aria-pressed={on}
-        className={cn('inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[0.8125rem] transition-colors', on ? 'bg-[var(--deep)] text-white' : 'bg-surface text-muted-foreground hover:text-foreground')}>
-        <Smile className="size-4" />{tx('Companion', 'الرفيق')}
+    <div className="flex shrink-0 items-center gap-1">
+      <button type="button" onClick={() => setPrefs({ companion: !on })} aria-pressed={on} aria-label={compact ? tx('Companion', 'الرفيق') : undefined} title={compact ? tx('Companion', 'الرفيق') : undefined}
+        className={cn('inline-flex h-9 items-center gap-1.5 rounded-full text-[0.8125rem] transition-colors', compact ? 'w-9 justify-center md:w-auto md:px-3' : 'px-3', on ? 'bg-[var(--deep)] text-white' : 'bg-surface text-muted-foreground hover:text-foreground')}>
+        <Smile className="size-4 shrink-0" /><span className={cn(compact && 'hidden md:inline')}>{tx('Companion', 'الرفيق')}</span>
       </button>
       {on && (
         <button type="button" onClick={() => setPrefs({ voice: !prefs.voice })} aria-pressed={Boolean(prefs.voice)} aria-label={prefs.voice ? tx('Stop reading replies aloud', 'إيقاف قراءة الردود') : tx('Read replies aloud', 'قراءة الردود بصوت عالٍ')}
@@ -65,8 +66,22 @@ export function CompanionToggles() {
 }
 
 /** The stage: the mascot and its latest line, with the mood following the conversation. */
+/** Short screens (a phone on its side): the companion shrinks to a strip so the conversation keeps the room. */
+function useShortScreen() {
+  const [short, setShort] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(max-height: 560px)');
+    const sync = () => setShort(m.matches);
+    sync(); m.addEventListener('change', sync);
+    return () => m.removeEventListener('change', sync);
+  }, []);
+  return short;
+}
+
 export function CompanionStage({ runtime, compact }: { runtime: AssistantRuntime; compact?: boolean }) {
   const { prefs, locale, tx } = useApp();
+  const shortScreen = useShortScreen();
+  const strip = Boolean(compact && shortScreen);
   const thread = useThread(runtime);
   const typing = useComposerText(runtime).trim().length > 0;
   const { speak, stop, speaking } = useSpeech();
@@ -95,15 +110,15 @@ export function CompanionStage({ runtime, compact }: { runtime: AssistantRuntime
   const short = line.length > 240 ? `${line.slice(0, 237).trimEnd()}…` : line;
 
   return (
-    <div className={cn('flex items-start gap-4', compact ? 'flex-row' : 'flex-col items-center text-center md:flex-row md:items-start md:text-start')}>
+    <div className={cn('flex items-start', strip ? 'items-center gap-3' : 'gap-4', compact ? 'flex-row' : 'flex-col items-center text-center md:flex-row md:items-start md:text-start')}>
       <div className="shrink-0 text-[var(--deep)]">
-        <MyMascot size={compact ? 84 : 168} mood={mood} />
+        <MyMascot size={strip ? 40 : compact ? 84 : shortScreen ? 112 : 168} mood={mood} grounded={!strip} />
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={running && !reply ? 'wait' : last?.id ?? 'hello'} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6 }}
-          className={cn('bubble max-w-[32rem] px-5 py-4 text-start text-[0.9375rem] leading-relaxed', compact && 'mt-2')} aria-live="polite">
-          <p className="eyebrow mb-1.5">{name}</p>
-          <p>{short}</p>
+          className={cn('bubble min-w-0 max-w-[32rem] text-start leading-relaxed', strip ? 'px-3.5 py-2 text-sm' : 'px-5 py-4 text-[0.9375rem]', compact && !strip && 'mt-2')} aria-live="polite">
+          {!strip && <p className="eyebrow mb-1.5">{name}</p>}
+          <p dir="auto" className={cn(strip ? 'line-clamp-1' : compact && 'line-clamp-4')}>{short}</p>
           {speaking && <button type="button" onClick={stop} className="mt-2 text-xs text-muted-foreground underline underline-offset-2">{tx('Stop reading', 'إيقاف القراءة')}</button>}
         </motion.div>
       </AnimatePresence>

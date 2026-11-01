@@ -11,6 +11,9 @@ import { useData } from '@/lib/use-data';
 const ORG = 'demo-school';
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Dubai' }) : '\u2014');
 
+/** 2026-09-01 → 1 Sep 2026 */
+const day = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : iso);
+
 export default function SchoolPage() {
   const org = useData<any>(`/orgs/${ORG}`);
   const lic = useData<any>('/licensing/overview');
@@ -29,14 +32,14 @@ export default function SchoolPage() {
       <ErrorBox error={org.error ?? lic.error ?? error} />
       {!o ? <Empty>Loading…</Empty> : (
         <div className="space-y-4">
-          <div className="grid grid-cols-[1.1fr_1fr] gap-4">
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
             <Card title={<span className="flex items-center gap-2"><Building2 className="size-4" />{o.name}</span>} action={<Badge tone="accent">Institution licence</Badge>}>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                 <div><dt className="eyebrow eyebrow-plain">Group</dt><dd className="mt-0.5">{o.group?.name}</dd></div>
                 <div><dt className="eyebrow eyebrow-plain">Licence</dt><dd className="mt-0.5">Murshid for Schools &middot; <span className="capitalize">{o.licence.status === 'pilot' ? 'proposed pilot (demo tenant)' : o.licence.status}</span></dd></div>
                 <div><dt className="eyebrow eyebrow-plain">Price</dt><dd className="mt-0.5">AED {o.licence.priceAed} per student per year</dd></div>
-                <div><dt className="eyebrow eyebrow-plain">Term</dt><dd className="mt-0.5">{o.licence.startDate} &rarr; {o.licence.endDate}</dd></div>
-                <div><dt className="eyebrow eyebrow-plain">Seats</dt><dd className="mt-0.5 tabular-nums">{o.usage.rosterStudents} of {o.usage.seats} students</dd></div>
+                <div><dt className="eyebrow eyebrow-plain">Term</dt><dd className="mt-0.5">{day(o.licence.startDate)} &rarr; {day(o.licence.endDate)}</dd></div>
+                <div><dt className="eyebrow eyebrow-plain">Seats</dt><dd className="mt-0.5 tabular-nums">{o.usage.rosterStudents} students &middot; {o.usage.seats} seats{o.usage.rosterStudents > o.usage.seats ? <span className="mt-1 block text-[var(--warning)]">{o.usage.rosterStudents - o.usage.seats} over the licence. Add seats before term starts.</span> : <span className="block text-xs text-[var(--text-muted)]">{o.usage.seats - o.usage.rosterStudents} free</span>}</dd></div>
                 <div><dt className="eyebrow eyebrow-plain">Student join code</dt><dd className="mt-0.5 font-mono text-[13px]">{o.joinCode}</dd></div>
               </dl>
               <p className="mt-4 rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-muted)]">{o.licence.note}. Students under this licence are linked to the school; their teachers post work directly here or through Microsoft Teams.</p>
@@ -44,7 +47,7 @@ export default function SchoolPage() {
             <Card title={<span className="flex items-center gap-2"><MicrosoftMark className="size-4" />Microsoft 365</span>} action={ms?.connected ? <Badge tone="success"><CheckCircle2 className="size-3" />Connected</Badge> : <Badge>Not connected</Badge>}>
               {ms?.connected ? (
                 <>
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
                     {[['Classes', ms.synced?.classes], ['Teachers', ms.synced?.teachers], ['Students', ms.synced?.students], ['Assignments', ms.synced?.assignments]].map(([l, v]) => (
                       <div key={l as string} className="rounded-[var(--radius-sm)] bg-[var(--surface-2)] p-2"><div className="text-lg font-semibold tabular-nums">{v as number}</div><div className="text-[11px] text-[var(--text-muted)]">{l as string}</div></div>
                     ))}
@@ -78,7 +81,7 @@ export default function SchoolPage() {
           </Card>
 
           {lic.data && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <Card title={<span className="flex items-center gap-2"><Building2 className="size-4" />Schools <span className="font-normal text-[var(--text-muted)]">&middot; institution licences</span></span>} action={<Badge tone="accent">{lic.data.totals.institutionStudents} students</Badge>}>
                 <ul className="space-y-2.5">{lic.data.institutions.map((i: any) => (
                   <li key={i.id} className="flex items-start justify-between gap-3 text-sm"><span className="min-w-0"><span className="block font-medium">{i.name}</span><span className="text-xs text-[var(--text-muted)]">{i.group ? `${i.group.name} \u00b7 ` : ''}{i.licence.note}</span></span><Badge tone={i.licence.status === 'pilot' ? 'success' : 'neutral'}>{i.licence.status === 'pilot' ? 'proposed pilot' : i.licence.status}</Badge></li>

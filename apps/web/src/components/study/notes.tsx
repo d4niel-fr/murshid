@@ -16,7 +16,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { rank } from '@/lib/fuzzy';
 import { headings, Markdown } from '@/lib/markdown';
 import { fadeUp, stagger } from '@/lib/motion';
-import { cardsFromText, readingMinutes, study, SUBJECTS, useStudy, type Note } from '@/lib/study';
+import { cardsFromText, readingMinutes, study, studyStore, SUBJECTS, useStudy, type Note } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { Ago } from '@/components/shared/ago';
 
@@ -97,6 +97,17 @@ export function NoteEditor() {
   const [status, setStatus] = useState<'saved' | 'saving'>('saved');
   const [view, setView] = useState<View>('write');
   const ta = useRef<HTMLTextAreaElement>(null);
+  // leaving a note that was never written in removes it, so "New note" doesn't leave empty notes behind
+  const latest = useRef({ title, body });
+  latest.current = { title, body };
+  useEffect(() => () => {
+    // after the route changes (a development remount stays on this note, so nothing is removed)
+    setTimeout(() => {
+      if (window.location.pathname.endsWith(`/${id}`)) return;
+      const cur = studyStore.get().notes.find((n) => n.id === id);
+      if (cur && !latest.current.title.trim() && !latest.current.body.trim() && !cur.title.trim() && !cur.body.trim()) study.removeNote(id);
+    }, 0);
+  }, [id]);
   // the note can arrive after the first render (stored notes load from this device): take its text once per note
   const loaded = useRef<string | null>(note?.id ?? null);
   useEffect(() => { if (window.matchMedia('(min-width: 1280px)').matches) setView('split'); }, []);
@@ -149,7 +160,7 @@ export function NoteEditor() {
     <Page wide>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <Link href="/app/study/notes" className="me-auto inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('All notes', 'كل الملاحظات')}</Link>
-        <span className="text-xs text-muted-foreground" aria-live="polite">{status === 'saving' ? tx('Saving…', 'جارٍ الحفظ…') : tx(`Saved · $<Ago ts={note.updatedAt} locale={locale} />`, `محفوظة · $<Ago ts={note.updatedAt} locale={locale} />`)}</span>
+        <span className="text-xs text-muted-foreground" aria-live="polite">{status === 'saving' ? tx('Saving…', 'جارٍ الحفظ…') : <>{tx('Saved', 'محفوظة')} · <Ago ts={note.updatedAt} locale={locale} /></>}</span>
         <button type="button" onClick={() => study.saveNote(note.id, { pinned: !note.pinned })} aria-pressed={Boolean(note.pinned)} aria-label={note.pinned ? tx('Unpin', 'إلغاء التثبيت') : tx('Pin', 'تثبيت')} className="grid size-9 place-items-center rounded-full bg-surface">{note.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}</button>
         <SaveButton id={`note:${note.id}`} kind="note" title={title || tx('Untitled note', 'ملاحظة بلا عنوان')} href={`/app/study/notes/${note.id}`} iconOnly />
         <CopyButton text={() => `# ${title}\n\n${body}`} label={tx('Copy note', 'نسخ الملاحظة')} iconOnly />
@@ -181,7 +192,7 @@ export function NoteEditor() {
               </div>
             )}
             {view !== 'write' && (
-              <article className="card min-h-[30vh] p-6" aria-label={tx('Preview', 'معاينة')}>
+              <article className="card min-h-[30vh] min-w-0 p-6 [overflow-wrap:anywhere]" aria-label={tx('Preview', 'معاينة')}>
                 {body.trim() ? <Markdown source={body} onToggleTask={toggleTask} /> : <p className="text-sm text-muted-foreground">{tx('Nothing to preview yet.', 'لا شيء للمعاينة بعد.')}</p>}
               </article>
             )}

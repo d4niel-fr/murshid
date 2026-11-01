@@ -2,7 +2,7 @@
 
 import { Dialog as D } from 'radix-ui';
 import { motion } from 'motion/react';
-import { Award, CalendarClock, MessageCircle, Plus, Target } from 'lucide-react';
+import { Award, CalendarClock, MessageCircle, Plus, Target, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
@@ -33,29 +33,30 @@ function AddGoal() {
   const [area, setArea] = useState<Goal['area']>('academics');
   const [due, setDue] = useState(addDays(world.today, 60));
   const [steps, setSteps] = useState('');
+  const dueOk = /^\d{4}-\d{2}-\d{2}$/.test(due) && due >= world.today;
   const save = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !dueOk) return;
     const id = `ug-${Date.now()}`;
     const ms = steps.split('\n').map((x) => x.trim()).filter(Boolean);
     const goal: Goal = { id, title: title.trim(), area, due, progress: 0, milestones: (ms.length ? ms : [tx('First step', 'الخطوة الأولى'), tx('Halfway', 'منتصف الطريق'), tx('Finish', 'الإنهاء')]).map((t, i) => ({ id: `${id}-m${i}`, title: t, done: false })) };
     update((u) => ({ ...u, extraGoals: [...u.extraGoals, goal] }));
     toast({ title: tx('Goal added', 'تمت إضافة الهدف'), description: goal.title });
-    setOpen(false); setTitle(''); setSteps('');
+    setOpen(false); setTitle(''); setSteps(''); setDue(addDays(world.today, 60));
   };
   return (
     <D.Root open={open} onOpenChange={setOpen}>
       <D.Trigger asChild><Button><Plus />{tx('New goal', 'هدف جديد')}</Button></D.Trigger>
       <DialogContent title={tx('New goal', 'هدف جديد')} description={tx('Small, specific and with a date works best.', 'الأفضل أن يكون صغيراً ومحدداً وبتاريخ.')}>
         <form onSubmit={(e) => { e.preventDefault(); save(); }} className="grid gap-4">
-          <div><Label htmlFor="g-title">{tx('Goal', 'الهدف')}</Label><Input id="g-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Run 5k under 25 minutes', 'مثلاً: الجري ٥ كم في أقل من ٢٥ دقيقة')} /></div>
+          <div><Label htmlFor="g-title">{tx('Goal', 'الهدف')}</Label><Input id="g-title" autoFocus maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Run 5k under 25 minutes', 'مثلاً: الجري ٥ كم في أقل من ٢٥ دقيقة')} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label htmlFor="g-area">{tx('Area', 'المجال')}</Label>
               <Select id="g-area" value={area} onChange={(e) => setArea(e.target.value as Goal['area'])}>{(Object.keys(AREA) as Goal['area'][]).map((a) => <option key={a} value={a}>{tx(AREA[a].en, AREA[a].ar)}</option>)}</Select></div>
-            <div><Label htmlFor="g-due">{tx('By', 'بحلول')}</Label><Input id="g-due" type="date" min={world.today} value={due} onChange={(e) => setDue(e.target.value)} /></div>
+            <div><Label htmlFor="g-due">{tx('By', 'بحلول')}</Label><Input id="g-due" type="date" required min={world.today} value={due} onChange={(e) => setDue(e.target.value)} aria-invalid={!dueOk} aria-describedby="g-due-hint" />{!dueOk && <p id="g-due-hint" className="mt-1 text-xs text-danger">{tx('Pick a date from today on.', 'اختر تاريخاً من اليوم فصاعداً.')}</p>}</div>
           </div>
           <div><Label htmlFor="g-steps">{tx('Milestones (one per line, optional)', 'المراحل (سطر لكل مرحلة، اختياري)')}</Label>
             <textarea id="g-steps" value={steps} onChange={(e) => setSteps(e.target.value)} className="min-h-24 w-full rounded-[var(--radius-sm)] border border-border bg-field px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" /></div>
-          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim()}>{tx('Add goal', 'إضافة')}</Button></div>
+          <div className="flex justify-end gap-2"><D.Close asChild><Button variant="ghost">{tx('Cancel', 'إلغاء')}</Button></D.Close><Button type="submit" disabled={!title.trim() || !dueOk}>{tx('Add goal', 'إضافة')}</Button></div>
         </form>
       </DialogContent>
     </D.Root>
@@ -70,6 +71,12 @@ export default function GoalsPage() {
     update((u) => ({ ...u, milestones: { ...u.milestones, [mId]: done } }));
     const after = g.milestones.map((m) => (m.id === mId ? done : m.done));
     if (done && after.every(Boolean)) toast({ title: tx('Goal complete! 🎉', 'اكتمل الهدف! 🎉'), description: g.title });
+  };
+  /** Only goals the student added can be removed (with undo). */
+  const removeGoal = (g: Goal) => {
+    let removed: Goal | undefined;
+    update((u) => { removed = u.extraGoals.find((x) => x.id === g.id); return { ...u, extraGoals: u.extraGoals.filter((x) => x.id !== g.id) }; });
+    toast({ title: tx('Goal removed', 'حُذف الهدف'), description: g.title, tone: 'info', action: { label: tx('Undo', 'تراجع'), onClick: () => { if (removed) update((u) => ({ ...u, extraGoals: [...u.extraGoals, removed!] })); } } });
   };
   return (
     <Page wide>
@@ -87,8 +94,11 @@ export default function GoalsPage() {
               <div className="flex items-start gap-4">
                 <ProgressRing value={g.progress * 100} size={76} stroke={8} color={AREA[g.area].color} locale={locale} />
                 <div className="min-w-0 flex-1">
-                  <Badge tone="outline" className="mb-1.5">{tx(AREA[g.area].en, AREA[g.area].ar)}</Badge>
-                  <p className="font-semibold leading-snug">{g.title}</p>
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <Badge tone="outline">{tx(AREA[g.area].en, AREA[g.area].ar)}</Badge>
+                    {g.id.startsWith('ug-') && <button type="button" onClick={() => removeGoal(g)} className="ms-auto inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs text-muted-foreground hover:bg-surface-2 hover:text-foreground"><Trash2 className="size-3.5" />{tx('Remove', 'حذف')}</button>}
+                  </div>
+                  <p className="font-semibold leading-snug [overflow-wrap:anywhere]">{g.title}</p>
                   <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(g.due, locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {days >= 0 ? tx(`${count(days, 'day')} left`, `متبقي ${days} يوماً`) : tx('Past due', 'متأخر')}</p>
                 </div>
               </div>

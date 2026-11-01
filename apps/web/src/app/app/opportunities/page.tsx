@@ -85,7 +85,7 @@ function View() {
       {tab !== 'applications' ? (
         <Bento key={`${tab}-${kind}`}>
           {(tab === 'discover' ? list : saved).map((o) => (
-            <motion.div key={o.id} variants={fadeUp} className="col-span-12 grid md:col-span-6 xl:col-span-4">
+            <motion.div key={o.id} variants={fadeUp} className="col-span-12 grid min-w-0 md:col-span-6 xl:col-span-4">
               <OpportunityCard o={o} onApply={canApply ? apply : undefined} />
             </motion.div>
           ))}
