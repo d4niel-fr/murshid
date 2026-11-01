@@ -77,11 +77,9 @@ function follow(el: SVGSVGElement) {
 }
 
 function MascotImpl({
-  size = 96, mood = 'idle', shape = 'orb', face = 'round', color = 'navy', glow = 'sky', accessory = 'none', track = true, grounded = true, className, label,
+  size = 96, mood = 'idle', shape = 'orb', face = 'round', color = 'navy', glow = 'sky', accessory = 'none', track = true, className, label,
 }: {
   size?: number; mood?: Mood; shape?: MascotShape; face?: MascotFace; color?: MascotColor; glow?: MascotGlow; accessory?: MascotAccessory;
-  /** draw the soft shadow underneath (off while flying) */
-  grounded?: boolean;
   /** eyes follow the pointer */
   track?: boolean; className?: string; label?: string;
 }) {
@@ -148,12 +146,12 @@ function MascotImpl({
   const { top, mid, left, right } = geo;
   return (
     <svg
-      ref={ref} viewBox="0 0 120 120" width={size} height={size} {...(label === '' ? { 'aria-hidden': true } : { role: 'img', 'aria-label': label ?? 'Murshid' })}
+      ref={ref} viewBox="0 0 120 120" width={size} height={size} role="img" aria-label={label ?? 'Murshid'}
       className={cn('mascot select-none overflow-visible', !reduce && `mascot-${mood}`, className)}
     >
       <defs><clipPath id={clip}><Body shape={shape} /></clipPath></defs>
       <g className="mascot-body">
-        {grounded && <ellipse cx="60" cy="116" rx="26" ry="3.2" fill="currentColor" opacity="0.12" />}
+        <ellipse cx="60" cy="116" rx="26" ry="3.2" fill="currentColor" opacity="0.12" />
         {/* side modules, like the ears of a little robot */}
         {geo.nubs && accessory !== 'headphones' && <g fill={f.shade}><rect x={left - 4} y={mid - 8} width="8" height="16" rx="4" /><rect x={right - 4} y={mid - 8} width="8" height="16" rx="4" /></g>}
         <Body shape={shape} fill={f.body} stroke={f.body} />

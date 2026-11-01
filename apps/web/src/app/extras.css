@@ -20,17 +20,6 @@
 .mascot[data-blink] .mascot-lids { transform: scaleY(0.12); }
 .mascot-talking .mascot-mouth-talk { animation: mascot-talk 0.3s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
 @keyframes mascot-talk { from { transform: scaleY(0.35) scaleX(0.9); } to { transform: scaleY(1.15) scaleX(1); } }
-/* the landing hero's bot: a slow loop around the star plus a gentle hover; transform only, so it stays on the GPU */
-.fly-path { animation: fly-path 16s ease-in-out infinite; will-change: transform; }
-.fly-hover { animation: fly-hover 3.4s ease-in-out infinite alternate; }
-.fly-path[data-paused='true'], .fly-path[data-paused='true'] .fly-hover { animation-play-state: paused; }
-@keyframes fly-path {
-  0%, 100% { transform: translate(0, 0) rotate(-3deg); }
-  22% { transform: translate(-2.2rem, -1.4rem) rotate(4deg); }
-  48% { transform: translate(-0.6rem, 1.6rem) rotate(6deg); }
-  74% { transform: translate(1.6rem, -0.4rem) rotate(-5deg); }
-}
-@keyframes fly-hover { from { transform: translateY(0); } to { transform: translateY(-0.35rem); } }
 @keyframes mascot-dot { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
 
 /* the companion's speech bubble */
@@ -65,7 +54,7 @@
 .flip[data-flipped='true'] .flip-inner { transform: rotateY(180deg); }
 .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flip-back { transform: rotateY(180deg); }
-@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } .mascot .mascot-body, .mascot .mascot-mouth-talk, .fly-path, .fly-hover { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } .mascot .mascot-body, .mascot .mascot-mouth-talk { animation: none !important; } }
 
 /* ---------------------------------------------------------------- loading */
 .skeleton { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface); }
