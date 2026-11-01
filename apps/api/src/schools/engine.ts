@@ -52,6 +52,13 @@ export interface WorkItem {
   questions?: FormQuestion[];
   /** personalised work: only these students get it (null/absent = the whole class) */
   assignees?: string[] | null;
+  /** files the teacher attached (slides, PDFs, worksheets, images) and links */
+  attachments?: import('./classroom').FileRef[];
+  links?: import('./classroom').LinkRef[];
+  /** hand-in must include at least one photo (e.g. "copy the slides into your notebook and send photos") */
+  photosRequired?: boolean;
+  /** optional marking rubric; the grade is the share of points */
+  rubric?: import('./classroom').RubricCriterion[];
 }
 
 /** Whether a student gets an item: everyone in the class, unless it was set for chosen students only. */
@@ -454,7 +461,15 @@ export function weeklyReport(school: School, st: RosterStudent, today: string, n
     remaining.length ? `${remaining.length} due in the next 7 days${tests.length ? ` and ${tests.length} test${tests.length > 1 ? 's' : ''}` : ''}.` : tests.length ? `${tests.length} test${tests.length > 1 ? 's' : ''} coming up.` : '',
     actMin ? `${round(actMin / 60, 1)} h of sport and activities.` : '',
   ].filter(Boolean).join(' ');
+  // the same summary in Arabic, for students and parents using the app in Arabic
+  const summaryAr = [
+    `سلّم ${first} ${completed.length} من الأعمال هذا الأسبوع (${onTime} من ${dueThisWeek.length} في الموعد).`,
+    missing.length ? `${missing.length} متأخرة.` : 'لا شيء متأخر.',
+    remaining.length ? `${remaining.length} مستحقة خلال الأيام السبعة القادمة${tests.length ? ` و${tests.length} ${tests.length > 1 ? 'اختبارات' : 'اختبار'}` : ''}.` : tests.length ? `${tests.length} ${tests.length > 1 ? 'اختبارات قادمة' : 'اختبار قادم'}.` : '',
+    actMin ? `${round(actMin / 60, 1)} ساعة من الرياضة والأنشطة.` : '',
+  ].filter(Boolean).join(' ');
   return {
+    summaryAr,
     studentId: st.id, name: st.name, section: st.section, appId: st.appId, weekStart: mon, weekEnd: fri,
     status: submittedAtDue ? 'submitted' as const : 'draft' as const,
     submittedAt: submittedAtDue ? `${fri}T16:00:00+04:00` : null,

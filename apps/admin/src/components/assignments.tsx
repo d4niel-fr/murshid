@@ -1,6 +1,9 @@
 'use client';
 
-import { ArrowDown, ArrowUp, ClipboardList, Copy, Download, ExternalLink, FileText, Link2, ListChecks, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { Files } from './files';
+import { ACCEPT_ATTACH, uploadAs, type FileRef } from '@/lib/classroom';
+import { ArrowDown, ArrowUp, ClipboardList, Copy, Download, ExternalLink, FileText, Link2, ListChecks, Paperclip, Plus, Search, Send, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, newIdempotencyKey } from '@/lib/api';
 import { useData } from '@/lib/use-data';
@@ -52,6 +55,15 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
   const [dueDate, setDueDate] = useState(preset?.dueDate ?? initial.dueDate);
   const [mins, setMins] = useState(preset?.minutes ?? minutes);
   const [error, setError] = useState<string | null>(null);
+  // what students get with it, and how it is handed in
+  const [attachments, setAttachments] = useState<FileRef[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [links, setLinks] = useState<{ url: string; label: string }[]>([]);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [photos, setPhotos] = useState(false);
+  const [useRubric, setUseRubric] = useState(false);
+  const [rubric, setRubric] = useState<{ label: string; points: number }[]>([{ label: 'Content and accuracy', points: 6 }, { label: 'Presentation', points: 4 }]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,6 +100,8 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
 
   const errors = { ...validateAssignment({ title, format, formUrl, questions }), ...serverErrors };
   if (who === 'chosen' && !chosen.length) errors.who = 'Choose at least one student, or set it for the whole class.';
+  if (linkUrl.trim() && !/^https?:\/\/\S+\.\S+/.test(linkUrl.trim())) errors.link = 'Links start with https:// (press Add to attach it).';
+  if (useRubric && rubric.some((r) => r.label.trim().length < 2 || !(r.points >= 1 && r.points <= 100))) errors.rubric = 'Each rubric row needs a name and 1 to 100 points.';
   if (dueDate && setDate && dueDate <= setDate) errors.dueDate = 'The due date must be after the set date (students need at least one evening).';
   const show = (k: string) => (touched ? errors[k] : undefined);
 
@@ -102,6 +116,10 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
     const body: Record<string, unknown> = { title: title.trim(), instructions: instructions.trim() || null, setDate, dueDate, minutes: mins, format };
     if (format === 'google_form' || format === 'microsoft_form') body.formUrl = formUrl.trim();
     if (who === 'chosen') body.studentIds = chosen;
+    if (attachments.length) body.attachmentIds = attachments.map((f) => f.id);
+    if (links.length) body.links = links;
+    if (format === 'task') body.photosRequired = photos;
+    if (format === 'task' && useRubric) body.rubric = rubric.map((r) => ({ label: r.label.trim(), points: Math.round(r.points) }));
     if (format === 'form') body.questions = questions.map((q) => ({ id: q.id, type: q.type, prompt: q.prompt.trim(), required: q.required, ...(q.type === 'choice' ? { options: q.options.map((o) => o.trim()).filter(Boolean) } : {}) }));
     try {
       const r = await api(`/teacher/classes/${classId}/assignments`, { method: 'POST', as: 'staff', body, headers: { 'idempotency-key': key.current } });
@@ -123,6 +141,18 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
     }
   };
 
+  const attach = async (list: File[]) => {
+    for (const f of list) {
+      setUploading(f.name); setError(null);
+      try { const ref = await uploadAs(f); setAttachments((a) => [...a, ref]); } catch (e) { setError((e as Error).message); }
+    }
+    setUploading(null);
+  };
+  const addLink = () => {
+    const url = linkUrl.trim();
+    if (!/^https?:\/\/\S+\.\S+/.test(url)) return;
+    setLinks((l) => (l.some((x) => x.url === url) ? l : [...l, { url, label: url.replace(/^https?:\/\//, '').slice(0, 60) }])); setLinkUrl('');
+  };
   const updateQ = (i: number, patch: Partial<Question>) => setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   const moveQ = (i: number, d: -1 | 1) => setQuestions((qs) => { const n = [...qs]; const j = i + d; if (j < 0 || j >= n.length) return qs; [n[i], n[j]] = [n[j]!, n[i]!]; return n; });
   const isBest = best && best.set === setDate && best.due === dueDate;
@@ -187,6 +217,51 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
       <label className="field"><span>Instructions {format !== 'task' && <span className="normal-case tracking-normal">(optional)</span>}</span>
         <textarea aria-label="Instructions" className="input" value={instructions} onChange={(e) => setInstructions(e.target.value)} maxLength={1000} placeholder={format === 'task' ? 'What to do, how long, what to hand in' : 'Anything students should know before they start'} />
       </label>
+
+      <fieldset>
+        <legend className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">Slides, files and links <span className="normal-case tracking-normal">(optional)</span></legend>
+        <Files files={attachments} onRemove={(id) => setAttachments((a) => a.filter((x) => x.id !== id))} compact />
+        {links.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-1.5">{links.map((l) => <li key={l.url} className="flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm"><Link2 className="size-4 shrink-0 text-[var(--text-muted)]" /><span className="min-w-0 flex-1 truncate">{l.url}</span><button type="button" aria-label={`Remove ${l.url}`} onClick={() => setLinks((x) => x.filter((y) => y.url !== l.url))} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface)]"><X className="size-4" /></button></li>)}</ul>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input ref={fileInput} type="file" multiple accept={ACCEPT_ATTACH} hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = ''; }} />
+          <Button type="button" size="sm" variant="outline" disabled={Boolean(uploading) || attachments.length >= 10} onClick={() => fileInput.current?.click()}>{uploading ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden /> : <Paperclip />}{uploading ? `Uploading ${uploading.slice(0, 24)}…` : 'Attach slides or files'}</Button>
+          <div className="flex min-w-[14rem] flex-1 items-center gap-2">
+            <input aria-label="Link" type="url" inputMode="url" className="input h-9 flex-1 text-sm" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLink(); } }} placeholder="https://… (a video, reading, Teams file)" />
+            <Button type="button" size="sm" variant="outline" onClick={addLink} disabled={!linkUrl.trim()}>Add</Button>
+          </div>
+        </div>
+        <p className={cn('mt-1.5 text-xs', show('link') ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]')}>{show('link') ?? 'PowerPoint, PDF, Word, Excel or photos, up to 3 MB each. Students open them on their phone or laptop.'}</p>
+      </fieldset>
+
+      {format === 'task' && (
+        <fieldset className="flex flex-col gap-3">
+          <legend className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">Handing in</legend>
+          <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] p-3.5">
+            <input type="checkbox" checked={photos} onChange={(e) => setPhotos(e.target.checked)} className="mt-0.5 size-4 accent-[var(--deep)]" />
+            <span><span className="block text-sm font-medium">Ask for photos of their notes</span><span className="block text-xs text-[var(--text-muted)]">Students must add at least one photo: a notebook page, or pages from their Murshid notebook.</span></span>
+          </label>
+          <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] p-3.5">
+            <input type="checkbox" checked={useRubric} onChange={(e) => setUseRubric(e.target.checked)} className="mt-0.5 size-4 accent-[var(--deep)]" />
+            <span><span className="block text-sm font-medium">Mark with a rubric</span><span className="block text-xs text-[var(--text-muted)]">Score each part; the grade is the share of points. Students see the rubric before they start.</span></span>
+          </label>
+          {useRubric && (
+            <div className="space-y-2 ps-1">
+              {rubric.map((r, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input aria-label={`Rubric row ${i + 1} name`} className="input h-9 flex-1 text-sm" value={r.label} maxLength={80} onChange={(e) => setRubric((x) => x.map((y, j) => (j === i ? { ...y, label: e.target.value } : y)))} />
+                  <input aria-label={`Rubric row ${i + 1} points`} type="number" min={1} max={100} className="input h-9 w-20 text-sm" value={r.points} onChange={(e) => setRubric((x) => x.map((y, j) => (j === i ? { ...y, points: Number(e.target.value) } : y)))} />
+                  <span className="text-xs text-[var(--text-muted)]">pts</span>
+                  <button type="button" aria-label={`Remove rubric row ${i + 1}`} disabled={rubric.length === 1} onClick={() => setRubric((x) => x.filter((_, j) => j !== i))} className="grid size-8 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface)] disabled:opacity-30"><X className="size-4" /></button>
+                </div>
+              ))}
+              {rubric.length < 8 && <button type="button" onClick={() => setRubric((x) => [...x, { label: '', points: 2 }])} className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent)] hover:underline"><Plus className="size-3.5" />Add a row</button>}
+              <p className={cn('text-xs', show('rubric') ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]')}>{show('rubric') ?? `Total ${rubric.reduce((t, r) => t + (Number(r.points) || 0), 0)} points.`}</p>
+            </div>
+          )}
+        </fieldset>
+      )}
 
       {format === 'form' && (
         <fieldset className="space-y-3">
@@ -292,7 +367,7 @@ export function AssignmentsTable({ items, loading, classId, onPost }: { items: a
               const f: Format = a.format ?? 'task';
               return (
                 <tr key={a.id} className={a.posted ? 'bg-[color-mix(in_oklab,var(--success)_7%,transparent)]' : ''}>
-                  <td><span className="font-medium">{a.title}</span>{a.posted && <Badge tone="success" className="ml-2">New</Badge>}{a.personalised && <Badge tone="accent" className="ml-2">For {a.students === 1 ? a.assigneeNames?.[0] ?? '1 student' : `${a.students} students`}</Badge>}{a.instructions && <div className="line-clamp-2 text-xs text-[var(--text-muted)]">{a.instructions}</div>}</td>
+                  <td><Link href={`/teacher/assignments/${encodeURIComponent(a.id)}?class=${classId}`} className="font-medium hover:underline">{a.title}</Link>{a.toReview > 0 && <Badge tone="warning" className="ml-2">{a.toReview} to review</Badge>}{a.unread > 0 && <Badge tone="accent" className="ml-2">{a.unread} new message{a.unread === 1 ? '' : 's'}</Badge>}{a.attachmentCount > 0 && <span className="ml-2 inline-flex items-center gap-0.5 text-xs text-[var(--text-muted)]"><Paperclip className="size-3" />{a.attachmentCount}</span>}{a.posted && <Badge tone="success" className="ml-2">New</Badge>}{a.personalised && <Badge tone="accent" className="ml-2">For {a.students === 1 ? a.assigneeNames?.[0] ?? '1 student' : `${a.students} students`}</Badge>}{a.instructions && <div className="line-clamp-2 text-xs text-[var(--text-muted)]">{a.instructions}</div>}</td>
                   <td className="whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5 text-sm"><FormatIcon f={f} className="size-3.5" />{FORMAT_LABEL[f]}</span>
                     {f === 'form' && <button onClick={() => setOpen(a)} className="mt-1 block text-xs font-medium text-[var(--accent)] hover:underline">{a.responses ?? 0} answer{a.responses === 1 ? '' : 's'} &middot; view</button>}

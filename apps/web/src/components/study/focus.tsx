@@ -94,7 +94,7 @@ export function FocusView() {
         subtitle={tx('Work in short, focused blocks with breaks in between. Space starts and pauses; R resets.', 'اعمل في فترات قصيرة مركّزة بينها استراحات. المسافة للبدء والإيقاف، وR لإعادة الضبط.')} />
       <div className="grid grid-cols-12 gap-4">
         <section className="card col-span-12 items-center p-6 lg:col-span-7" aria-label={tx('Timer', 'المؤقت')}>
-          <Segmented ariaLabel={tx('Timer length', 'مدة المؤقت')} value={mode} onChange={choose} options={[{ value: 'focus', label: tx('Focus 25', 'تركيز 25') }, { value: 'short', label: tx('Break 5', 'استراحة 5') }, { value: 'long', label: tx('Break 15', 'استراحة 15') }, { value: 'deep', label: tx('Deep 50', 'عميق 50') }]} />
+          <Segmented stretch className="max-w-md" ariaLabel={tx('Timer length', 'مدة المؤقت')} value={mode} onChange={choose} options={[{ value: 'focus', label: tx('Focus 25', 'تركيز 25') }, { value: 'short', label: tx('Break 5', 'استراحة 5') }, { value: 'long', label: tx('Break 15', 'استراحة 15') }, { value: 'deep', label: tx('Deep 50', 'عميق 50') }]} />
           <div className="relative my-6 grid place-items-center">
             <svg viewBox="0 0 280 280" className="size-[min(72vw,300px)] -rotate-90" aria-hidden>
               <circle cx="140" cy="140" r={R} fill="none" stroke="color-mix(in oklab, var(--text) 8%, transparent)" strokeWidth="10" />

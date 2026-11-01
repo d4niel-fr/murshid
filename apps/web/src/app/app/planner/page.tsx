@@ -99,8 +99,8 @@ export default function PlannerPage() {
           <Button onClick={() => { setAddDate(world.today >= days[0]! && world.today <= days[6]! ? world.today : days[0]!); setAddOpen(true); }}><Plus />{tx('Plan a block', 'خطط لوقت')}</Button>
         </>}
       />
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-        <motion.div key={weekStart} initial="hidden" animate="show" variants={stagger} className="grid grid-cols-2 gap-2.5 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <motion.div key={weekStart} initial="hidden" animate="show" variants={stagger} className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-4 lg:grid-cols-7">
           {days.map((d) => {
             const isToday = d === world.today;
             return (

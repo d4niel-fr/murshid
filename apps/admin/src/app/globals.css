@@ -67,3 +67,7 @@
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); }
 }
+
+/* A grid with no explicit columns sizes its one column to its widest content, so long text or a wide child pushes the
+   page sideways on phones. Give those grids a column that can shrink. Zero specificity: any grid-cols-* class wins. */
+:where(.grid:not([class^="grid-cols-"]):not([class*=" grid-cols-"])) { grid-template-columns: minmax(0, 1fr); }

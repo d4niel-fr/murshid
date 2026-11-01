@@ -228,6 +228,62 @@ export const DEMO_G11: DemoStudent = {
   links: { linkedin: 'https://www.linkedin.com/in/demo-zayed', github: 'https://github.com/demo-zayed', portfolio: 'https://example.com/zayed' },
 };
 
+/**
+ * The flagship persona (what "Try the student app" signs in as): Ahamed Mehta, a fictional Grade 11 CBSE student
+ * with football, competitive swimming and a small business. Mirrors the API's demo-ideal profile, so the app shows
+ * the same student offline as it does with the API.
+ */
+export const DEMO_IDEAL: DemoStudent = {
+  id: 'demo-ideal',
+  synthetic: true,
+  firstName: 'Ahamed',
+  lastName: 'Mehta',
+  nameAr: 'أحمد ميهتا',
+  grade: 11,
+  band: 'g11-12',
+  curriculum: 'cbse',
+  classLabel: 'Grade 11 (11B)',
+  school: 'Demo Secondary School',
+  emirate: 'Dubai',
+  subjects: [
+    { id: 'maths', name: 'Mathematics', scale: 'percent', current: 89, target: 93, trend: [84, 86, 87, 89] },
+    { id: 'economics', name: 'Economics', scale: 'percent', current: 86, target: 92, trend: [79, 82, 84, 86] },
+    { id: 'business', name: 'Business Studies', scale: 'percent', current: 90, target: 93, trend: [86, 87, 89, 90] },
+    { id: 'physics', name: 'Physics', scale: 'percent', current: 83, target: 88, trend: [78, 80, 81, 83] },
+    { id: 'english', name: 'English', scale: 'percent', current: 85, target: 90, trend: [80, 82, 83, 85] },
+  ],
+  activities: [
+    {
+      id: 'football', name: 'Football (U18 1st XI)', kind: 'sport', area: 'football', weeklyTargetMinutes: 250,
+      sessions: weekly(6, [1, 3], () => 90, { name: '30m sprint', unit: 's', value: (i) => 4.46 - i * 0.025 }),
+    },
+    {
+      id: 'swimming', name: 'Club swimming', kind: 'sport', area: 'swimming', weeklyTargetMinutes: 300,
+      sessions: weekly(6, [0, 2, 4, 6], () => 75, { name: 'session distance', unit: 'km', value: (i) => 3.2 + i * 0.06 }),
+    },
+  ],
+  goals: [
+    { id: 'goal-econ-astar', title: 'A* in Economics (90%+)', area: 'academics', progress: 0.6, due: '2027-06-30', milestones: ['Finish elasticity unit notes', 'Two past papers under timed conditions', 'Case study practice with feedback', 'Mock exam 90%+'] },
+    { id: 'goal-free100', title: '100m freestyle under 55.0s', area: 'extracurriculars', progress: 0.55, due: '2027-03-31', milestones: ['Under 57.5s at a club meet', 'Under 56.5s', 'Under 55.5s', 'Under 55.0s at a gala'] },
+    { id: 'goal-yoyo20', title: 'Yo-Yo level 20 (U18 squad standard)', area: 'extracurriculars', progress: 0.5, due: '2027-02-28', milestones: ['Level 18', 'Level 19', 'Level 19.5', 'Level 20'] },
+    { id: 'goal-tideline', title: 'Tideline: AED 25,000 revenue in 12 months', area: 'future', progress: 0.4, due: '2027-01-31', milestones: ['First 5 school clubs as customers', 'AED 10,000', 'AED 18,000', 'AED 25,000'] },
+    { id: 'goal-ucas', title: 'UCAS application ready (Economics & Management)', area: 'future', progress: 0.35, due: '2027-10-15', milestones: ['Shortlist 5 universities', 'Personal statement draft', 'Teacher reference requested', 'Application sent'] },
+  ],
+  upcoming: [
+    { id: 'ui-1', title: 'Economics unit test: demand and elasticity', date: '2026-10-21', type: 'test' },
+    { id: 'ui-2', title: 'Match vs Test British School (1st XI)', date: '2026-10-22', type: 'competition' },
+    { id: 'ui-3', title: 'Physics practical: simple pendulum write-up', date: '2026-10-26', type: 'homework' },
+    { id: 'ui-4', title: 'Dubai Schools Swim Gala', date: '2026-11-07', type: 'competition' },
+    { id: 'ui-5', title: 'Half-yearly exams begin', date: '2026-11-23', type: 'exam' },
+  ],
+  streaks: { current: 21, best: 30 },
+  badges: [],
+  links: { linkedin: 'https://www.linkedin.com/in/ahamed-mehta-demo', portfolio: 'https://ahamed-demo.example.com' },
+};
+
+/** Named personas a demo can sign in as (in place of the band's default student). */
+export const demoPersonas: Record<string, DemoStudent> = { 'demo-ideal': DEMO_IDEAL };
+
 export const demoStudents: Record<BandId, DemoStudent> = {
   'g5-6': DEMO_G5,
   'g7-8': DEMO_G7,

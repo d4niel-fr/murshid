@@ -309,7 +309,7 @@ export interface DemoUpcoming {
 }
 
 export interface DemoStudent {
-  id: 'demo-g5' | 'demo-g7' | 'demo-g9' | 'demo-g11';
+  id: 'demo-g5' | 'demo-g7' | 'demo-g9' | 'demo-g11' | 'demo-ideal';
   synthetic: true;
   firstName: string;
   lastName: string;

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, BarChart3, Building2, ClipboardList, GraduationCap, KeyRound, LogIn, LogOut, Megaphone, Menu, ScrollText, Users, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Building2, ClipboardList, GraduationCap, Inbox, KeyRound, LogIn, LogOut, Megaphone, Menu, ScrollText, Sheet, Users, WifiOff, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { adminAccess, api, API_BASE, checkAdminPasscode, getAdminPasscode, getSession, setAdminPasscode, setSession, type StaffSession } from '@/lib/api';
 import { cn, PasswordInput } from './ui';
@@ -11,10 +11,10 @@ import { cn, PasswordInput } from './ui';
 type NavGroup = { section: string; items: { href: string; label: string; icon: typeof Users }[] };
 /** Teachers see their own classes and students; the school sections are for school admins only. */
 const TEACHER_NAV: NavGroup[] = [
-  { section: 'Teaching', items: [{ href: '/teacher', label: 'My classes', icon: ClipboardList }, { href: '/teacher/students', label: 'My students', icon: GraduationCap }] },
+  { section: 'Teaching', items: [{ href: '/teacher/inbox', label: 'Inbox', icon: Inbox }, { href: '/teacher', label: 'My classes', icon: ClipboardList }, { href: '/teacher/students', label: 'My students', icon: GraduationCap }, { href: '/teacher/gradebook', label: 'Gradebook', icon: Sheet }] },
 ];
 const ADMIN_NAV: NavGroup[] = [
-  { section: 'Teaching', items: [{ href: '/teacher', label: 'All classes', icon: ClipboardList }, { href: '/teacher/students', label: 'Student progress', icon: GraduationCap }] },
+  { section: 'Teaching', items: [{ href: '/teacher', label: 'All classes', icon: ClipboardList }, { href: '/teacher/students', label: 'Student progress', icon: GraduationCap }, { href: '/teacher/gradebook', label: 'Gradebook', icon: Sheet }] },
   { section: 'School', items: [
     { href: '/', label: 'Students', icon: Users },
     { href: '/school', label: 'School & licence', icon: Building2 },
@@ -24,7 +24,7 @@ const ADMIN_NAV: NavGroup[] = [
   { section: 'Validation', items: [{ href: '/survey', label: 'Survey results', icon: BarChart3 }] },
 ];
 const isActive = (href: string, path: string) =>
-  href === '/' ? path === '/' || path.startsWith('/students') : href === '/teacher' ? path === '/teacher' : path.startsWith(href);
+  href === '/' ? path === '/' || path.startsWith('/students') : href === '/teacher' ? path === '/teacher' || path.startsWith('/teacher/assignments') : path.startsWith(href);
 
 export function useSession(): StaffSession | null {
   const [s, setS] = useState<StaffSession | null>(null);

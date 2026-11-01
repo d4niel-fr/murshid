@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { PageHeader, MicrosoftMark, useSession } from '@/components/shell';
 import { Workings } from '@/components/workings';
 import { AssignmentsTable, PostAssignmentForm } from '@/components/assignments';
+import { ClassStreamPanel } from '@/components/stream';
 import { Delegation, HomeworkTiming, ProgressTable, SummaryStats, WeeklyReports } from '@/components/teacher';
 import { Button, cn, Empty, ErrorBox, Modal, Tabs } from '@/components/ui';
 import { getSession } from '@/lib/api';
@@ -20,6 +21,7 @@ const TABS = [
   { id: 'timing', label: 'Best day for homework' },
   { id: 'weekly', label: 'Weekly reports' },
   { id: 'assignments', label: 'Assignments' },
+  { id: 'stream', label: 'Class stream' },
 ];
 
 function TeacherPortal() {
@@ -100,6 +102,7 @@ function TeacherPortal() {
       {tab === 'delegate' && (rec.data ? <Delegation rec={rec.data} /> : <Empty>Working out groups…</Empty>)}
       {tab === 'timing' && (timing.data ? <HomeworkTiming t={timing.data} minutes={minutes ?? timing.data.minutes} onMinutes={setMinutes} onUse={(s, d) => openPost(s, d)} /> : <Empty>Checking everyone&rsquo;s week…</Empty>)}
       {tab === 'weekly' && (weekly.data ? <WeeklyReports w={weekly.data} week={week} onWeek={setWeek} /> : <Empty>Loading reports…</Empty>)}
+      {tab === 'stream' && cls && <ClassStreamPanel key={cls} classId={cls} />}
       {tab === 'assignments' && (assignments.error ? <ErrorBox error={assignments.error} /> : <AssignmentsTable items={assignments.data?.items ?? null} loading={assignments.loading} classId={cls!} onPost={() => openPost()} />)}
 
       <Modal open={posting !== null} title={`Post an assignment \u00b7 ${c?.name ?? ''}`} onClose={() => setPosting(null)} wide>

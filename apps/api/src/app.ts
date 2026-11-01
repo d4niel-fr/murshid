@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import { readConfig, type AppEnv, type Config, type Deps } from './lib/context';
 import { Api } from './lib/router';
@@ -67,6 +68,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
   app.use('*', requestId());
   const limitsOn = opts.rateLimit !== false && (opts.rateLimit !== undefined || (env.NODE_ENV !== 'test' && env.RATE_LIMIT !== 'off'));
   if (limitsOn) app.use('*', rateLimit({ ...DEFAULT_LIMITS, ...(opts.rateLimit || {}) }));
+  // request bodies: 5 MB at most (a 3 MB file upload is ~4.2 MB of base64); bigger is a clear 413
+  app.use('*', bodyLimit({ maxSize: 5 * 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too big. Files can be up to 3 MB.', code: 'too_large', requestId: c.get('requestId') }, 413) }));
   app.use('*', idempotency());
   app.use('*', timeout(opts.timeoutMs ?? Number(env.REQUEST_TIMEOUT_MS ?? 15_000)));
   app.use('*', async (c, next) => { c.set('deps', deps); await next(); });

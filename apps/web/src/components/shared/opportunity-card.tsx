@@ -43,9 +43,9 @@ export function OpportunityCard({ o, compact, onApply }: { o: Opportunity; compa
   const days = diffDays(o.deadline, world.today);
   const isSaved = saved(o.id, o.saved);
   return (
-    <div className={cn('flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5', compact && 'rounded-[var(--radius)] bg-surface-2 p-4')}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+    <div className={cn('flex min-w-0 max-w-full flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-5', compact && 'rounded-[var(--radius)] bg-surface-2 p-4')}>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{o.title}</p>
           <p className="truncate text-xs text-muted-foreground">{o.org}</p>
         </div>

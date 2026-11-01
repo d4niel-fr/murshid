@@ -305,3 +305,6 @@ export function greetingKey(hourDubai: number): 'greeting.morning' | 'greeting.a
   if (hourDubai >= 12 && hourDubai < 17) return 'greeting.afternoon';
   return 'greeting.evening';
 }
+
+/** Named personas: none in the fallback. */
+export const demoPersonas: Record<string, never> = {};

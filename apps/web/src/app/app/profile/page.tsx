@@ -111,9 +111,9 @@ export default function ProfilePage() {
           <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,application/pdf" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           {links.resumeUrl ? (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 rounded-[var(--radius)] bg-surface-2 p-3">
-                <span className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--deep)]"><FileText className="size-5 text-white" /></span>
-                <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{links.resumeName ?? 'resume.pdf'}</p><p className="text-xs text-muted-foreground">{preview ? tx('Preview below', 'المعاينة أدناه') : tx('Stored for your applications', 'محفوظة لطلباتك')}</p></div>
+              <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] bg-surface-2 p-3">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--deep)]"><FileText className="size-5 text-white" /></span>
+                <div className="min-w-[9rem] flex-1"><p className="truncate text-sm font-medium">{links.resumeName ?? 'resume.pdf'}</p><p className="text-xs text-muted-foreground">{preview ? tx('Preview below', 'المعاينة أدناه') : tx('Stored for your applications', 'محفوظة لطلباتك')}</p></div>
                 <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload />{tx('Replace', 'استبدال')}</Button>
                 <Button size="icon-sm" variant="ghost" aria-label={tx('Remove resume', 'حذف السيرة')} onClick={() => { setPreview(null); save({ ...links, resumeUrl: null, resumeName: null, connectedAt: { ...links.connectedAt, resume: null } }); toast({ title: tx('Resume removed', 'تم حذف السيرة'), tone: 'info' }); }}><Trash2 /></Button>
               </div>
@@ -201,11 +201,11 @@ function LinkedInCard() {
   return (
     <Card id="linkedin-cv" className="col-span-12">
       <CardHeader title={tx('LinkedIn-ready CV', 'سيرة جاهزة لـ LinkedIn')} icon={<LinkedInIcon className="size-4" />} action={<Badge tone="neutral">{tx('synthetic demo', 'بيانات تجريبية')}</Badge>} />
-      <div className="grid gap-6 md:grid-cols-[1.3fr_1fr]">
-        <div>
-          <p className="text-base font-semibold leading-snug">{pack.headline}</p>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{pack.about}</p>
-          <div className="mt-4 flex gap-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1.3fr_1fr]">
+        <div className="min-w-0">
+          <p className="text-base font-semibold leading-snug [overflow-wrap:anywhere]">{pack.headline}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground [overflow-wrap:anywhere]">{pack.about}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button size="sm" onClick={() => void openPdf()}><FileText />{tx('Open CV (PDF)', 'افتح السيرة (PDF)')}</Button>
             <Button size="sm" variant="outline" onClick={() => void navigator.clipboard?.writeText(`${pack.headline}\n\n${pack.about}`)}>{tx('Copy headline + About', 'نسخ العنوان والنبذة')}</Button>
           </div>

@@ -6,12 +6,14 @@ import { spring } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /** Toggle group with a sliding indicator (layoutId + spring.layout). */
-export function Segmented<T extends string>({ value, onChange, options, size = 'md', className, ariaLabel }: {
+export function Segmented<T extends string>({ value, onChange, options, size = 'md', className, ariaLabel, stretch }: {
   value: T; onChange: (v: T) => void; options: { value: T; label: React.ReactNode }[]; size?: 'sm' | 'md'; className?: string; ariaLabel?: string;
+  /** fill the width, options sharing it equally (use where the control is the main thing in its row) */
+  stretch?: boolean;
 }) {
   const id = useId();
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className={cn('inline-flex items-center rounded-full bg-[color-mix(in_oklab,var(--text)_6%,transparent)] p-1', className)}>
+    <div role="radiogroup" aria-label={ariaLabel} className={cn('no-scrollbar max-w-full items-center overflow-x-auto rounded-full bg-[color-mix(in_oklab,var(--text)_6%,transparent)] p-1', stretch ? 'flex w-full' : 'inline-flex', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -20,7 +22,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o.value)}
-            className={cn('seg-btn relative rounded-full font-medium transition-colors', size === 'sm' ? 'h-7 px-3 text-xs' : 'h-8 px-3.5 text-[0.8125rem]', active ? 'text-background' : 'text-muted-foreground hover:text-foreground')}
+            className={cn('seg-btn relative shrink-0 rounded-full font-medium transition-colors', size === 'sm' ? 'h-7 px-3 text-xs' : 'h-8 px-3.5 text-[0.8125rem]', stretch && 'flex-1 px-2 sm:px-3.5', active ? 'text-background' : 'text-muted-foreground hover:text-foreground')}
           >
             {active && <motion.span layoutId={`seg-${id}`} transition={spring.layout} className="absolute inset-0 rounded-full bg-foreground" />}
             <span className="relative z-10 whitespace-nowrap">{o.label}</span>

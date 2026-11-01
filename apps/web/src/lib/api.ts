@@ -46,7 +46,7 @@ export function createClient(opts: ClientOptions) {
   // generous: a serverless API can take a few seconds to wake up, and giving up early shows demo data instead of live
   const { band, locale = 'en', mode = 'auto', baseUrl = API_BASE, timeoutMs = 8000, now } = opts;
   const f = opts.fetchImpl ?? (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : undefined);
-  const world = opts.world ?? (() => mockWorld(band, now));
+  const world = opts.world ?? (() => mockWorld(band, now, opts.persona));
 
   const devUser = opts.persona || DEV_USER_OVERRIDE || demoStudents[band]?.id || 'demo-g9';
   const chatTimeoutMs = opts.chatTimeoutMs ?? 180_000;
@@ -75,16 +75,19 @@ export function createClient(opts: ClientOptions) {
   return {
     band,
     getDashboard: () => call('/dashboard', (x) => toDashboard(x, locale), () => world().dashboard),
-    getProgress: (area: string, range: ChartRange, type?: ChartType) =>
-      call(`/progress?area=${encodeURIComponent(area)}&range=${range}${type ? `&type=${type}` : ''}`, toChartSpec, () => buildChartSpec(world(), { area, range, type, locale })),
-    getAcademics: () => call('/app/academics', toAcademics, () => world().academics),
+    getProgress: async (area: string, range: ChartRange, type?: ChartType) => {
+      const r = await call(`/progress?area=${encodeURIComponent(area)}&range=${range}${type ? `&type=${type}` : ''}`, toChartSpec, () => buildChartSpec(world(), { area, range, type, locale }));
+      // the API writes chart sentences in English; in Arabic, draw the same student's chart with Arabic text
+      return locale === 'ar' && r.source === 'api' ? { ...r, data: buildChartSpec(world(), { area, range, type, locale }) } : r;
+    },
+    getAcademics: () => call('/academics', toAcademics, () => world().academics),
     /** Live payload is only used to confirm availability; the web keeps the richer session-level mock for charts. */
-    getExtracurriculars: () => call('/app/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
-    getProfileLinks: () => call('/app/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
+    getExtracurriculars: () => call('/extracurriculars', (x) => (isObj(x) && Array.isArray(x.activities) ? world().extracurriculars : null), () => world().extracurriculars),
+    getProfileLinks: () => call('/profile/links', toLinks, () => linkOverrides.get(band) ?? world().links),
     putProfileLinks: (links: ProfileLinks) => {
       linkOverrides.set(band, links);
       const body = { linkedin: links.linkedin, github: links.github, instagram: links.instagram, portfolio: links.portfolio };
-      return call('/app/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
+      return call('/profile/links', toLinks, () => links, { method: 'PUT', body: JSON.stringify(body) });
     },
     /** LinkedIn pack + PDF (student API); null when the API is down. */
     async getLinkedIn(): Promise<Record<string, unknown> | null> {
