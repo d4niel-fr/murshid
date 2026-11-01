@@ -253,3 +253,42 @@ describe('copying an assignment to another class', () => {
     expect((await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/copy`, THOMAS, { toClassId: 'cls-math-10ab' })).status).toBe(403);
   });
 });
+
+describe('api behaviour from the QA pass', () => {
+  it('answers a wrong method with 405 and the methods it takes', async () => {
+    const { raw } = await setup();
+    const res = await raw('DELETE', '/teacher/inbox', THOMAS);
+    expect(res.status).toBe(405);
+    expect(res.headers.get('allow')).toBe('GET');
+    expect((await raw('GET', '/no/such/route')).status).toBe(404);
+  });
+  it('refuses impossible and past due dates with the field named', async () => {
+    const { req } = await setup();
+    const bad = await req('POST', `/teacher/classes/${CLASS}/assignments`, THOMAS, { title: 'Bad date', dueDate: '2026-02-30' });
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.body.details)).toContain('not a real date');
+    const past = await req('POST', `/teacher/classes/${CLASS}/assignments`, THOMAS, { title: 'Past', setDate: addDays(today, -10), dueDate: addDays(today, -3) });
+    expect(past.status).toBe(400);
+    expect(past.body.details[0].path).toBe('dueDate');
+  });
+  it('never invents hand-ins for work posted in Murshid', async () => {
+    const { req, post } = await setup();
+    const a = await post();
+    const list = (await req('GET', `/teacher/classes/${CLASS}/assignments/${a.id}/handins`, THOMAS)).body;
+    expect(list.counts).toMatchObject({ handedIn: 0, marked: 0 });
+    expect(list.rows.every((r: { synthetic: boolean }) => !r.synthetic)).toBe(true);
+  });
+  it('clears the teacher reminder once the work is handed in', async () => {
+    const { req, post } = await setup();
+    const a = await post();
+    await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/remind`, THOMAS, {});
+    expect((await req('GET', '/student/stream', AHAMED)).body.reminders).toHaveLength(1);
+    await req('POST', `/student/assignments/${a.id}/handin`, AHAMED, { text: 'Done' });
+    expect((await req('GET', '/student/stream', AHAMED)).body.reminders).toHaveLength(0);
+  });
+  it('gives unknown origins no CORS header', async () => {
+    const { raw } = await setup();
+    const res = await raw('GET', '/health', { origin: 'https://evil.example' });
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});

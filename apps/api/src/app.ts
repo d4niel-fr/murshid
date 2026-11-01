@@ -58,7 +58,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
     ...(env.CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
   ]);
   app.use('*', cors({
-    origin: (origin) => (origin && allowed.has(origin) ? origin : '*'),
+    // only listed origins (the apps themselves are same-origin); anything else gets no CORS header at all
+    origin: (origin) => (origin && allowed.has(origin) ? origin : null),
     allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['x-request-id', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset', 'idempotent-replayed'],
@@ -105,7 +106,18 @@ export function buildApi(opts: CreateAppOptions = {}) {
     console.error(`[${requestId}]`, err);
     return c.json({ error: 'Something went wrong on our side. Please try again.', code: 'internal', requestId }, 500);
   });
-  app.notFound((c) => c.json({ error: 'route not found', code: 'not_found', requestId: c.get('requestId') }, 404));
+  // a known path with the wrong method is a 405 (with the methods it does take), not "route not found"
+  let known: { method: string; re: RegExp }[] | null = null;
+  app.notFound((c) => {
+    known ??= api.routes.map((r) => ({ method: r.method.toUpperCase(), re: new RegExp(`^${r.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z]+/g, '[^/]+')}/?$`) }));
+    const path = new URL(c.req.url).pathname;
+    const allow = [...new Set(known.filter((r) => r.re.test(path)).map((r) => r.method))];
+    if (allow.length && c.req.method !== 'OPTIONS') {
+      c.header('Allow', allow.join(', '));
+      return c.json({ error: `this route takes ${allow.join(' or ')}, not ${c.req.method}`, code: 'method_not_allowed', allow, requestId: c.get('requestId') }, 405);
+    }
+    return c.json({ error: 'route not found', code: 'not_found', requestId: c.get('requestId') }, 404);
+  });
 
   const api = new Api(app);
   const store = opts.store ?? new DemoStore();

@@ -118,10 +118,8 @@ export function submission(st: RosterStudent, item: WorkItem, today: string): Su
   const r = rng(`${st.seed ?? st.id}|${item.id}`);
   const a = r(); const b = r(); const g = r();
   const grade = (late: boolean) => clamp(Math.round(100 * (st.ability * 0.8 + 0.15) + (g - 0.5) * 14 - (late ? 6 : 0)), 35, 99);
-  if (item.posted) {
-    // just posted: nobody has handed it in yet unless it is already past due
-    if (item.dueDate >= today) return { status: 'pending', grade: null, submittedOn: null };
-  }
+  // work posted in Murshid: only real hand-ins count (they are recorded separately), so nothing is invented here
+  if (item.posted) return item.dueDate < today ? { status: 'missing', grade: null, submittedOn: null } : { status: 'pending', grade: null, submittedOn: null };
   if (item.dueDate < today) {
     const onTime = Math.min(0.98, st.diligence * 0.97 + 0.03);
     if (a < onTime) return { status: 'on_time', grade: grade(false), submittedOn: addDays(item.dueDate, -1) };

@@ -213,6 +213,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
         grade: null, scores: null, feedback: prev?.feedback ?? null, reviewedAt: prev?.reviewedAt ?? null, reviewer: prev?.reviewer ?? null,
       };
       (room.handins[item.id] ??= {})[r.id] = next;
+      for (const rem of room.reminders[r.id] ?? []) if (rem.itemId === item.id) rem.dismissed = true;
       // tick off the matching task in the student's plan
       const rec = store.has(v.profile.id) ? store.record(v.profile.id, v.now) : null;
       const task = rec?.customTasks.find((t) => t.id === `school-${item.id}-${v.profile.id}`);

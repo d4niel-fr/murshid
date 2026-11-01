@@ -28,7 +28,8 @@ import { refOf } from './classroom';
 import { registerClassroom } from './classroom-routes';
 import { studentInsight, teacherStudents } from './insights';
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
+  .refine((d) => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; }, 'not a real date');
 export const SchoolSchemas = {
   Onboarding: z.union([
     z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
@@ -232,7 +233,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
   function createPost(c: Ctx, s: Staff, st: Stream, b: z.output<typeof SchoolSchemas.Post>) {
       const day = today(c); const now = c.get('deps').now();
       const setDate = b.setDate ?? day;
-      if (b.dueDate <= setDate) throw new HTTPException(400, { message: 'due date must be after the set date' });
+      if (b.dueDate <= setDate) throw new HTTPException(400, { message: 'due date must be after the set date', cause: [{ path: 'dueDate', message: 'must be after the set date' }] });
+      if (b.dueDate < day) throw new HTTPException(400, { message: 'the due date has already passed', cause: [{ path: 'dueDate', message: 'choose today or later' }] });
       const teacher = schools.teachers.find((t) => t.id === st.teacherId)!;
       const classMembers = schools.members[st.id] ?? [];
       const studentIds = b.studentIds ? [...new Set(b.studentIds)] : null;
