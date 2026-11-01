@@ -94,7 +94,7 @@ export function AssignmentView({ id }: { id: string }) {
           <span className="text-sm text-muted-foreground">{a.subject} · {a.teacher}</span>
         </div>
         <h1 className="text-[1.75rem] font-medium leading-tight tracking-[-0.02em] sm:text-[2.25rem]">{a.title}</h1>
-        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="size-4" />{tx(`Due ${a.dueLabel}, ${a.dueTime}`, `التسليم ${a.dueLabel}، ${a.dueTime}`)} · {tx(`about ${a.minutes} min`, `حوالي ${a.minutes} دقيقة`)}</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="size-4" />{tx(`Due ${friendlyDates(a.dueDate, 'en')}, ${a.dueTime}`, `التسليم ${friendlyDates(a.dueDate, 'ar')}، ${a.dueTime}`)} · {tx(`about ${a.minutes} min`, `حوالي ${a.minutes} دقيقة`)}</p>
       </header>
 
       {data.reminders.length > 0 && (
