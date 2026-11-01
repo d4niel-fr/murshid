@@ -1,9 +1,9 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, Download, File, FileImage, FileSpreadsheet, FileText, Presentation, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fileUrl, sizeLabel, type FileKind, type FileRef } from '@/lib/classroom';
-import { cn } from './ui';
+import { cn, useFocusTrap } from './ui';
 
 const ICON: Record<FileKind, typeof File> = { image: FileImage, pdf: FileText, slides: Presentation, doc: FileText, sheet: FileSpreadsheet, text: FileText };
 const LABEL: Record<FileKind, string> = { image: 'Photo', pdf: 'PDF', slides: 'Slides', doc: 'Document', sheet: 'Spreadsheet', text: 'Text' };
@@ -47,9 +47,11 @@ export function Files({ files, onRemove, compact, className }: { files: FileRef[
 
 export function Lightbox({ photos, index, onIndex }: { photos: FileRef[]; index: number; onIndex: (i: number | null) => void }) {
   const f = photos[index]!;
+  const box = useRef<HTMLDivElement>(null);
+  useFocusTrap(box, true);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onIndex(null);
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); onIndex(null); }
       if (e.key === 'ArrowRight') onIndex(Math.min(photos.length - 1, index + 1));
       if (e.key === 'ArrowLeft') onIndex(Math.max(0, index - 1));
     };
@@ -58,11 +60,11 @@ export function Lightbox({ photos, index, onIndex }: { photos: FileRef[]; index:
     return () => { window.removeEventListener('keydown', key); document.body.style.overflow = prev; };
   }, [index, photos.length, onIndex]);
   return (
-    <div role="dialog" aria-modal="true" aria-label={f.name} className="fixed inset-0 z-[60] flex flex-col bg-black/90">
+    <div ref={box} tabIndex={-1} role="dialog" aria-modal="true" aria-label={f.name} className="fixed inset-0 z-[60] flex flex-col bg-black/90 outline-none">
       <div className="flex items-center gap-3 px-4 py-3 text-white">
         <p className="min-w-0 flex-1 truncate text-sm">{f.name}{photos.length > 1 ? ` · ${index + 1} / ${photos.length}` : ''}</p>
         <a href={fileUrl(f)} download={f.name} aria-label="Download" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20"><Download className="size-4" /></a>
-        <button type="button" autoFocus onClick={() => onIndex(null)} aria-label="Close" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20"><X className="size-4" /></button>
+        <button type="button" data-autofocus onClick={() => onIndex(null)} aria-label="Close" className="grid size-10 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20"><X className="size-4" /></button>
       </div>
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4" onClick={(e) => { if (e.target === e.currentTarget) onIndex(null); }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -56,7 +56,9 @@ export interface HandIn {
   text: string; files: FileRef[]; state: HandInState; late: boolean; submittedAt: string; updatedAt: string; versions: number;
   grade: number | null; scores: Record<string, number> | null; feedback: string | null; reviewedAt: string | null; reviewer: string | null;
 }
-export interface Message { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; files: FileRef[]; at: string }
+export interface Message { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; files: FileRef[]; at: string;
+  /** set on the note a review leaves in the thread, so apps can word it in the reader's language */
+  review?: { action: 'mark' | 'return'; grade: number | null; feedback: string } }
 /** read state is a position (messages read so far), so it stays right even when two messages share a timestamp */
 export interface Thread { messages: Message[]; seenByStudent: number; seenByTeacher: number }
 export interface Reply { id: string; from: 'student' | 'teacher'; authorId: string; name: string; text: string; at: string }

@@ -122,8 +122,8 @@ describe('review: return for revision, resubmit, mark with a rubric', () => {
     const again = await req('POST', `/student/assignments/${a.id}/handin`, AHAMED, { text: 'Labelled now', fileIds: [p.id] });
     expect(again.body.handIn).toMatchObject({ state: 'handed_in', versions: 2 });
 
-    // mark with rubric scores: 5/6 + 4/4 = 90%; scores are clamped to each criterion
-    const marked = await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/handins/${ME}/review`, THOMAS, { action: 'mark', scores: { c1: 5, c2: 9 }, feedback: 'Much better.' });
+    // mark with rubric scores: 5/6 + 4/4 = 90%
+    const marked = await req('POST', `/teacher/classes/${CLASS}/assignments/${a.id}/handins/${ME}/review`, THOMAS, { action: 'mark', scores: { c1: 5, c2: 4 }, feedback: 'Much better.' });
     expect(marked.body.handIn).toMatchObject({ state: 'marked', grade: 90, scores: { c1: 5, c2: 4 } });
     expect((await req('POST', `/student/assignments/${a.id}/handin`, AHAMED, { text: 'one more' })).status).toBe(409);
     expect((await req('DELETE', `/student/assignments/${a.id}/handin`, AHAMED)).status).toBe(409);
@@ -290,5 +290,20 @@ describe('api behaviour from the QA pass', () => {
     const { raw } = await setup();
     const res = await raw('GET', '/health', { origin: 'https://evil.example' });
     expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});
+
+describe('rubric limits', () => {
+  it('refuses a score above the row maximum and takes half points', async () => {
+    const { req, post } = await setup();
+    const a = await post({ title: 'Rubric limits', rubric: [{ label: 'Content', points: 6 }, { label: 'Style', points: 4 }] });
+    await req('POST', `/student/assignments/${a.id}/handin`, AHAMED, { text: 'Done' });
+    const url = `/teacher/classes/${CLASS}/assignments/${a.id}/handins/${ME}/review`;
+    const bad = await req('POST', url, THOMAS, { action: 'mark', scores: { c1: 9, c2: 4 } });
+    expect(bad.status).toBe(400);
+    expect(bad.body.details[0].path).toBe('scores.c1');
+    const ok = await req('POST', url, THOMAS, { action: 'mark', scores: { c1: 4.5, c2: 3 } });
+    expect(ok.status).toBe(200);
+    expect(ok.body.handIn.grade).toBe(75);
   });
 });

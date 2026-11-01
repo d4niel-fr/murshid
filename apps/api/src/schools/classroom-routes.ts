@@ -344,14 +344,19 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const hand = room.handins[item.id]?.[m.id];
       if (!hand) throw new HTTPException(409, { message: `${m.name.split(' ')[0]} hasn't handed this in through Murshid yet`, cause: { code: 'nothing_handed_in' } });
       let grade = b.grade ?? null; let scores: Record<string, number> | null = null;
-      if (item.rubric?.length && b.scores) ({ grade, scores } = rubricGrade(item.rubric, b.scores));
+      if (item.rubric?.length && b.scores) {
+        // a score above a row's maximum is a typing mistake: say so instead of quietly lowering it
+        const over = item.rubric.filter((c) => (b.scores![c.id] ?? 0) > c.points);
+        if (over.length) throw new HTTPException(400, { message: `score above the maximum for ${over.map((c) => c.label).join(', ')}`, cause: over.map((c) => ({ path: `scores.${c.id}`, message: `max ${c.points}` })) });
+        ({ grade, scores } = rubricGrade(item.rubric, b.scores));
+      }
       if (b.action === 'mark' && grade === null) throw new HTTPException(400, { message: 'add a grade (or rubric scores) to mark it', cause: [{ path: 'grade', message: 'required' }] });
       const at = c.get('deps').now().toISOString();
       hand.state = b.action === 'mark' ? 'marked' : 'returned';
       hand.grade = grade; hand.scores = scores; hand.feedback = b.feedback?.trim() || null; hand.reviewedAt = at; hand.reviewer = teacherName(s);
       if (b.feedback?.trim()) {
         const th = room.thread(item.id, m.id);
-        th.messages.push({ id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: `${b.action === 'mark' ? `Marked${grade !== null ? ` ${grade}%` : ''}` : 'Returned for revision'}: ${b.feedback.trim()}`, files: [], at });
+        th.messages.push({ id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: `${b.action === 'mark' ? `Marked${grade !== null ? ` ${grade}%` : ''}` : 'Returned for revision'}: ${b.feedback.trim()}`, files: [], at, review: { action: b.action, grade: b.action === 'mark' ? grade : null, feedback: b.feedback.trim() } });
         th.seenByTeacher = th.messages.length;
       }
       audit(s.actor, 'admin', m.appId ?? null, 'update', 'handin', item.id, `${teacherName(s)} ${b.action === 'mark' ? `marked "${item.title}"${grade !== null ? ` (${grade}%)` : ''}` : `returned "${item.title}" for revision`} for ${m.name}`, at);

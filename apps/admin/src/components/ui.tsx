@@ -2,7 +2,7 @@
 
 import { clsx } from 'clsx';
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, EyeOff, X } from 'lucide-react';
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type RefObject } from 'react';
 
 export const cn = clsx;
 
@@ -48,30 +48,62 @@ export function Card({ title, action, children, className, pad = true }: { title
 
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="card p-6">
-      <div className="eyebrow">{label}</div>
-      <div className="figure mt-4 text-[2.5rem]">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-[var(--text-muted)]">{sub}</div>}
+    <div className="card min-w-0 p-4 sm:p-6">
+      <div className="eyebrow max-w-full tracking-[0.14em] [overflow-wrap:anywhere] sm:tracking-[0.2em]">{label}</div>
+      <div className="figure mt-3 text-[2rem] sm:mt-4 sm:text-[2.5rem]">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-[var(--text-muted)] [overflow-wrap:anywhere]">{sub}</div>}
     </div>
   );
 }
 
+/* Dialogs keep keyboard focus inside while open and hand it back to whatever opened them. Only the top one traps. */
+const traps: HTMLElement[] = [];
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!active || !el) return;
+    const back = document.activeElement as HTMLElement | null;
+    traps.push(el);
+    const list = () => [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((n) => n.getClientRects().length > 0);
+    if (!el.contains(document.activeElement)) (el.querySelector<HTMLElement>('[data-autofocus]') ?? el).focus({ preventScroll: true });
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || traps[traps.length - 1] !== el) return;
+      const items = list();
+      if (!items.length) { e.preventDefault(); return; }
+      const first = items[0]!; const last = items[items.length - 1]!; const at = document.activeElement;
+      if (e.shiftKey && (at === first || at === el || !el.contains(at))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (at === last || !el.contains(at))) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('keydown', key);
+      traps.splice(traps.indexOf(el), 1);
+      if (back && back !== document.body && document.contains(back)) back.focus({ preventScroll: true });
+    };
+  }, [active, ref]);
+}
+/** True while any dialog is open (page-level shortcuts stay quiet). */
+export const dialogOpen = () => traps.length > 0;
+
 export function Modal({ open, title, onClose, children, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  useFocusTrap(box, open);
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && traps[traps.length - 1] === box.current) onClose(); };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgb(15_47_99/0.4)] p-6 pt-[8vh] backdrop-blur-sm" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={title} className={cn('w-full rounded-[28px] bg-[var(--popover)] shadow-[var(--shadow-2)]', wide ? 'max-w-3xl' : 'max-w-xl')} onMouseDown={(e) => e.stopPropagation()}>
-        <header className="flex items-center justify-between px-7 pb-2 pt-6">
-          <h2 className="display text-[1.75rem]">{title}</h2>
-          <button aria-label="Close" onClick={onClose} className="grid size-10 place-items-center rounded-full bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"><X className="size-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgb(15_47_99/0.4)] p-3 pt-[6vh] backdrop-blur-sm sm:p-6 sm:pt-[8vh]" onMouseDown={onClose}>
+      <div ref={box} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} className={cn('w-full min-w-0 rounded-[24px] bg-[var(--popover)] shadow-[var(--shadow-2)] outline-none sm:rounded-[28px]', wide ? 'max-w-3xl' : 'max-w-xl')} onMouseDown={(e) => e.stopPropagation()}>
+        <header className="flex items-start justify-between gap-3 px-5 pb-2 pt-5 sm:px-7 sm:pt-6">
+          <h2 className="display min-w-0 text-[1.375rem] [overflow-wrap:anywhere] sm:text-[1.75rem]">{title}</h2>
+          <button aria-label="Close" onClick={onClose} className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"><X className="size-4" /></button>
         </header>
-        <div className="px-7 pb-7 pt-4">{children}</div>
+        <div className="px-5 pb-6 pt-3 sm:px-7 sm:pb-7 sm:pt-4">{children}</div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { ArrowLeft, BellRing, Camera, CheckCircle2, ChevronLeft, ChevronRight, C
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Files } from '@/components/files';
 import { PageHeader } from '@/components/shell';
-import { Badge, Button, Card, cn, EmptyState, ErrorBox, Modal, SkeletonRows } from '@/components/ui';
+import { Badge, Button, Card, cn, dialogOpen, EmptyState, ErrorBox, Modal, SkeletonRows } from '@/components/ui';
 import { api, getSession, newIdempotencyKey } from '@/lib/api';
 import { uploadAs, type FileRef } from '@/lib/classroom';
 import { useData } from '@/lib/use-data';
@@ -134,6 +134,10 @@ function Review() {
   );
 }
 
+/** Unsaved marking per student (kept while the teacher moves around the class; cleared once saved). */
+type Draft = { grade: string; scores: Record<string, string>; feedback: string };
+const drafts = new Map<string, Draft>();
+
 function StudentWork({ cls, itemId, studentId, onBack, onPrev, onNext, onChanged }: { cls: string; itemId: string; studentId: string; onBack: () => void; onPrev?: () => void; onNext?: () => void; onChanged: () => void }) {
   const base = `/teacher/classes/${cls}/assignments/${encodeURIComponent(itemId)}`;
   const d = useData<any>(`${base}/handins/${studentId}`, 'staff');
@@ -144,18 +148,32 @@ function StudentWork({ cls, itemId, studentId, onBack, onPrev, onNext, onChanged
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const key = `${itemId}:${studentId}`;
+  const [seeded, setSeeded] = useState(false);
   useEffect(() => {
     const h = d.data?.handIn;
     if (!h) return;
+    const kept = drafts.get(key);
+    if (kept) { setGrade(kept.grade); setScores(kept.scores); setFeedback(kept.feedback); setSeeded(true); return; }
     setGrade(h.grade !== null && !h.scores ? String(h.grade) : '');
     setScores(h.scores ? Object.fromEntries(Object.entries(h.scores).map(([k, v]) => [k, String(v)])) : {});
-    setFeedback(h.feedback ?? '');
-  }, [d.data?.handIn]);
+    // only an existing mark's feedback is edited in place; an earlier "please change" note is shown as history instead
+    setFeedback(h.state === 'marked' ? (h.feedback ?? '') : '');
+    setSeeded(true);
+  }, [d.data?.handIn, key]);
+  // remember what the teacher has typed but not saved
+  useEffect(() => {
+    const h = d.data?.handIn;
+    if (!seeded || !h) return;
+    const saved: Draft = { grade: h.grade !== null && !h.scores ? String(h.grade) : '', scores: h.scores ? Object.fromEntries(Object.entries(h.scores).map(([k, v]) => [k, String(v)])) : {}, feedback: h.state === 'marked' ? (h.feedback ?? '') : '' };
+    const same = grade === saved.grade && feedback === saved.feedback && JSON.stringify(scores) === JSON.stringify(saved.scores);
+    if (same) drafts.delete(key); else drafts.set(key, { grade, scores, feedback });
+  }, [grade, scores, feedback, seeded, key, d.data?.handIn]);
   // ← → move through the class (not while typing)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.closest('input,textarea,select,[contenteditable]')) return;
+      if (t.closest('input,textarea,select,[contenteditable]') || dialogOpen()) return;
       if (e.key === 'ArrowLeft' && onPrev) onPrev();
       if (e.key === 'ArrowRight' && onNext) onNext();
     };
@@ -169,17 +187,32 @@ function StudentWork({ cls, itemId, studentId, onBack, onPrev, onNext, onChanged
   const rubric: any[] | null = a.rubric;
   const total = rubric?.reduce((t, r) => t + r.points, 0) ?? 0;
   const got = rubric?.reduce((t, r) => t + (Number(scores[r.id]) || 0), 0) ?? 0;
+  // a score must be a whole or half point between 0 and the row's maximum
+  const scoreError = (r: { points: number }, v: string | undefined) => {
+    if (v === undefined || v.trim() === '') return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) return 'Use 0 or more';
+    if (n > r.points) return `Max ${r.points}`;
+    if (Math.round(n * 2) !== n * 2) return 'Use whole or half points';
+    return null;
+  };
+  const badScores = rubric?.filter((r) => scoreError(r, scores[r.id])) ?? [];
+  const gradeError = grade.trim() === '' ? null : !Number.isFinite(Number(grade)) || Number(grade) < 0 || Number(grade) > 100 ? 'Use a number from 0 to 100' : null;
+  const unsaved = drafts.has(key);
 
   const review = async (action: 'mark' | 'return') => {
     setErr(null); setDone(null);
     const body: any = { action, feedback: feedback.trim() || undefined };
-    if (rubric) { if (Object.keys(scores).length) body.scores = Object.fromEntries(rubric.map((r) => [r.id, Math.max(0, Math.min(r.points, Number(scores[r.id]) || 0))])); }
-    else if (grade.trim() !== '') body.grade = Math.max(0, Math.min(100, Math.round(Number(grade))));
+    if (badScores.length) { setErr(`Fix the score for ${badScores.map((r) => r.label).join(', ')}.`); return; }
+    if (gradeError) { setErr(gradeError); return; }
+    if (rubric) { if (Object.values(scores).some((v) => v.trim() !== '')) body.scores = Object.fromEntries(rubric.map((r) => [r.id, Number(scores[r.id]) || 0])); }
+    else if (grade.trim() !== '') body.grade = Math.round(Number(grade));
     if (action === 'mark' && body.grade === undefined && !body.scores) { setErr(rubric ? 'Score the rubric to mark it.' : 'Add a grade (0–100) to mark it.'); return; }
     if (action === 'return' && !body.feedback) { setErr('Say what to change when you return it.'); return; }
     setBusy(action);
     try {
       await api(`${base}/handins/${studentId}/review`, { method: 'POST', as: 'staff', body, headers: { 'idempotency-key': newIdempotencyKey('rev') } });
+      drafts.delete(key);
       setDone(action === 'mark' ? `Marked and returned to ${student.name.split(' ')[0]}.` : `Returned to ${student.name.split(' ')[0]} for changes.`);
       await d.reload(); onChanged();
     } catch (e) { setErr((e as Error).message); } finally { setBusy(null); }
@@ -228,18 +261,28 @@ function StudentWork({ cls, itemId, studentId, onBack, onPrev, onNext, onChanged
           {rubric ? (
             <div className="mb-4">
               <ul className="divide-y divide-[var(--border)] rounded-[var(--radius-sm)] border border-[var(--border)]">
-                {rubric.map((r) => (
-                  <li key={r.id} className="flex items-center gap-3 px-3.5 py-2.5">
-                    <span className="min-w-0 flex-1 text-sm">{r.label}</span>
-                    <input aria-label={`${r.label} score`} inputMode="numeric" type="number" min={0} max={r.points} className="input h-9 w-20 text-sm" value={scores[r.id] ?? ''} onChange={(e) => setScores((x) => ({ ...x, [r.id]: e.target.value }))} />
-                    <span className="w-14 text-xs text-[var(--text-muted)]">/ {r.points}</span>
-                  </li>
-                ))}
+                {rubric.map((r) => {
+                  const bad = scoreError(r, scores[r.id]);
+                  return (
+                    <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5">
+                      <span className="min-w-0 flex-1 text-sm">{r.label}</span>
+                      <input aria-label={`${r.label} score`} aria-invalid={bad ? true : undefined} aria-describedby={bad ? `err-${r.id}` : undefined} inputMode="decimal" type="number" min={0} max={r.points} step={0.5} className={cn('input h-9 w-20 text-sm', bad && 'border-[var(--danger)]')} value={scores[r.id] ?? ''} onChange={(e) => setScores((x) => ({ ...x, [r.id]: e.target.value }))} />
+                      <span className="w-14 text-xs text-[var(--text-muted)]">/ {r.points}</span>
+                      {bad && <span id={`err-${r.id}`} className="basis-full text-end text-xs text-[var(--danger)]">{bad}</span>}
+                    </li>
+                  );
+                })}
               </ul>
-              <p className="mt-2 text-sm"><span className="font-medium tabular-nums">{got} / {total}</span> <span className="text-[var(--text-muted)]">= {total ? Math.round((got / total) * 100) : 0}%</span></p>
+              <p className="mt-2 text-sm">{badScores.length ? <span className="text-[var(--danger)]">Fix the scores above to see the total.</span> : <><span className="font-medium tabular-nums">{got} / {total}</span> <span className="text-[var(--text-muted)]">= {total ? Math.round((got / total) * 100) : 0}%</span></>}</p>
             </div>
           ) : (
-            <label className="field mb-4 max-w-[12rem]"><span>Grade (%)</span><input aria-label="Grade" inputMode="numeric" type="number" min={0} max={100} className="input" value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="e.g. 85" /></label>
+            <label className="field mb-4 max-w-[12rem]"><span>Grade (%)</span><input aria-label="Grade" aria-invalid={gradeError ? true : undefined} inputMode="numeric" type="number" min={0} max={100} className={cn('input', gradeError && 'border-[var(--danger)]')} value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="e.g. 85" />{gradeError && <span className="text-xs text-[var(--danger)]">{gradeError}</span>}</label>
+          )}
+          {h.state !== 'marked' && h.feedback && (
+            <div className="mb-4 rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] p-3 text-sm">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{h.state === 'returned' ? 'You asked for changes' : 'Your earlier request'}</p>
+              <p className="whitespace-pre-wrap text-[var(--text-muted)] [overflow-wrap:anywhere]" dir="auto">{h.feedback}</p>
+            </div>
           )}
           <label className="field"><span>Feedback</span>
             <textarea aria-label="Feedback" className="input min-h-28" value={feedback} maxLength={2000} onChange={(e) => setFeedback(e.target.value)} placeholder="What went well, and what to do next" />
@@ -253,6 +296,7 @@ function StudentWork({ cls, itemId, studentId, onBack, onPrev, onNext, onChanged
             ))}
             {feedback.trim().length > 3 && !bank.includes(feedback.trim()) && <button type="button" onClick={() => add(feedback.trim())} className="rounded-full px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:underline">+ Save this comment</button>}
           </div>
+          {unsaved && !done && <p className="mt-3 text-xs text-[var(--text-muted)]">Not saved yet. Your notes stay here while you look at other students.</p>}
           {err && <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{err}</p>}
           {done && <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-[var(--success)]"><CheckCircle2 className="size-4" />{done}</p>}
           <div className="mt-4 flex flex-wrap gap-2">

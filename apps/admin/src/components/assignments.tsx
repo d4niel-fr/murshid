@@ -32,7 +32,7 @@ function FormatIcon({ f, className = 'size-4' }: { f: Format; className?: string
 let qSeq = 0;
 const newQuestion = (type: QType = 'short'): Question => ({ id: `q${Date.now().toString(36).slice(-4)}${(qSeq++).toString(36)}`, type, prompt: '', options: type === 'choice' ? ['', ''] : [], required: true });
 
-interface Draft { title: string; instructions: string; format: Format; formUrl: string; questions: Question[] }
+interface Draft { title: string; instructions: string; format: Format; formUrl: string; questions: Question[]; attachments?: FileRef[]; links?: { url: string; label: string }[]; photos?: boolean; useRubric?: boolean; rubric?: { label: string; points: number }[] }
 const draftKey = (classId: string) => `murshid:assignment-draft:${classId}`;
 function readDraft(classId: string): Draft | null {
   try { const raw = localStorage.getItem(draftKey(classId)); return raw ? (JSON.parse(raw) as Draft) : null; } catch { return null; }
@@ -78,9 +78,15 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
   useEffect(() => {
     if (preset) { loaded.current = true; return; }
     const d = readDraft(classId);
-    if (d && (d.title || d.instructions || d.formUrl || d.questions?.some((q) => q.prompt))) {
+    if (d && (d.title || d.instructions || d.formUrl || d.questions?.some((q) => q.prompt) || d.attachments?.length || d.links?.length)) {
       setTitle(d.title); setInstructions(d.instructions); setFormat(d.format); setFormUrl(d.formUrl);
       if (d.questions?.length) setQuestions(d.questions);
+      // files were uploaded already, so their references come back with the rest
+      if (d.attachments?.length) setAttachments(d.attachments);
+      if (d.links?.length) setLinks(d.links);
+      if (d.photos) setPhotos(true);
+      if (d.useRubric) setUseRubric(true);
+      if (d.rubric?.length) setRubric(d.rubric);
       setRestored(true);
     }
     loaded.current = true;
@@ -91,12 +97,12 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
     if (!loaded.current) return;
     setSaved('saving');
     const t = setTimeout(() => {
-      try { localStorage.setItem(draftKey(classId), JSON.stringify({ title, instructions, format, formUrl, questions } satisfies Draft)); setSaved('saved'); } catch { setSaved('idle'); }
+      try { localStorage.setItem(draftKey(classId), JSON.stringify({ title, instructions, format, formUrl, questions, attachments, links, photos, useRubric, rubric } satisfies Draft)); setSaved('saved'); } catch { setSaved('idle'); }
     }, 600);
     return () => clearTimeout(t);
-  }, [classId, title, instructions, format, formUrl, questions]);
+  }, [classId, title, instructions, format, formUrl, questions, attachments, links, photos, useRubric, rubric]);
   // any edit makes this a new request
-  useEffect(() => { key.current = newIdempotencyKey('post'); }, [title, instructions, format, formUrl, questions, setDate, dueDate, mins, who, chosen]);
+  useEffect(() => { key.current = newIdempotencyKey('post'); }, [title, instructions, format, formUrl, questions, setDate, dueDate, mins, who, chosen, attachments, links, photos, useRubric, rubric]);
 
   const errors = { ...validateAssignment({ title, format, formUrl, questions }), ...serverErrors };
   if (who === 'chosen' && !chosen.length) errors.who = 'Choose at least one student, or set it for the whole class.';
@@ -106,7 +112,7 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
   const show = (k: string) => (touched ? errors[k] : undefined);
 
   const clearDraft = () => { try { localStorage.removeItem(draftKey(classId)); } catch { /* storage off */ } };
-  const reset = () => { clearDraft(); setTitle(''); setInstructions(''); setFormat('task'); setFormUrl(''); setQuestions([newQuestion('short')]); setRestored(false); setTouched(false); setServerErrors({}); };
+  const reset = () => { clearDraft(); setTitle(''); setInstructions(''); setFormat('task'); setFormUrl(''); setQuestions([newQuestion('short')]); setAttachments([]); setLinks([]); setLinkUrl(''); setPhotos(false); setUseRubric(false); setRubric([{ label: 'Content and accuracy', points: 6 }, { label: 'Presentation', points: 4 }]); setRestored(false); setTouched(false); setServerErrors({}); };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setTouched(true); setError(null); setServerErrors({});
@@ -136,7 +142,8 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
         }
         setServerErrors(map);
       }
-      setError(ae.message);
+      // a file from an old draft can expire on the server
+      setError(/attachment|file/i.test(ae.message) && attachments.length ? `${ae.message}. Remove the attached files and add them again.` : ae.message);
       setBusy(false);
     }
   };
@@ -239,11 +246,11 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">Handing in</legend>
           <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] p-3.5">
-            <input type="checkbox" checked={photos} onChange={(e) => setPhotos(e.target.checked)} className="mt-0.5 size-4 accent-[var(--deep)]" />
+            <input type="checkbox" checked={photos} onChange={(e) => setPhotos(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--deep)]" />
             <span><span className="block text-sm font-medium">Ask for photos of their notes</span><span className="block text-xs text-[var(--text-muted)]">Students must add at least one photo: a notebook page, or pages from their Murshid notebook.</span></span>
           </label>
           <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] p-3.5">
-            <input type="checkbox" checked={useRubric} onChange={(e) => setUseRubric(e.target.checked)} className="mt-0.5 size-4 accent-[var(--deep)]" />
+            <input type="checkbox" checked={useRubric} onChange={(e) => setUseRubric(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--deep)]" />
             <span><span className="block text-sm font-medium">Mark with a rubric</span><span className="block text-xs text-[var(--text-muted)]">Score each part; the grade is the share of points. Students see the rubric before they start.</span></span>
           </label>
           {useRubric && (
@@ -303,7 +310,7 @@ export function PostAssignmentForm({ classId, initial, minutes, best, onDone, st
         </fieldset>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="field"><span>Set on</span><input aria-label="Set on" type="date" className="input" value={setDate} onChange={(e) => setSetDate(e.target.value)} /></label>
         <label className="field"><span>Due</span><input aria-label="Due" type="date" className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-invalid={Boolean(show('dueDate'))} /></label>
         <label className="field"><span>Minutes</span><input aria-label="Minutes" type="number" min={10} max={240} className="input" value={mins} onChange={(e) => setMins(Number(e.target.value))} /></label>
@@ -338,12 +345,12 @@ export function AssignmentsTable({ items, loading, classId, onPost }: { items: a
 
   return (
     <Card pad={false} title="Assignments" action={
-      <div className="flex items-center gap-2">
-        <label className="relative"><span className="sr-only">Search assignments</span>
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <label className="relative min-w-0 flex-1 sm:flex-none"><span className="sr-only">Search assignments</span>
           <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto size-3.5 text-[var(--text-muted)]" aria-hidden />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="input h-9 w-48 ps-8 text-sm" />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="input h-9 w-full ps-8 text-sm sm:w-48" />
         </label>
-        <select aria-label="Filter by format" className="input h-9 w-44 py-0 text-sm" value={fmt} onChange={(e) => setFmt(e.target.value as typeof fmt)}>
+        <select aria-label="Filter by format" className="input h-9 min-w-0 flex-1 py-0 text-sm sm:w-44 sm:flex-none" value={fmt} onChange={(e) => setFmt(e.target.value as typeof fmt)}>
           <option value="all">All formats ({counts.all})</option>
           {FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label} ({counts[f.id] ?? 0})</option>)}
         </select>

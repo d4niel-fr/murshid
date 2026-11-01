@@ -29,22 +29,22 @@ export default function StudentsPage() {
         action={<Button onClick={() => setCreating(true)}><Plus className="size-4" />New student</Button>} />
       <ErrorBox error={list.error ?? overview.error} />
       {overview.data && (
-        <div className="mb-5 grid grid-cols-4 gap-3">
+        <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Students" value={overview.data.students} sub={Object.entries(overview.data.byGrade).map(([g, n]) => `G${g}: ${n}`).join(' · ')} />
           <Stat label="Assessments next 7 days" value={overview.data.upcomingAssessments7d} />
           <Stat label="Overdue tasks" value={overview.data.overdueTasks} />
-          <Stat label="Published opportunities" value={overview.data.catalog.published} sub={`${overview.data.editsToday} edits today`} />
+          <Stat label="Published opportunities" value={overview.data.catalog.published} sub={`of ${overview.data.catalog.total} in the catalogue · ${overview.data.editsToday} edit${overview.data.editsToday === 1 ? '' : 's'} today`} />
         </div>
       )}
       <div className="mb-5"><AiStatus detailed /></div>
       <Card pad={false} title={<span>All students <span className="font-normal text-[var(--text-muted)]">({items.length})</span></span>}
         action={
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-[var(--text-muted)]" />
-              <input aria-label="Search students" className="input w-64 pl-8" placeholder="Search name, school, interest, project…" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input aria-label="Search students" className="input w-full pl-8 sm:w-64" placeholder="Search name, school, interest, project…" value={q} onChange={(e) => setQ(e.target.value)} />
             </div>
-            <select aria-label="Filter by grade" className="input w-28" value={grade} onChange={(e) => setGrade(e.target.value)}>
+            <select aria-label="Filter by grade" className="input w-full sm:w-32" value={grade} onChange={(e) => setGrade(e.target.value)}>
               <option value="">All grades</option>
               {grades.map((g) => <option key={g} value={g}>Grade {g}</option>)}
             </select>

@@ -123,7 +123,7 @@ export function Delegation({ rec }: { rec: any }) {
         <Info className="mt-0.5 size-4 shrink-0 text-[var(--info)]" />
         <div className="text-sm"><span className="font-medium">For the next task: </span>{rec.summary}</div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {rec.groups.map((g: any) => {
           const st = GROUP_STYLE[g.id]!;
           const Icon = st.icon;
@@ -140,7 +140,7 @@ export function Delegation({ rec }: { rec: any }) {
           );
         })}
       </div>
-      <div className="grid grid-cols-[1.3fr_1fr] gap-4">
+      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card title="Peer partners">
           {rec.pairs.length ? (
             <ul className="space-y-2.5">
@@ -255,7 +255,7 @@ export function WeeklyReports({ w, week, onWeek }: { w: any; week: 'current' | '
           Week of {shortDate(w.weekStart)} &middot; {w.status === 'submitted' ? <span className="font-medium text-[var(--success)]">submitted automatically {shortDate(w.weekEnd)}, 4:00 PM</span> : <span>drafts &middot; each student&rsquo;s report sends itself on {shortDate(w.weekEnd)} at 4:00 PM</span>}
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card p-6"><div className="eyebrow">Reports in</div><div className="figure mt-4 text-[2.25rem]">{r.submitted}/{r.students}</div></div>
         <div className="card p-6"><div className="eyebrow">Work handed in (all subjects)</div><div className="figure mt-4 text-[2.25rem]">{r.avgCompletion}%</div></div>
         <div className="card p-6"><div className="eyebrow">Students with overdue work</div><div className="figure mt-4 text-[2.25rem]">{r.withOverdue}</div></div>
