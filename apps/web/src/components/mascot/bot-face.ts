@@ -81,12 +81,15 @@ const pair = (e: Omit<Eye, 'u'> & { u: number }, mirrorTilt = true): [Eye, Eye] 
   { ...e },
 ];
 
-/** The base eyes for each eye style, at rest. */
+/**
+ * The base eyes for each eye style, at rest: chunky, upright and close together, sitting just above the middle of
+ * the face (u, v and the sizes are angles on the head, so they stay in proportion at any size).
+ */
 const BASE: Record<BotEyes, Eye> = {
-  tall: { u: 0.25, v: 0.12, len: 0.5, thick: 0.21, tilt: 0.12, bend: 0 },
-  round: { u: 0.24, v: 0.1, len: 0, thick: 0.27, tilt: 0, bend: 0 },
-  wide: { u: 0.29, v: 0.08, len: 0.3, thick: 0.17, tilt: Math.PI / 2 - 0.1, bend: 0 },
-  mono: { u: 0, v: 0.1, len: 0.46, thick: 0.32, tilt: 0, bend: 0 },
+  tall: { u: 0.17, v: 0.08, len: 0.28, thick: 0.21, tilt: 0, bend: 0 },
+  round: { u: 0.18, v: 0.07, len: 0, thick: 0.24, tilt: 0, bend: 0 },
+  wide: { u: 0.22, v: 0.06, len: 0.16, thick: 0.165, tilt: Math.PI / 2, bend: 0 },
+  mono: { u: 0, v: 0.08, len: 0.3, thick: 0.27, tilt: 0, bend: 0 },
 };
 
 /** The pose a mood asks for (before the pointer, blinking and talking are added). */
@@ -95,14 +98,14 @@ export function moodPose(mood: BotMood, eyes: BotEyes): Pose {
   const mono = eyes === 'mono';
   const at = (e: Partial<Eye>, tiltMirror = true) => pair({ ...b, ...e }, tiltMirror);
   switch (mood) {
-    case 'happy': // eyes become arches: horizontal, bent upwards
-      return { yaw: 0, pitch: 0.06, roll: 0, open: 1, mono, eyes: pair({ ...b, u: mono ? 0 : 0.3, len: mono ? 0.5 : 0.3, thick: 0.15, tilt: Math.PI / 2, bend: 0.55, v: b.v + 0.02 }, false) };
-    case 'thinking': // looks up and to the side, eyes narrower
-      return { yaw: 0.32, pitch: 0.24, roll: -0.06, open: 1, mono, eyes: at({ len: Math.max(b.len * 0.85, 0), thick: b.thick * 0.85 }) };
+    case 'happy': // eyes close into soft arches
+      return { yaw: 0, pitch: 0.05, roll: 0, open: 1, mono, eyes: pair({ ...b, u: mono ? 0 : 0.24, len: mono ? 0.36 : 0.29, thick: 0.115, tilt: Math.PI / 2, bend: 0.5, v: b.v + 0.03 }, false) };
+    case 'thinking': // looks up and to the side
+      return { yaw: 0.36, pitch: 0.27, roll: -0.05, open: 1, mono, eyes: at({ len: b.len * 0.9, thick: b.thick * 0.94 }) };
     case 'listening': // eyes a little bigger, head tilted
-      return { yaw: 0, pitch: 0.04, roll: 0.09, open: 1, mono, eyes: at({ len: b.len * 1.12, thick: b.thick * 1.12 }) };
+      return { yaw: 0, pitch: 0.05, roll: 0.08, open: 1, mono, eyes: at({ len: b.len * 1.12, thick: b.thick * 1.08 }) };
     case 'sleepy': // thin, low lines
-      return { yaw: 0, pitch: -0.12, roll: 0, open: 1, mono, eyes: pair({ ...b, u: mono ? 0 : 0.27, len: mono ? 0.36 : 0.26, thick: 0.08, tilt: Math.PI / 2, bend: -0.1, v: b.v - 0.04 }, false) };
+      return { yaw: 0, pitch: -0.1, roll: 0, open: 1, mono, eyes: pair({ ...b, u: mono ? 0 : 0.2, len: mono ? 0.28 : 0.2, thick: 0.08, tilt: Math.PI / 2, bend: -0.1, v: b.v - 0.03 }, false) };
     case 'talking':
     case 'idle':
     default:
