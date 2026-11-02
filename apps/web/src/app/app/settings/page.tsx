@@ -10,8 +10,7 @@ import { billing, price, useBilling } from '@/lib/billing';
 import { ApiError, newIdempotencyKey } from '@/lib/http';
 import { cancelPlan } from '@/lib/school-api';
 import { DEFAULT_MASCOT, MASCOT_COLORS, MASCOT_FACES, MASCOT_GLOWS, MASCOT_SHAPES, type MascotColor, type MascotFace, type MascotGlow, type MascotShape, type TextSize } from '@/lib/prefs';
-import { MASCOT_FILL, MASCOT_GLOW } from '@/components/mascot/mascot';
-import { shadeOf } from '@/components/mascot/bot-face';
+import { eyeColour, MASCOT_FILL } from '@/components/mascot/mascot';
 import { cn } from '@/lib/utils';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '@/components/providers/app-provider';
@@ -263,7 +262,7 @@ function MascotCard() {
   const SHAPE: Record<MascotShape, string> = { orb: tx('Orb', 'كرة'), pebble: tx('Pebble', 'حصاة'), cube: tx('Cube', 'مكعب'), capsule: tx('Capsule', 'كبسولة') };
   const FACE: Record<MascotFace, string> = { tall: tx('Tall', 'طويلة'), round: tx('Round', 'دائرية'), wide: tx('Wide', 'عريضة'), mono: tx('Single', 'واحدة') };
   const COL: Record<MascotColor, string> = { royal: tx('Murshid blue', 'أزرق مرشد'), navy: tx('Navy', 'كحلي'), sky: tx('Sky', 'سماوي'), teal: tx('Teal', 'تركوازي'), violet: tx('Violet', 'بنفسجي'), coral: tx('Coral', 'مرجاني'), lime: tx('Lime', 'ليموني'), graphite: tx('Graphite', 'رمادي داكن') };
-  const GLOW: Record<MascotGlow, string> = { white: tx('White', 'أبيض'), ink: tx('Ink', 'حبر'), sky: tx('Ice blue', 'أزرق ثلجي'), lime: tx('Lime', 'ليموني') };
+  const GLOW: Record<MascotGlow, string> = { auto: tx('Auto', 'تلقائي'), ink: tx('Ink', 'حبر'), white: tx('White', 'أبيض'), sky: tx('Ice blue', 'أزرق ثلجي'), lime: tx('Lime', 'ليموني') };
   const label = 'mb-2 block text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-muted-foreground rtl:tracking-normal';
   const swatch = (on: boolean) => cn('size-10 rounded-full ring-offset-2 ring-offset-[var(--surface)] transition-shadow duration-150 hover:ring-2 hover:ring-[var(--border)] active:scale-[0.95] sm:size-9', on && 'ring-2 ring-[var(--text)]');
   const tile = (on: boolean) => cn('flex min-w-0 flex-col items-center gap-1 rounded-2xl border px-1 py-2 text-[0.75rem] font-medium transition-colors active:scale-[0.98]', on ? 'border-[var(--deep)] bg-[color-mix(in_oklab,var(--deep)_6%,transparent)] text-foreground' : 'border-[var(--border)] text-muted-foreground hover:bg-surface');
@@ -296,13 +295,17 @@ function MascotCard() {
           <div>
             <p className={label}>{tx('Colour', 'اللون')}</p>
             <div role="radiogroup" aria-label={tx('Body colour', 'لون الجسم')} className="flex flex-wrap gap-2">
-              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={swatch(m.color === c)} style={{ background: `radial-gradient(circle at 38% 30%, ${shadeOf(MASCOT_FILL[c], 0.2)}, ${MASCOT_FILL[c]} 55%, ${shadeOf(MASCOT_FILL[c], -0.35)})` }} />)}
+              {MASCOT_COLORS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.color === c} aria-label={COL[c]} title={COL[c]} onClick={() => set({ color: c })} className={swatch(m.color === c)} style={{ background: MASCOT_FILL[c] }} />)}
             </div>
           </div>
           <div>
             <p className={label}>{tx('Eye colour', 'لون العينين')}</p>
             <div role="radiogroup" aria-label={tx('Eye colour', 'لون العينين')} className="flex flex-wrap gap-2">
-              {MASCOT_GLOWS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.glow === c} aria-label={GLOW[c]} title={GLOW[c]} onClick={() => set({ glow: c })} className={cn(swatch(m.glow === c), 'grid place-items-center')} style={{ background: MASCOT_FILL[m.color] }}><span className="h-4 w-2 rounded-full" style={{ background: MASCOT_GLOW[c] }} /></button>)}
+              {MASCOT_GLOWS.map((c) => <button key={c} type="button" role="radio" aria-checked={m.glow === c} aria-label={GLOW[c]} title={GLOW[c]} onClick={() => set({ glow: c })} className={cn(swatch(m.glow === c), 'grid place-items-center')} style={{ background: MASCOT_FILL[m.color] }}>
+                {/* each swatch shows the eyes as they will be drawn on this body (Auto: ink, or white on dark bodies) */}
+                <span className="flex gap-[3px]" aria-hidden><span className="h-3.5 w-[5px] rounded-full" style={{ background: eyeColour(c, MASCOT_FILL[m.color]) }} /><span className="h-3.5 w-[5px] rounded-full" style={{ background: eyeColour(c, MASCOT_FILL[m.color]) }} /></span>
+                {c === 'auto' && <span className="sr-only">{tx('Picks dark or white eyes for the colour', 'يختار عينين داكنتين أو بيضاوين حسب اللون')}</span>}
+              </button>)}
             </div>
           </div>
         </div>

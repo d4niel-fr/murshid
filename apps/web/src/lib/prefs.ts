@@ -7,19 +7,21 @@ export type TextSize = 'sm' | 'md' | 'lg' | 'xl';
 export const TEXT_SIZES: TextSize[] = ['sm', 'md', 'lg', 'xl'];
 
 /**
- * The mascot: Murshid, a small companion bot with a soft matte head and two eyes (no human features). Students shape
+ * The mascot: Murshid, a small companion bot with one flat-coloured head and two dark eyes (no human features). Students shape
  * it: the head (orb, pebble, cube or capsule), the eyes, the body colour and the eye colour. It is always called Murshid.
  */
 export type MascotShape = 'orb' | 'pebble' | 'cube' | 'capsule';
 export type MascotFace = 'tall' | 'round' | 'wide' | 'mono';
 export type MascotColor = 'royal' | 'navy' | 'sky' | 'teal' | 'violet' | 'coral' | 'lime' | 'graphite';
-export type MascotGlow = 'white' | 'ink' | 'sky' | 'lime';
-export interface MascotPrefs { shape: MascotShape; face: MascotFace; color: MascotColor; glow: MascotGlow }
+/** eye colour: 'auto' = near-black, or white on a dark body */
+export type MascotGlow = 'auto' | 'ink' | 'white' | 'sky' | 'lime';
+/** v: the look's version (2 = the flat bot with dark eyes) */
+export interface MascotPrefs { shape: MascotShape; face: MascotFace; color: MascotColor; glow: MascotGlow; v?: 2 }
 export const MASCOT_SHAPES: MascotShape[] = ['orb', 'pebble', 'cube', 'capsule'];
 export const MASCOT_FACES: MascotFace[] = ['tall', 'round', 'wide', 'mono'];
 export const MASCOT_COLORS: MascotColor[] = ['royal', 'navy', 'sky', 'teal', 'violet', 'coral', 'lime', 'graphite'];
-export const MASCOT_GLOWS: MascotGlow[] = ['white', 'ink', 'sky', 'lime'];
-export const DEFAULT_MASCOT: MascotPrefs = { shape: 'orb', face: 'tall', color: 'royal', glow: 'white' };
+export const MASCOT_GLOWS: MascotGlow[] = ['auto', 'ink', 'white', 'sky', 'lime'];
+export const DEFAULT_MASCOT: MascotPrefs = { shape: 'orb', face: 'tall', color: 'royal', glow: 'auto', v: 2 };
 export const MASCOT_NAME = { en: 'Murshid', ar: 'مرشد' } as const;
 
 export interface Prefs {
@@ -55,7 +57,9 @@ function parseMascot(x: unknown): MascotPrefs {
     shape: pick(MASCOT_SHAPES, m.shape, DEFAULT_MASCOT.shape),
     face: pick(MASCOT_FACES, m.face, DEFAULT_MASCOT.face),
     color: pick(MASCOT_COLORS, m.color, DEFAULT_MASCOT.color),
-    glow: pick(MASCOT_GLOWS, m.glow, DEFAULT_MASCOT.glow),
+    // white eyes were the old default: bots saved before the redesign move to the new automatic eyes
+    glow: m.v !== 2 && (m.glow === 'white' || m.glow === undefined) ? 'auto' : pick(MASCOT_GLOWS, m.glow, DEFAULT_MASCOT.glow),
+    v: 2,
   };
 }
 export const PREFS_COOKIE = 'murshid_prefs';

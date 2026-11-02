@@ -2,22 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_MASCOT, MASCOT_NAME, parsePrefs, serializePrefs } from './prefs';
 import { hits, simplify, type Stroke } from './notebook';
 import { contrast, readableEyes } from '@/components/mascot/bot-face';
-import { MASCOT_FILL, MASCOT_GLOW } from '@/components/mascot/mascot';
+import { eyeColour, MASCOT_FILL, MASCOT_GLOW } from '@/components/mascot/mascot';
 
 const raw = (mascot: unknown) => serializePrefs({ ...parsePrefs(null), mascot } as never);
 
 describe('mascot prefs', () => {
-  it('defaults to a Murshid-blue orb with white eyes, called Murshid', () => {
+  it('defaults to a flat Murshid-blue orb with automatic (dark) eyes, called Murshid', () => {
     expect(parsePrefs(null).mascot).toEqual(DEFAULT_MASCOT);
-    expect(DEFAULT_MASCOT).toEqual({ shape: 'orb', face: 'tall', color: 'royal', glow: 'white' });
+    expect(DEFAULT_MASCOT).toEqual({ shape: 'orb', face: 'tall', color: 'royal', glow: 'auto', v: 2 });
     expect(MASCOT_NAME).toEqual({ en: 'Murshid', ar: 'مرشد' });
   });
   it('keeps every choice the bot still has', () => {
-    expect(parsePrefs(raw({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime' })).mascot).toEqual({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime' });
+    expect(parsePrefs(raw({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime' })).mascot).toEqual({ shape: 'capsule', face: 'mono', color: 'graphite', glow: 'lime', v: 2 });
+    expect(parsePrefs(raw({ shape: 'cube', face: 'tall', color: 'navy', glow: 'white', v: 2 })).mascot).toEqual({ shape: 'cube', face: 'tall', color: 'navy', glow: 'white', v: 2 });
+  });
+  it('moves bots saved with the old default white eyes to the new automatic eyes', () => {
+    expect(parsePrefs(raw({ shape: 'pebble', face: 'round', color: 'coral', glow: 'white' })).mascot).toEqual({ shape: 'pebble', face: 'round', color: 'coral', glow: 'auto', v: 2 });
   });
   it('carries older looks over where they still exist, and drops the rest', () => {
     // star shape, mint eyes and accessories are gone; the colour stays
-    expect(parsePrefs(raw({ shape: 'star', face: 'round', color: 'teal', glow: 'mint', accessory: 'antenna' })).mascot).toEqual({ shape: 'orb', face: 'round', color: 'teal', glow: 'white' });
+    expect(parsePrefs(raw({ shape: 'star', face: 'round', color: 'teal', glow: 'mint', accessory: 'antenna' })).mascot).toEqual({ shape: 'orb', face: 'round', color: 'teal', glow: 'auto', v: 2 });
     expect(parsePrefs(raw({ kind: 'guide', skin: 'deep', hair: 'curly', name: 'Rashid' })).mascot).toEqual(DEFAULT_MASCOT);
   });
 });
@@ -56,5 +60,12 @@ describe('mascot eyes stay readable', () => {
       expect(out).not.toBe(MASCOT_GLOW[eye]);
       expect(contrast(out, MASCOT_FILL[body])).toBeGreaterThanOrEqual(2.6);
     }
+  });
+});
+
+describe('automatic eyes', () => {
+  it('are near-black on light bodies and white on dark ones', () => {
+    for (const c of ['royal', 'sky', 'teal', 'violet', 'coral', 'lime'] as const) expect(eyeColour('auto', MASCOT_FILL[c])).toBe(MASCOT_GLOW.ink);
+    for (const c of ['navy', 'graphite'] as const) expect(eyeColour('auto', MASCOT_FILL[c])).toBe(MASCOT_GLOW.white);
   });
 });
