@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Button } from '@/components/ui/button';
 import { Check } from '@/components/ui/check';
+import { DetailsButton, ItemSheet, openOn, type DetailItem } from '@/components/shared/item-sheet';
 import { bandMotion, spring } from '@/lib/motion';
 import type { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -35,12 +36,13 @@ function Burst() {
   );
 }
 
-export function TaskRow({ task, onToggle }: { task: Task; onToggle: (done: boolean) => void }) {
+export function TaskRow({ task, onToggle, onOpen }: { task: Task; onToggle: (done: boolean) => void; onOpen?: () => void }) {
   const { tx } = useApp();
   const [burst, setBurst] = useState(0);
   const area = AREA_LABEL[task.area];
   return (
-    <motion.li layout="position" transition={spring.layout} className="relative flex min-h-12 items-center gap-3 rounded-[10px] px-2 py-2 hover:bg-surface-2">
+    <motion.li layout="position" transition={spring.layout} {...(onOpen ? { ...openOn(onOpen), title: tx('Double-click for details', 'انقر مرتين للتفاصيل') } : {})}
+      className={cn('group relative flex min-h-12 select-none items-center gap-3 rounded-[10px] px-2 py-2 hover:bg-surface-2', onOpen && 'cursor-pointer')}>
       <span className="relative">
         <Check checked={task.done} label={task.title} onChange={(v) => { onToggle(v); if (v) setBurst((b) => b + 1); }} />
         <AnimatePresence>{task.done && burst > 0 && <Burst key={burst} />}</AnimatePresence>
@@ -53,13 +55,16 @@ export function TaskRow({ task, onToggle }: { task: Task; onToggle: (done: boole
       </span>
       <span className={cn('hidden text-xs font-medium sm:inline', area.tone)}>{tx(area.en, area.ar)}</span>
       <span className="w-12 text-end text-xs tabular text-muted-foreground">{task.due && /^\d\d:\d\d$/.test(task.due) ? task.due : task.minutes ? `${task.minutes}m` : ''}</span>
+      {onOpen && <DetailsButton label={tx(`Details: ${task.title}`, `التفاصيل: ${task.title}`)} onOpen={onOpen} className="-ms-1" />}
     </motion.li>
   );
 }
 
 /** Today list with tick animation and inline add. Writes ticks + new tasks to local user state. */
-export function TaskList({ tasks, max, allowAdd = true }: { tasks: Task[]; max?: number; allowAdd?: boolean }) {
-  const { update, tx, toast, band } = useApp();
+export function TaskList({ tasks, max, allowAdd = true, onOpen }: { tasks: Task[]; max?: number; allowAdd?: boolean; /** open a task's details (default: the task list's own detail view) */ onOpen?: (t: Task) => void }) {
+  const { update, tx, toast, band, world } = useApp();
+  const [detail, setDetail] = useState<DetailItem | null>(null);
+  const open = onOpen ?? ((t: Task) => setDetail({ kind: 'task', task: t, date: world.today }));
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const shown = max ? tasks.slice(0, max) : tasks;
@@ -79,8 +84,9 @@ export function TaskList({ tasks, max, allowAdd = true }: { tasks: Task[]; max?:
   return (
     <div>
       <ul className="-mx-2 flex flex-col">
-        {shown.map((t) => <TaskRow key={t.id} task={t} onToggle={(d) => toggle(t, d)} />)}
+        {shown.map((t) => <TaskRow key={t.id} task={t} onToggle={(d) => toggle(t, d)} onOpen={() => open(t)} />)}
       </ul>
+      {!onOpen && <ItemSheet item={detail} onOpenChange={(o) => { if (!o) setDetail(null); }} />}
       {allowAdd && (
         <div className="mt-2">
           {adding ? (

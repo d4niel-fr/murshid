@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, FileText, Flame, Layers, ListChecks, PenLine, Play, Sparkles, Timer } from 'lucide-react';
+import { ArrowRight, Award, FileText, FileUp, Flame, Layers, ListChecks, ListPlus, Lock, PenLine, Play, Presentation, Radio, Sparkles, Timer, Trophy, Video, Wand2, Zap } from 'lucide-react';
+import { levelOf } from '@murshid/study';
 import { useApp } from '@/components/providers/app-provider';
 import { MyMascot, useMascotName } from '@/components/mascot/my-mascot';
 import { Page, PageHeader } from '@/components/shared/page';
 import { Button } from '@/components/ui/button';
 import { fadeUp, stagger } from '@/lib/motion';
-import { isDue, studyStreak, useStudy, weekFocusMinutes } from '@/lib/study';
+import { ACHIEVEMENTS, isDue, study, studyStreak, useStudy, weekFocusMinutes, xpStats } from '@/lib/study';
+import { useBoards } from '@/lib/whiteboard';
 import { cn } from '@/lib/utils';
 import { count, countAr } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
@@ -18,6 +20,8 @@ export function StudyHub() {
   const { tx, locale, world } = useApp();
   const s = useStudy();
   const nbs = useNotebooks();
+  const boards = useBoards();
+  const xp = xpStats(s); const lvl = levelOf(xp.total);
   const name = useMascotName();
   const now = Date.now();
   const due = s.cards.filter((c) => isDue(c, now)).length;
@@ -41,6 +45,7 @@ export function StudyHub() {
     { href: '/app/study/flashcards', icon: Layers, title: tx('Flashcards', 'البطاقات التعليمية'), body: tx('Spaced repetition: each card comes back just before you would forget it.', 'تكرار متباعد: تعود كل بطاقة قبل أن تنساها مباشرة.'), meta: tx(`${count(s.decks.length, 'deck')} · ${due} due`, `${s.decks.length} مجموعات · ${due} مستحقة`) },
     { href: '/app/study/notes', icon: FileText, title: tx('Notes', 'الملاحظات'), body: tx('Headings, checklists and tables. Saves as you type; turns “term :: meaning” lines into cards.', 'عناوين وقوائم وجداول. تُحفظ أثناء الكتابة؛ وتحوّل سطور «مصطلح :: معنى» إلى بطاقات.'), meta: tx(count(s.notes.length, 'note'), `${s.notes.length} ملاحظات`) },
     { href: '/app/study/notebook', icon: PenLine, title: tx('Notebook', 'الدفتر'), body: tx('Write by hand with a stylus or finger: pen, highlighter, eraser, lined or grid paper.', 'اكتب بخط يدك بالقلم أو الإصبع: قلم وقلم تمييز وممحاة وورق مسطّر أو مربعات.'), meta: tx(count(nbs.notebooks.length, 'notebook'), `${nbs.notebooks.length} دفاتر`) },
+    { href: '/app/study/whiteboard', icon: Presentation, title: tx('Whiteboard', 'السبورة'), body: tx('An endless board: draw, add shapes, arrows, sticky notes, text and pictures. Pinch or scroll to zoom.', 'سبورة بلا حدود: ارسم وأضف أشكالاً وأسهماً وملاحظات لاصقة ونصاً وصوراً. كبّر بالقرص أو التمرير.'), meta: tx(count(boards.boards.length, 'board'), `${boards.boards.length} سبورات`) },
     { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${week} دقيقة هذا الأسبوع`) },
     { href: '/app/study/topics', icon: ListChecks, title: tx('Topic tracker', 'متتبع المواضيع'), body: tx('Rate each topic from “not started” to “confident” and revise the shaky ones first.', 'قيّم كل موضوع من «لم أبدأ» إلى «متقن» وراجع الضعيفة أولاً.'), meta: tx(`${shaky.length} to revise`, `${shaky.length} للمراجعة`) },
   ];
@@ -49,7 +54,7 @@ export function StudyHub() {
     <Page>
       <PageHeader eyebrow={tx('Study tools', 'أدوات الدراسة')} title={tx('Study', 'الدراسة')}
         subtitle={tx('Flashcards, notes, a focus timer and quizzes, all in one place. Everything is saved on this device.', 'بطاقات وملاحظات ومؤقت تركيز واختبارات في مكان واحد. يُحفظ كل شيء على هذا الجهاز.')}
-        actions={<Button asChild><Link href="/app/study/focus?start=25"><Play />{tx('Start a 25-min focus', 'ابدأ تركيزاً 25 دقيقة')}</Link></Button>} />
+        actions={<><Button variant="secondary" asChild><Link href="/app/study/focus?start=25"><Play />{tx('25-min focus', 'تركيز 25 دقيقة')}</Link></Button><Button asChild><Link href="/app/study/create"><Wand2 />{tx('Create with Murshid', 'أنشئ مع مرشد')}</Link></Button></>} />
 
       <motion.section initial="hidden" animate="show" variants={stagger} className="on-deep relative mb-6 overflow-hidden rounded-[var(--radius-band)] bg-[var(--deep)] p-6 text-white md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
@@ -75,7 +80,47 @@ export function StudyHub() {
       </motion.section>
 
       <motion.div initial="hidden" animate="show" variants={stagger} className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <motion.section variants={fadeUp} className="card col-span-12 flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-4 lg:w-[38%]">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[var(--deep)] text-white"><Wand2 className="size-5" /></span>
+            <div><h2 className="card-title">{tx('Create with Murshid', 'أنشئ مع مرشد')}</h2><p className="mt-1 text-sm text-muted-foreground">{tx('Slides, PDFs, notes or a lecture become flashcards and clean notes in seconds.', 'تتحول الشرائح وملفات PDF والملاحظات والمحاضرات إلى بطاقات وملاحظات مرتبة في ثوانٍ.')}</p></div>
+          </div>
+          <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+            {([['file', FileUp, tx('Upload slides or a PDF', 'ارفع شرائح أو PDF')], ['paste', FileText, tx('Paste text', 'الصق نصاً')], ['import', ListPlus, tx('From Quizlet / Anki', 'من Quizlet / Anki')], ['video', Video, tx('Lecture or video', 'محاضرة أو فيديو')]] as const).map(([from, Icon, label]) => (
+              <Link key={from} href={`/app/study/create?from=${from}`} className="flex min-h-14 items-center gap-2.5 rounded-2xl bg-surface px-3.5 text-sm font-medium transition-colors hover:bg-surface-2"><Icon className="size-4 shrink-0" />{label}</Link>
+            ))}
+            <Link href="/app/study/live" className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3.5 text-sm font-medium hover:bg-surface sm:col-span-4"><Radio className="size-4" />{tx('Join a live quiz with a code', 'انضم إلى اختبار مباشر برمز')}</Link>
+          </div>
+        </motion.section>
+
+        <motion.section variants={fadeUp} className="card col-span-12 p-5 lg:col-span-5">
+          <div className="mb-4 flex items-center justify-between"><h2 className="card-title flex items-center gap-2"><Zap className="size-4" />{tx(`Level ${lvl.level}`, `المستوى ${lvl.level}`)}</h2><span className="text-xs tabular text-muted-foreground">{xp.total.toLocaleString()} XP</span></div>
+          <div className="flex items-center gap-5">
+            <GoalRing value={xp.today} goal={xp.goal} />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-medium">{xp.today >= xp.goal ? tx('Daily goal done!', 'أنجزت هدف اليوم!') : tx(`${xp.goal - xp.today} XP to today’s goal`, `${xp.goal - xp.today} نقطة لهدف اليوم`)}</p>
+              <p className="mt-1 text-muted-foreground">{tx(`${lvl.need - lvl.into} XP to level ${lvl.level + 1}. Earn XP in Learn, Write, Match, Tests and reviews.`, `${lvl.need - lvl.into} نقطة للمستوى ${lvl.level + 1}. اجمع النقاط في التعلم والكتابة والمطابقة والاختبارات والمراجعة.`)}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
+              <label className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">{tx('Daily goal', 'الهدف اليومي')}
+                <select value={xp.goal} onChange={(e) => study.setGoal(Number(e.target.value))} className="rounded-full bg-surface px-2 py-1 text-foreground">{[20, 50, 100, 150, 250].map((g) => <option key={g} value={g}>{g} XP</option>)}</select></label>
+            </div>
+          </div>
+        </motion.section>
+
+        <League week={xp.week} className="col-span-12 lg:col-span-7" />
+
+        <motion.section variants={fadeUp} className="card col-span-12 p-5">
+          <h2 className="card-title mb-3 flex items-center gap-2"><Award className="size-4" />{tx('Badges', 'الشارات')} <span className="text-xs font-normal text-muted-foreground">{Object.keys(s.achievements).length}/{ACHIEVEMENTS.length}</span></h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            {ACHIEVEMENTS.map((a) => { const got = !!s.achievements[a.key]; return (
+              <li key={a.key} title={tx(...a.hint)} className={cn('flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center text-xs', got ? 'bg-[color-mix(in_oklab,var(--brand)_10%,transparent)]' : 'bg-surface opacity-60')}>
+                <span className={cn('grid size-9 place-items-center rounded-full', got ? 'bg-[var(--deep)] text-white' : 'bg-surface-2 text-muted-foreground')}>{got ? <Trophy className="size-4" /> : <Lock className="size-3.5" />}</span>
+                <span className="font-medium">{tx(a.en, a.ar)}</span><span className="text-[0.6875rem] text-muted-foreground">{tx(...a.hint)}</span>
+              </li>); })}
+          </ul>
+        </motion.section>
+
+        <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {tools.map((t) => (
           <motion.div key={t.href} variants={fadeUp}>
             <Link href={t.href} className="lift card group flex h-full flex-col p-5">
@@ -123,5 +168,48 @@ export function StudyHub() {
         )}
       </motion.div>
     </Page>
+  );
+}
+
+function GoalRing({ value, goal }: { value: number; goal: number }) {
+  const { tx } = useApp();
+  const pct = Math.min(1, value / Math.max(1, goal)); const R = 34; const C = 2 * Math.PI * R;
+  return (
+    <span className="relative grid size-24 shrink-0 place-items-center" role="img" aria-label={tx(`${value} of ${goal} XP today`, `${value} من ${goal} نقطة اليوم`)}>
+      <svg viewBox="0 0 80 80" className="absolute inset-0 -rotate-90"><circle cx="40" cy="40" r={R} fill="none" strokeWidth="8" className="stroke-[var(--surface-2)]" /><circle cx="40" cy="40" r={R} fill="none" strokeWidth="8" strokeLinecap="round" stroke="var(--brand)" strokeDasharray={C} strokeDashoffset={C * (1 - pct)} style={{ transition: 'stroke-dashoffset 600ms cubic-bezier(.2,.8,.2,1)' }} /></svg>
+      <span className="text-center leading-tight"><span className="block text-lg font-semibold tabular">{value}</span><span className="text-[0.6875rem] text-muted-foreground">/ {goal}</span></span>
+    </span>
+  );
+}
+
+/** This week's XP next to classmates (demo classmates; a real school shows its own class). */
+function League({ week, className }: { week: number; className?: string }) {
+  const { tx, world } = useApp();
+  const d = new Date(); const weekNo = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 1).getTime()) / (7 * 86_400_000));
+  const dow = ((d.getDay() + 6) % 7) + 1;
+  const mates = ['Krish A.', 'Aisha S.', 'Neel B.', 'Riya F.', 'Khalid M.', 'Tara P.', 'Samir Q.'].map((n, i) => {
+    let h = (weekNo + 1) * 2654435761 + i * 40503; h = (h ^ (h >>> 13)) >>> 0;
+    return { name: n, xp: Math.round(((h % 320) + 40) * (dow / 7)) };
+  });
+  const me = { name: tx('You', 'أنت'), xp: week, me: true };
+  const rows = [...mates.map((m) => ({ ...m, me: false })), me].sort((a, b) => b.xp - a.xp);
+  const rank = rows.findIndex((r) => r.me) + 1;
+  return (
+    <motion.section variants={fadeUp} className={cn('card p-5', className)}>
+      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="card-title flex items-center gap-2"><Trophy className="size-4" />{tx('Class league this week', 'دوري الصف هذا الأسبوع')}</h2><span className="text-xs text-muted-foreground">{tx(`You are #${rank}`, `ترتيبك ${rank}`)}</span></div>
+      <ol className="flex flex-col">
+        {rows.slice(0, 6).concat(rank > 6 ? [rows[rank - 1]!] : []).map((r) => {
+          const pos = rows.indexOf(r) + 1;
+          return (
+            <li key={r.name} className={cn('flex items-center gap-3 rounded-[14px] px-2 py-2 text-sm', r.me && 'bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] font-medium')}>
+              <span className={cn('grid size-7 place-items-center rounded-full text-xs tabular', pos <= 3 ? 'bg-[var(--deep)] text-white' : 'bg-surface text-muted-foreground')}>{pos}</span>
+              <span className="flex-1">{r.me ? `${r.name} (${world.dashboard.student.firstName})` : r.name}</span>
+              <span className="tabular text-muted-foreground">{r.xp} XP</span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 text-[0.6875rem] text-muted-foreground">{tx('Resets every Monday. Classmates here are demo students.', 'يُعاد كل اثنين. الزملاء هنا طلاب تجريبيون.')}</p>
+    </motion.section>
   );
 }

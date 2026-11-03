@@ -3,11 +3,17 @@
 import { createLocalStore, uid } from './local-store';
 
 /* ------------------------------------------------------------------ types */
-export interface Deck { id: string; title: string; subject: string; createdAt: number; updatedAt: number }
+export interface Deck { id: string; title: string; subject: string; createdAt: number; updatedAt: number;
+  /** where the cards came from ("Lesson 4 slides.pptx", "Shared by a classmate") */ source?: string;
+  /** a test this deck is for: the hub counts down and paces reviews to it */ examDate?: string;
+  /** best Match time in ms, best Challenge score */ best?: { match?: number; challenge?: number } }
 export interface Card {
   id: string; deckId: string; front: string; back: string; createdAt: number;
   /** spaced repetition (SM-2 style): next review time, interval in days, ease factor, successful reps in a row */
   due: number; interval: number; ease: number; reps: number; lapses: number; reviewedAt?: number;
+  /** what kind of card the generator made (definition, formula, list, cloze…) */ kind?: string;
+  starred?: boolean;
+  /** Learn mode: 0 new, 1 recognised (multiple choice), 2 recalled (typed), 3 mastered */ learn?: 0 | 1 | 2 | 3;
 }
 export interface Note { id: string; title: string; body: string; subject: string; tags: string[]; pinned?: boolean; createdAt: number; updatedAt: number }
 export interface FocusSession { id: string; startedAt: number; minutes: number; label: string }
@@ -15,7 +21,9 @@ export interface FocusSession { id: string; startedAt: number; minutes: number; 
 export type Confidence = 0 | 1 | 2 | 3;
 export interface Topic { id: string; subject: string; name: string; confidence: Confidence; updatedAt: number }
 export interface QuizResult { id: string; deckId: string; at: number; score: number; total: number }
-export interface StudyState { decks: Deck[]; cards: Card[]; notes: Note[]; sessions: FocusSession[]; topics: Topic[]; quizzes: QuizResult[] }
+/** XP earned per day (YYYY-MM-DD, local) and the daily goal. */
+export interface Xp { total: number; days: Record<string, number>; goal: number }
+export interface StudyState { decks: Deck[]; cards: Card[]; notes: Note[]; sessions: FocusSession[]; topics: Topic[]; quizzes: QuizResult[]; xp: Xp; achievements: Record<string, number> }
 
 export const SUBJECTS = ['Physics', 'Mathematics', 'Economics', 'English', 'Business Studies', 'Chemistry', 'Biology', 'Arabic', 'Other'];
 
@@ -120,14 +128,14 @@ function seed(): StudyState {
     { id: 'fs_seed_2', startedAt: now - DAY - 2 * 3_600_000, minutes: 25, label: 'Physics revision' },
     { id: 'fs_seed_3', startedAt: now - 2 * DAY, minutes: 50, label: 'Integration practice' },
   ];
-  return { decks: decks.map(([d]) => d), cards: decks.flatMap(([, c]) => c), notes, sessions, topics, quizzes: [] };
+  return { decks: decks.map(([d]) => d), cards: decks.flatMap(([, c]) => c), notes, sessions, topics, quizzes: [], xp: { total: 0, days: {}, goal: 50 }, achievements: {} };
 }
 
 export const studyStore = createLocalStore<StudyState>('study', seed, {
   migrate: (raw) => {
     const r = raw as Partial<StudyState> | null;
     if (!r || !Array.isArray(r.decks) || !Array.isArray(r.cards)) return null;
-    return { decks: r.decks, cards: r.cards, notes: r.notes ?? [], sessions: r.sessions ?? [], topics: r.topics ?? [], quizzes: r.quizzes ?? [] };
+    return { decks: r.decks, cards: r.cards, notes: r.notes ?? [], sessions: r.sessions ?? [], topics: r.topics ?? [], quizzes: r.quizzes ?? [], xp: r.xp ?? { total: 0, days: {}, goal: 50 }, achievements: r.achievements ?? {} };
   },
 });
 export const useStudy = () => studyStore.use();
@@ -153,7 +161,7 @@ export const study = {
   },
   updateCard(id: string, patch: Partial<Pick<Card, 'front' | 'back'>>) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) })); },
   removeCard(id: string) { studyStore.set((s) => ({ ...s, cards: s.cards.filter((c) => c.id !== id) })); },
-  grade(id: string, g: Grade) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? review(c, g) : c)) })); },
+  grade(id: string, g: Grade) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? review(c, g) : c)) })); study.addXp(g === 0 ? 2 : 5); },
   addNote(subject = 'Other'): string {
     const id = uid('note_'); const now = Date.now();
     studyStore.set((s) => ({ ...s, notes: [{ id, title: '', body: '', subject, tags: [], createdAt: now, updatedAt: now }, ...s.notes] }));
@@ -179,8 +187,66 @@ export const study = {
   removeTopic(id: string) { studyStore.set((s) => ({ ...s, topics: s.topics.filter((t) => t.id !== id) })); },
   logQuiz(deckId: string, score: number, total: number) {
     studyStore.set((s) => ({ ...s, quizzes: [...s.quizzes.slice(-49), { id: uid('quiz_'), deckId, at: Date.now(), score, total }] }));
+    if (total >= 5 && score === total) study.unlock('perfect');
   },
+  /** A whole deck at once (from Create, an import or a shared link). Returns the new deck's id. */
+  createDeck(title: string, subject: string, cards: { front: string; back: string; kind?: string }[], source?: string): string {
+    const id = uid('deck_'); const now = Date.now();
+    const made = cards.filter((c) => c.front.trim() && c.back.trim()).map((c, i): Card => ({ id: uid('card_'), deckId: id, front: c.front.trim(), back: c.back.trim(), createdAt: now, due: now - i, interval: 0, ease: 2.5, reps: 0, lapses: 0, ...(c.kind ? { kind: c.kind } : {}) }));
+    studyStore.set((s) => ({ ...s, decks: [{ id, title: title.trim() || 'New deck', subject, createdAt: now, updatedAt: now, ...(source ? { source } : {}) }, ...s.decks], cards: [...s.cards, ...made] }));
+    study.unlock('first-deck');
+    return id;
+  },
+  setDeck(id: string, patch: Partial<Pick<Deck, 'examDate' | 'source' | 'subject'>>) {
+    studyStore.set((s) => ({ ...s, decks: s.decks.map((d) => (d.id === id ? { ...d, ...patch } : d)) }));
+  },
+  /** Keep a personal best (lower is better for match times, higher for scores). */
+  best(id: string, key: 'match' | 'challenge', value: number): boolean {
+    const d = studyStore.get().decks.find((x) => x.id === id); if (!d) return false;
+    const old = d.best?.[key];
+    const better = old === undefined || (key === 'match' ? value < old : value > old);
+    if (better) studyStore.set((s) => ({ ...s, decks: s.decks.map((x) => (x.id === id ? { ...x, best: { ...x.best, [key]: value } } : x)) }));
+    return better;
+  },
+  star(id: string, on?: boolean) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, starred: on ?? !c.starred } : c)) })); },
+  setLearn(id: string, stage: 0 | 1 | 2 | 3) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, learn: stage } : c)) })); },
+  resetLearn(deckId: string) { studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (c.deckId === deckId ? { ...c, learn: 0 } : c)) })); },
+  /** Mark cards as due now (missed in a test, so they come back first). */
+  dueNow(ids: string[]) { const now = Date.now(); const set = new Set(ids); studyStore.set((s) => ({ ...s, cards: s.cards.map((c) => (set.has(c.id) ? { ...c, due: now } : c)) })); },
+  /** XP for studying: answers, reviews, games. Returns the day's new total. */
+  addXp(n: number): number {
+    if (n <= 0) return 0;
+    const day = dayKey(Date.now()); let today = 0;
+    studyStore.set((s) => { today = (s.xp.days[day] ?? 0) + n; const days = { ...s.xp.days, [day]: today }; return { ...s, xp: { ...s.xp, total: s.xp.total + n, days: Object.fromEntries(Object.entries(days).slice(-60)) } }; });
+    const st = studyStore.get();
+    if (today >= st.xp.goal && today - n < st.xp.goal) study.unlock('goal');
+    if (st.xp.total >= 1000) study.unlock('xp-1000');
+    if (studyStreak(st) >= 7) study.unlock('streak-7');
+    return today;
+  },
+  setGoal(goal: number) { studyStore.set((s) => ({ ...s, xp: { ...s.xp, goal: Math.max(10, Math.min(500, Math.round(goal))) } })); },
+  unlock(key: string) { if (!studyStore.get().achievements[key]) studyStore.set((s) => ({ ...s, achievements: { ...s.achievements, [key]: Date.now() } })); },
 };
+
+export const dayKey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+/** XP this week (Monday first) and today. */
+export function xpStats(state: StudyState, now = Date.now()) {
+  const d = new Date(now); const dow = (d.getDay() + 6) % 7; const mon = new Date(d); mon.setHours(0, 0, 0, 0); mon.setDate(d.getDate() - dow);
+  let week = 0; for (let i = 0; i < 7; i++) { const x = new Date(mon); x.setDate(mon.getDate() + i); week += state.xp.days[dayKey(x.getTime())] ?? 0; }
+  return { today: state.xp.days[dayKey(now)] ?? 0, week, goal: state.xp.goal, total: state.xp.total };
+}
+
+/** Badges a student can earn; the hub shows them, earned or still to get. */
+export const ACHIEVEMENTS: { key: string; en: string; ar: string; hint: [string, string] }[] = [
+  { key: 'first-deck', en: 'First deck', ar: 'أول مجموعة', hint: ['Make or import a deck', 'أنشئ مجموعة أو استوردها'] },
+  { key: 'goal', en: 'Daily goal', ar: 'الهدف اليومي', hint: ['Reach your daily XP goal', 'حقق هدفك اليومي'] },
+  { key: 'perfect', en: 'Perfect test', ar: 'اختبار كامل', hint: ['Get every question right (5 or more)', 'أجب عن كل الأسئلة صحيحاً'] },
+  { key: 'mastered', en: 'Deck mastered', ar: 'إتقان مجموعة', hint: ['Master every card in Learn', 'أتقن كل البطاقات في وضع التعلم'] },
+  { key: 'speedy', en: 'Speed matcher', ar: 'سرعة المطابقة', hint: ['Finish Match in under 25 seconds', 'أنهِ المطابقة في أقل من 25 ثانية'] },
+  { key: 'survivor', en: 'Survivor', ar: 'الصامد', hint: ['Score 15+ in Challenge', 'احصل على 15+ في التحدي'] },
+  { key: 'streak-7', en: '7-day streak', ar: 'سلسلة 7 أيام', hint: ['Study 7 days in a row', 'ادرس 7 أيام متتالية'] },
+  { key: 'xp-1000', en: '1,000 XP', ar: '1000 نقطة', hint: ['Earn 1,000 XP in total', 'اجمع 1000 نقطة'] },
+];
 
 /** Flashcard pairs written in a note as `front :: back` lines. */
 export function cardsFromText(text: string): [string, string][] {

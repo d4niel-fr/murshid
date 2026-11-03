@@ -27,11 +27,13 @@ export interface UserState {
   extraGoals: Goal[];
   planner: PlannerBlock[];
   plannerDone: Record<string, boolean>;
+  /** private notes on any planner item, keyed `${kind}:${id}` */
+  itemNotes: Record<string, string>;
 }
 
 export const EMPTY_USER: UserState = {
   taskDone: {}, extraTasks: [], sessions: {}, links: null, appStatus: {}, appChecklist: {}, newApps: [], savedOpps: [],
-  milestones: {}, extraGoals: [], planner: [], plannerDone: {},
+  milestones: {}, extraGoals: [], planner: [], plannerDone: {}, itemNotes: {},
 };
 
 export function applyTaskState(tasks: Task[], u: UserState): Task[] {
