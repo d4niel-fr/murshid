@@ -153,6 +153,7 @@ export const study = {
     studyStore.set((s) => ({ ...s, decks: s.decks.map((d) => (d.id === id ? { ...d, title: title.trim() || d.title, subject: subject ?? d.subject, updatedAt: Date.now() } : d)) }));
   },
   removeDeck(id: string) { studyStore.set((s) => ({ ...s, decks: s.decks.filter((d) => d.id !== id), cards: s.cards.filter((c) => c.deckId !== id) })); },
+  restoreDeck(deck: Deck, cards: Card[]) { studyStore.set((s) => ({ ...s, decks: [deck, ...s.decks.filter((d) => d.id !== deck.id)], cards: [...s.cards.filter((c) => c.deckId !== deck.id), ...cards] })); },
   addCards(deckId: string, pairs: [string, string][]) {
     const now = Date.now();
     const cards = pairs.filter(([f, b]) => f.trim() && b.trim()).map(([front, back]) => ({ id: uid('card_'), deckId, front: front.trim(), back: back.trim(), createdAt: now, due: now, interval: 0, ease: 2.5, reps: 0, lapses: 0 }));
@@ -184,6 +185,7 @@ export const study = {
     if (!name.trim()) return;
     studyStore.set((s) => ({ ...s, topics: [...s.topics, { id: uid('topic_'), subject, name: name.trim(), confidence: 0, updatedAt: Date.now() }] }));
   },
+  renameTopic(id: string, name: string) { if (!name.trim()) return; studyStore.set((s) => ({ ...s, topics: s.topics.map((t) => (t.id === id ? { ...t, name: name.trim().slice(0, 80), updatedAt: Date.now() } : t)) })); },
   removeTopic(id: string) { studyStore.set((s) => ({ ...s, topics: s.topics.filter((t) => t.id !== id) })); },
   logQuiz(deckId: string, score: number, total: number) {
     studyStore.set((s) => ({ ...s, quizzes: [...s.quizzes.slice(-49), { id: uid('quiz_'), deckId, at: Date.now(), score, total }] }));

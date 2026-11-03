@@ -1,10 +1,10 @@
 'use client';
 
-import { drawPaper, drawStroke, pageCanvas } from './notebook-render';
+import { drawPaper, drawStroke, drawTexts, pageCanvas } from './notebook-render';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Download, Eraser, FilePlus2, Hand, Highlighter, PenLine, Plus, Printer, Redo2, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Copy, CopyPlus, Download, Eraser, FilePlus2, Hand, Highlighter, Lasso, MoveLeft, MoveRight, PenLine, Plus, Printer, Redo2, Send, Shapes, Trash2, Type, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Page, PageHeader } from '@/components/shared/page';
@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input, Select } from '@/components/ui/input';
-import { HIGHLIGHT, hits, INK, notebooks, PAGE_H, PAGE_W, simplify, useNotebooks, type Notebook, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
+import { HIGHLIGHT, hits, INK, lassoed, notebooks, PAGE_H, PAGE_W, recognise, simplify, useNotebooks, type Notebook, type NoteText, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
 import { SUBJECTS } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { Ago } from '@/components/shared/ago';
@@ -84,6 +84,13 @@ export function NotebookEditor({ id }: { id: string }) {
   const [mark, setMark] = useState<string>(HIGHLIGHT[0]);
   const [size, setSize] = useState(4);
   const [penOnly, setPenOnly] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [sel, setSel] = useState<string[]>([]);
+  const [editText, setEditText] = useState<NoteText | null>(null);
+  const [textSize, setTextSize] = useState(26);
+  const lasso = useRef<Pt[] | null>(null);
+  const moving = useRef<{ from: Pt; before: Stroke[] } | null>(null);
+  const texts = useRef<NoteText[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const page = nb?.pages[Math.min(index, (nb?.pages.length ?? 1) - 1)];
@@ -117,12 +124,27 @@ export function NotebookEditor({ id }: { id: string }) {
     if (!ctx || !nb) return;
     drawPaper(ctx, nb.paper, dark);
     for (const s of strokes.current) drawStroke(ctx, s);
+    drawTexts(ctx, texts.current.filter((t) => t.id !== editingId.current));
   }, [nb, dark]);
+  const editingId = useRef<string | null>(null);
+  /** The dashed box around lassoed strokes, on the top canvas. */
+  const selBox = useCallback((ids: string[]) => {
+    const picked = strokes.current.filter((s) => ids.includes(s.id)); if (!picked.length) return null;
+    const xs = picked.flatMap((s) => s.points.map((p) => p[0])); const ys = picked.flatMap((s) => s.points.map((p) => p[1]));
+    return { x: Math.min(...xs) - 10, y: Math.min(...ys) - 10, w: Math.max(...xs) - Math.min(...xs) + 20, h: Math.max(...ys) - Math.min(...ys) + 20 };
+  }, []);
+  const drawSel = useCallback((ids: string[]) => {
+    const ctx = live.current?.getContext('2d'); if (!ctx) return;
+    ctx.clearRect(0, 0, PAGE_W, PAGE_H);
+    const b = selBox(ids); if (!b) return;
+    ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = '#2563c9'; ctx.lineWidth = 2; ctx.strokeRect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle = 'rgba(37,99,201,0.06)'; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.restore();
+  }, [selBox]);
 
   // load the page's strokes when the page changes (not on every save of the same page)
   useEffect(() => {
     if (!page) return;
-    strokes.current = page.strokes; undo.current = []; redo.current = [];
+    strokes.current = page.strokes; texts.current = page.texts ?? []; undo.current = []; redo.current = []; setSel([]); setEditText(null);
     fit(); redraw(); force((n) => n + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page?.id, mounted]);
@@ -168,6 +190,8 @@ export function NotebookEditor({ id }: { id: string }) {
     if (keep.length !== strokes.current.length) { strokes.current = keep; redraw(); }
   };
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // a tap outside an open text box finishes it first
+    if (editText) { e.preventDefault(); saveText(); return; }
     if (e.pointerType === 'pen' && !penOnly) setPenOnly(true); // a stylus was used: fingers and palms stop drawing
     if (penOnly && e.pointerType === 'touch') return; // palm rejection: with a stylus in use, fingers don't draw
     if (active.current !== null) return; // one stroke at a time (a second finger is ignored)
@@ -177,12 +201,37 @@ export function NotebookEditor({ id }: { id: string }) {
     active.current = e.pointerId;
     const pt = toPage(e);
     if (tool === 'eraser') { erasing.current = { before: strokes.current }; eraseAt(pt); return; }
-    current.current = { id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tool, color: tool === 'pen' ? ink : mark, size: tool === 'highlighter' ? size * 5 : size, points: [pt] };
+    if (tool === 'lasso') {
+      const b = selBox(sel);
+      if (b && pt[0] >= b.x && pt[0] <= b.x + b.w && pt[1] >= b.y && pt[1] <= b.y + b.h) { moving.current = { from: pt, before: strokes.current }; return; }
+      setSel([]); lasso.current = [pt]; return;
+    }
+    if (tool === 'text') {
+      active.current = null;
+      const hitText = texts.current.find((t) => pt[0] >= t.x - 6 && pt[0] <= t.x + Math.max(...t.text.split('\n').map((l) => l.length), 2) * t.size * 0.56 && pt[1] >= t.y - t.size && pt[1] <= t.y + (t.text.split('\n').length - 1) * t.size * 1.3 + 8);
+      const t = hitText ?? { id: `tx${Date.now().toString(36)}`, x: pt[0], y: pt[1] + textSize * 0.4, text: '', size: textSize, color: ink };
+      editingId.current = t.id; setEditText(t); redraw(); return;
+    }
+    const kind = tool === 'shape' ? 'pen' : tool;
+    current.current = { id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tool: kind as 'pen' | 'highlighter', color: kind === 'pen' ? ink : mark, size: kind === 'highlighter' ? size * 5 : size, points: [pt] };
   };
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (active.current !== e.pointerId) return;
     const events = typeof e.nativeEvent.getCoalescedEvents === 'function' ? e.nativeEvent.getCoalescedEvents() : [e.nativeEvent];
     if (tool === 'eraser') { for (const ev of events) eraseAt(toPage(ev)); return; }
+    if (tool === 'lasso') {
+      const ctx = live.current!.getContext('2d')!;
+      if (moving.current) {
+        const pt = toPage(e.nativeEvent); const dx = pt[0] - moving.current.from[0]; const dy = pt[1] - moving.current.from[1];
+        strokes.current = moving.current.before.map((st) => (sel.includes(st.id) ? { ...st, points: st.points.map((q) => [q[0] + dx, q[1] + dy, q[2]] as Pt) } : st));
+        redraw(); drawSel(sel); return;
+      }
+      if (!lasso.current) return;
+      for (const ev of events) lasso.current.push(toPage(ev));
+      ctx.clearRect(0, 0, PAGE_W, PAGE_H); ctx.save(); ctx.setLineDash([6, 6]); ctx.strokeStyle = '#2563c9'; ctx.lineWidth = 2;
+      ctx.beginPath(); lasso.current.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); ctx.restore();
+      return;
+    }
     const s = current.current; if (!s) return;
     for (const ev of events.length ? events : [e.nativeEvent]) s.points.push(toPage(ev));
     const ctx = live.current!.getContext('2d')!;
@@ -197,18 +246,48 @@ export function NotebookEditor({ id }: { id: string }) {
       if (before !== strokes.current) { const next = strokes.current; strokes.current = before; commit(next, before); }
       return;
     }
+    if (tool === 'lasso') {
+      if (moving.current) { const before = moving.current.before; moving.current = null; const next = strokes.current; strokes.current = before; commit(next, before); drawSel(sel); return; }
+      const loop = lasso.current; lasso.current = null;
+      const ids = loop ? lassoed(strokes.current, loop) : [];
+      setSel(ids); drawSel(ids); return;
+    }
     const s = current.current; current.current = null;
     live.current!.getContext('2d')!.clearRect(0, 0, PAGE_W, PAGE_H);
     if (!s) return;
     const before = strokes.current;
-    commit([...before, { ...s, points: simplify(s.points) }], before);
+    const pts = simplify(s.points);
+    // the shape tool tidies a rough line, box, circle or triangle
+    const neat = tool === 'shape' ? recognise(pts) : null;
+    commit([...before, neat ? { ...s, points: neat, shape: true } : { ...s, points: pts }], before);
   };
+
+  const selected = strokes.current.filter((st) => sel.includes(st.id));
+  const delSel = () => { if (!sel.length) return; const before = strokes.current; commit(before.filter((st) => !sel.includes(st.id)), before); setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); };
+  const dupSel = () => { if (!sel.length) return; const before = strokes.current; const copies = selected.map((st) => ({ ...st, id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, points: st.points.map((q) => [q[0] + 24, q[1] + 24, q[2]] as Pt) })); commit([...before, ...copies], before); const ids = copies.map((c) => c.id); setSel(ids); drawSel(ids); };
+  const recolorSel = (c: string) => { if (!sel.length) return; const before = strokes.current; commit(before.map((st) => (sel.includes(st.id) && st.tool === 'pen' ? { ...st, color: c } : st)), before); drawSel(sel); };
+  const saveText = () => {
+    const t = editText; editingId.current = null; setEditText(null);
+    if (!t || !nb || !page) { redraw(); return; }
+    const others = texts.current.filter((x) => x.id !== t.id);
+    texts.current = t.text.trim() ? [...others, t] : others;
+    notebooks.setTexts(nb.id, page.id, texts.current); redraw();
+  };
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement; if (el.closest('input,textarea,select,[contenteditable]')) return;
+      if ((e.key === 'Delete' || e.key === 'Backspace') && sel.length) { e.preventDefault(); delSel(); }
+      if (e.key === 'Escape' && sel.length) { setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); }
+    };
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
+  });
+  useEffect(() => { if (tool !== 'lasso' && sel.length) { setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); } }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const exportPng = () => {
     if (!nb || !page) return;
     const c = document.createElement('canvas'); c.width = PAGE_W * 1.5; c.height = PAGE_H * 1.5;
     const ctx = c.getContext('2d')!; ctx.scale(1.5, 1.5);
-    drawPaper(ctx, nb.paper, false); for (const s of strokes.current) drawStroke(ctx, s);
+    drawPaper(ctx, nb.paper, false); for (const s of strokes.current) drawStroke(ctx, s); drawTexts(ctx, texts.current);
     c.toBlob((b) => {
       if (!b) return;
       const url = URL.createObjectURL(b); const a = document.createElement('a');
@@ -261,12 +340,16 @@ export function NotebookEditor({ id }: { id: string }) {
         {toolBtn('pen', PenLine, tx('Pen', 'قلم'))}
         {toolBtn('highlighter', Highlighter, tx('Highlighter', 'قلم تمييز'))}
         {toolBtn('eraser', Eraser, tx('Eraser', 'ممحاة'))}
+        {toolBtn('lasso', Lasso, tx('Lasso: select to move, recolour or delete', 'الحبل: حدد لتحريك أو تلوين أو حذف'))}
+        {toolBtn('shape', Shapes, tx('Shapes: draw a rough line, box or circle and it straightens', 'الأشكال: ارسم خطاً أو مربعاً أو دائرة تقريبية فتُعدَّل'))}
+        {toolBtn('text', Type, tx('Text box', 'مربع نص'))}
         <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
-        {tool !== 'eraser' && colours.map((c) => (
+        {tool === 'text' && [18, 26, 38].map((ts) => <button key={ts} type="button" onClick={() => setTextSize(ts)} aria-pressed={textSize === ts} aria-label={tx(`Text size ${ts}`, `حجم النص ${ts}`)} className={cn('grid size-10 shrink-0 place-items-center rounded-full font-medium', textSize === ts && 'bg-surface-2')} style={{ fontSize: ts / 2.2 }}>A</button>)}
+        {tool !== 'eraser' && tool !== 'lasso' && colours.map((c) => (
           <button key={c} type="button" onClick={() => (tool === 'highlighter' ? setMark(c) : setInk(c))} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} aria-pressed={colour === c}
             className={cn('grid size-10 shrink-0 place-items-center rounded-full', colour === c && 'bg-surface-2')}><span className="size-5 rounded-full ring-1 ring-black/10" style={{ background: c }} /></button>
         ))}
-        {tool !== 'eraser' && [2, 4, 7].map((w) => (
+        {(tool === 'pen' || tool === 'highlighter' || tool === 'shape') && [2, 4, 7].map((w) => (
           <button key={w} type="button" onClick={() => setSize(w)} aria-label={tx(`Size ${w}`, `الحجم ${w}`)} aria-pressed={size === w}
             className={cn('grid size-10 shrink-0 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-foreground" style={{ width: w + 3, height: w + 3 }} /></button>
         ))}
@@ -284,24 +367,47 @@ export function NotebookEditor({ id }: { id: string }) {
         {iconBtn(printAll, Printer, tx('Print or save as PDF', 'طباعة أو حفظ PDF'))}
       </div>
 
-      <div ref={wrap} className="relative w-full overflow-hidden rounded-[14px] shadow-[0_1px_3px_rgb(0_0_0/0.08),0_8px_24px_-12px_rgb(15_47_99/0.18)]" style={{ aspectRatio: `${PAGE_W} / ${PAGE_H}` }}>
+      {sel.length > 0 && (
+        <div className="sticky top-[calc(var(--topbar-h)+4rem)] z-20 mb-2 flex flex-wrap items-center gap-1 rounded-full border border-border bg-[var(--popover)] p-1 shadow-sm">
+          <span className="px-3 text-xs text-muted-foreground">{tx(`${sel.length} selected · drag to move`, `${sel.length} محدد · اسحب للتحريك`)}</span>
+          {INK.map((c) => <button key={c} type="button" onClick={() => recolorSel(c)} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} className="grid size-9 place-items-center rounded-full hover:bg-surface-2"><span className="size-4 rounded-full ring-1 ring-black/10" style={{ background: c }} /></button>)}
+          {iconBtn(dupSel, Copy, tx('Duplicate', 'تكرار'))}
+          {iconBtn(delSel, Trash2, tx('Delete', 'حذف'))}
+        </div>
+      )}
+      <div className="overflow-auto rounded-[14px]" onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom((z) => Math.max(1, Math.min(3, Math.round((z - e.deltaY * 0.004) * 10) / 10))); } }}>
+      <div ref={wrap} className="relative overflow-hidden rounded-[14px] shadow-[0_1px_3px_rgb(0_0_0/0.08),0_8px_24px_-12px_rgb(15_47_99/0.18)]" style={{ aspectRatio: `${PAGE_W} / ${PAGE_H}`, width: `${zoom * 100}%` }}>
         <canvas ref={base} className="absolute inset-0" aria-hidden />
-        <canvas ref={live} className="absolute inset-0 select-none" style={{ touchAction: 'none', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+        {editText && (
+          <textarea autoFocus dir="auto" value={editText.text} onChange={(e) => setEditText({ ...editText, text: e.target.value })} onBlur={saveText}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); saveText(); } }} aria-label={tx('Text box', 'مربع نص')} placeholder={tx('Type…', 'اكتب…')}
+            className="absolute z-10 resize-none overflow-hidden bg-transparent font-medium leading-[1.3] outline-none ring-2 ring-[var(--brand-light)]"
+            style={{ left: (editText.x - 4) * scale.current, top: (editText.y - editText.size) * scale.current, fontSize: editText.size * scale.current, color: editText.color, width: Math.max(220, (PAGE_W - editText.x - 20) * scale.current * 0.9), height: (editText.text.split('\n').length + 1) * editText.size * 1.3 * scale.current, fontFamily: 'Onest, system-ui, sans-serif' }} />
+        )}
+        <canvas ref={live} className="absolute inset-0 select-none" style={{ touchAction: penOnly ? 'pan-x pan-y' : 'none', cursor: tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : tool === 'lasso' ? 'default' : 'crosshair' }}
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onContextMenu={(e) => e.preventDefault()}
           role="img" aria-label={tx(`Page ${at + 1} of ${n}: ${strokes.current.length} strokes`, `الصفحة ${at + 1} من ${n}`)} />
       </div>
+      </div>
 
-      <div className="mt-3 flex items-center justify-center gap-1">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-1">
         {iconBtn(() => setIndex(Math.max(0, at - 1)), ChevronLeft, tx('Previous page', 'الصفحة السابقة'), at === 0)}
         <span className="min-w-16 text-center text-sm tabular-nums text-muted-foreground" aria-live="polite">{at + 1} / {n}</span>
         {iconBtn(() => setIndex(Math.min(n - 1, at + 1)), ChevronRight, tx('Next page', 'الصفحة التالية'), at >= n - 1)}
         <span className="mx-1 h-6 w-px bg-border" aria-hidden />
         {iconBtn(() => { const i = notebooks.addPage(nb.id, at); setIndex(i); }, FilePlus2, tx('Add a page after this one', 'إضافة صفحة بعد هذه'))}
+        {iconBtn(() => { const i = notebooks.duplicatePage(nb.id, at); setIndex(i); toast({ title: tx('Page duplicated', 'كُررت الصفحة') }); }, CopyPlus, tx('Duplicate this page', 'تكرار هذه الصفحة'))}
+        {iconBtn(() => { notebooks.movePage(nb.id, at, at - 1); setIndex(at - 1); }, MoveLeft, tx('Move page earlier', 'انقل الصفحة للأمام'), at === 0)}
+        {iconBtn(() => { notebooks.movePage(nb.id, at, at + 1); setIndex(at + 1); }, MoveRight, tx('Move page later', 'انقل الصفحة للخلف'), at >= n - 1)}
         {iconBtn(() => {
           const removed = nb.pages[at]!;
           notebooks.removePage(nb.id, at); setIndex(Math.max(0, at - 1));
           toast({ title: tx('Page deleted', 'حُذفت الصفحة'), tone: 'info', action: removed.strokes.length ? { label: tx('Undo', 'تراجع'), onClick: () => notebooks.restore({ ...nb }) } : undefined });
         }, Trash2, tx('Delete this page', 'حذف هذه الصفحة'))}
+        <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+        {iconBtn(() => setZoom((z) => Math.max(1, z - 0.5)), ZoomOut, tx('Zoom out', 'تصغير'), zoom <= 1)}
+        <button type="button" onClick={() => setZoom(1)} className="h-10 min-w-12 rounded-full text-xs tabular text-muted-foreground hover:bg-surface-2" aria-label={tx('Fit the page', 'ملاءمة الصفحة')}>{Math.round(zoom * 100)}%</button>
+        {iconBtn(() => setZoom((z) => Math.min(3, z + 0.5)), ZoomIn, tx('Zoom in', 'تكبير'), zoom >= 3)}
       </div>
     </div>
   );

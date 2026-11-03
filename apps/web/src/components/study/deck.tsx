@@ -271,7 +271,7 @@ export function DeckView() {
               <Button type="submit" size="icon" aria-label={tx('Save', 'حفظ')}><Check /></Button>
             </form>
           ) : (
-            <h1 className="display flex items-center gap-3 text-[2.25rem] sm:text-[2.75rem]">{deck.title}<button type="button" onClick={() => { setTitle(deck.title); setRename(true); }} aria-label={tx('Rename deck', 'إعادة تسمية المجموعة')} className="grid size-9 place-items-center rounded-full bg-surface text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button></h1>
+            <h1 className="display flex items-center gap-3 text-[2.25rem] sm:text-[2.75rem]" onDoubleClick={() => { setTitle(deck.title); setRename(true); }} title={tx('Double-click to rename', 'انقر مرتين لإعادة التسمية')}>{deck.title}<button type="button" onClick={() => { setTitle(deck.title); setRename(true); }} aria-label={tx('Rename deck', 'إعادة تسمية المجموعة')} className="grid size-9 place-items-center rounded-full bg-surface text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button></h1>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -316,12 +316,12 @@ export function DeckView() {
       </section>
 
       {cards.length ? (
-        <DataTable rows={cards} columns={columns} rowKey={(c) => c.id} initialSort={{ key: 'due', dir: 'asc' }} caption={tx('Cards in this deck', 'بطاقات هذه المجموعة')} filterPlaceholder={tx('Filter cards', 'تصفية البطاقات')} />
+        <DataTable rows={cards} columns={columns} rowKey={(c) => c.id} onRowOpen={(c) => { if (editing !== c.id) { setEditing(c.id); setEdit({ front: c.front, back: c.back }); } }} initialSort={{ key: 'due', dir: 'asc' }} caption={tx('Cards in this deck', 'بطاقات هذه المجموعة')} filterPlaceholder={tx('Filter cards', 'تصفية البطاقات')} />
       ) : (
         <EmptyState compact title={tx('No cards yet', 'لا توجد بطاقات بعد')}>{tx('Add one above, or paste a list. Tip: in Notes, lines like “term :: meaning” become cards in one click.', 'أضف بطاقة أعلاه أو الصق قائمة. نصيحة: في الملاحظات، تتحول سطور «مصطلح :: معنى» إلى بطاقات بنقرة.')}</EmptyState>
       )}
       <div className="mt-8 flex justify-end">
-        <Button variant="ghost" className="text-[var(--danger)]" onClick={() => { if (window.confirm(tx('Delete this deck and its cards?', 'حذف هذه المجموعة وبطاقاتها؟'))) { study.removeDeck(deck.id); router.push('/app/study/flashcards'); } }}><Trash2 />{tx('Delete deck', 'حذف المجموعة')}</Button>
+        <Button variant="ghost" className="text-[var(--danger)]" onClick={() => { const kept = { deck, cards }; study.removeDeck(deck.id); router.push('/app/study/flashcards'); toast({ title: tx('Deck deleted', 'حُذفت المجموعة'), description: deck.title, tone: 'info', action: { label: tx('Undo', 'تراجع'), onClick: () => study.restoreDeck(kept.deck, kept.cards) } }); }}><Trash2 />{tx('Delete deck', 'حذف المجموعة')}</Button>
       </div>
     </Page>
   );

@@ -474,16 +474,16 @@ export function BoardEditor() {
         </div>
 
         {/* style + selection bar */}
-        <div className="absolute start-3 top-3 flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-[var(--popover)] p-2 shadow-sm">
+        <div className="absolute inset-x-3 top-3 flex flex-col items-start gap-2 sm:end-auto">
+          <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-[var(--popover)] p-2 shadow-sm">
             {(tool === 'sticky' ? STICKY : BOARD_INK).map((c) => (
               <button key={c} type="button" onClick={() => (tool === 'sticky' ? setStickyColor(c) : recolor(c))} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} aria-pressed={(tool === 'sticky' ? stickyColor : ink) === c}
-                className={cn('size-7 rounded-full ring-offset-2 ring-offset-[var(--popover)]', (tool === 'sticky' ? stickyColor : ink) === c && 'ring-2 ring-[var(--text)]')} style={{ background: c }} />
+                className={cn('size-7 shrink-0 rounded-full ring-offset-2 ring-offset-[var(--popover)]', (tool === 'sticky' ? stickyColor : ink) === c && 'ring-2 ring-[var(--text)]')} style={{ background: c }} />
             ))}
             {tool !== 'sticky' && <>
               <span className="mx-1 h-5 w-px bg-border" />
-              {[2, 3, 6].map((w) => <button key={w} type="button" onClick={() => setSize(w)} aria-pressed={size === w} aria-label={tx(`Thickness ${w}`, `السماكة ${w}`)} className={cn('grid size-7 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-[var(--text)]" style={{ width: w + 2, height: w + 2 }} /></button>)}
-              {(tool === 'rect' || tool === 'ellipse') && <button type="button" onClick={() => setFill((f) => !f)} aria-pressed={fill} className={cn('h-7 rounded-full px-2.5 text-xs', fill ? 'bg-[var(--deep)] text-white' : 'bg-surface')}>{tx('Fill', 'تعبئة')}</button>}
+              {[2, 3, 6].map((w) => <button key={w} type="button" onClick={() => setSize(w)} aria-pressed={size === w} aria-label={tx(`Thickness ${w}`, `السماكة ${w}`)} className={cn('grid size-7 shrink-0 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-[var(--text)]" style={{ width: w + 2, height: w + 2 }} /></button>)}
+              {(tool === 'rect' || tool === 'ellipse') && <button type="button" onClick={() => setFill((f) => !f)} aria-pressed={fill} className={cn('h-7 shrink-0 rounded-full px-2.5 text-xs', fill ? 'bg-[var(--deep)] text-white' : 'bg-surface')}>{tx('Fill', 'تعبئة')}</button>}
             </>}
           </div>
           {sel.length > 0 && (
@@ -497,7 +497,7 @@ export function BoardEditor() {
         </div>
 
         {/* zoom */}
-        <div className="absolute end-3 top-3 flex items-center gap-0.5 rounded-full border border-border bg-[var(--popover)] p-1 shadow-sm">
+        <div className="absolute bottom-[4.75rem] end-3 flex items-center gap-0.5 rounded-full border border-border bg-[var(--popover)] p-1 shadow-sm sm:bottom-auto sm:top-3">
           <button type="button" onClick={() => { const r = svg.current!.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); }} aria-label={tx('Zoom out', 'تصغير')} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Minus className="size-4" /></button>
           <button type="button" onClick={() => setView((v) => ({ ...v, z: 1 }))} className="h-8 min-w-12 rounded-full px-1 text-xs tabular hover:bg-surface-2" aria-label={tx('Reset zoom', 'إعادة التكبير')}>{Math.round(view.z * 100)}%</button>
           <button type="button" onClick={() => { const r = svg.current!.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); }} aria-label={tx('Zoom in', 'تكبير')} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Plus className="size-4" /></button>

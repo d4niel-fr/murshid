@@ -69,3 +69,25 @@ describe('automatic eyes', () => {
     for (const c of ['navy', 'graphite'] as const) expect(eyeColour('auto', MASCOT_FILL[c])).toBe(MASCOT_GLOW.white);
   });
 });
+
+describe('notebook shapes and lasso', async () => {
+  const { recognise, lassoed } = await import('@/lib/notebook');
+  const loop = (pts: [number, number][]) => pts.map(([x, y]) => [x, y, 50] as [number, number, number]);
+  it('straightens a wobbly line', () => {
+    const line = loop(Array.from({ length: 20 }, (_, i) => [100 + i * 10, 200 + (i % 2 ? 3 : -3)]));
+    expect(recognise(line)).toHaveLength(2);
+  });
+  it('turns a rough box into a box and a rough circle into an ellipse', () => {
+    const box = loop([[100, 100], [200, 102], [300, 100], [302, 200], [300, 300], [200, 298], [100, 300], [98, 200], [102, 104]]);
+    expect(recognise(box)).toHaveLength(5);
+    const circle = loop(Array.from({ length: 40 }, (_, i) => { const t = (i / 39) * Math.PI * 2; return [400 + Math.cos(t) * 100, 400 + Math.sin(t) * 80]; }));
+    expect(recognise(circle)).toHaveLength(49);
+  });
+  it('leaves handwriting alone and finds strokes inside the lasso', () => {
+    const scribble = loop([[100, 100], [140, 160], [120, 90], [180, 170], [150, 80], [210, 150]]);
+    expect(recognise(scribble)).toBeNull();
+    const s = { id: 'a', tool: 'pen' as const, color: '#000', size: 3, points: loop([[110, 110], [120, 120]]) };
+    const far = { id: 'b', tool: 'pen' as const, color: '#000', size: 3, points: loop([[900, 900], [910, 910]]) };
+    expect(lassoed([s, far], loop([[100, 100], [200, 100], [200, 200], [100, 200]]))).toEqual(['a']);
+  });
+});

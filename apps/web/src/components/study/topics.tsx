@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 export function TopicsView() {
   const { tx } = useApp();
   const s = useStudy();
+  const [renaming, setRenaming] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [newSubject, setNewSubject] = useState('Chemistry');
@@ -51,7 +52,11 @@ export function TopicsView() {
                 <ul className="flex flex-col">
                   {items.map((t) => (
                     <li key={t.id} className="group flex flex-wrap items-center gap-2 border-b border-border py-2.5 last:border-0">
-                      <span className="min-w-0 flex-1 text-[0.9375rem]">{t.name}</span>
+                      {renaming === t.id ? (
+                        <form className="min-w-0 flex-1" onSubmit={(e) => { e.preventDefault(); study.renameTopic(t.id, (e.currentTarget.elements.namedItem('n') as HTMLInputElement).value); setRenaming(null); }}>
+                          <input name="n" autoFocus defaultValue={t.name} onBlur={(e) => { study.renameTopic(t.id, e.target.value); setRenaming(null); }} onKeyDown={(e) => { if (e.key === 'Escape') setRenaming(null); }} aria-label={tx('Topic name', 'اسم الموضوع')} className="h-9 w-full rounded-[10px] bg-surface px-2 text-[0.9375rem] outline-none ring-1 ring-border focus:ring-[var(--accent)]" />
+                        </form>
+                      ) : <span className="min-w-0 flex-1 cursor-text text-[0.9375rem]" onDoubleClick={() => setRenaming(t.id)} title={tx('Double-click to rename', 'انقر مرتين لإعادة التسمية')}>{t.name}</span>}
                       <div role="radiogroup" aria-label={tx(`How well do you know ${t.name}?`, `ما مدى معرفتك بـ ${t.name}؟`)} className="flex gap-1">
                         {LEVELS.map(([c, l, tone]) => (
                           <button key={c} type="button" role="radio" aria-checked={t.confidence === c} title={l} onClick={() => study.setConfidence(t.id, c)}
