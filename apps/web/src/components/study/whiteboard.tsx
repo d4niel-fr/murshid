@@ -203,7 +203,9 @@ export function BoardEditor() {
   const addEl = (e: El, edit = false) => { commit([...els, e]); setSel([e.id]); if (edit) setEditing(e.id); };
 
   const onDown = (ev: React.PointerEvent<SVGSVGElement>) => {
-    if (editing) { setEditing(null); return; }
+    // keep focus where it is: a new text box or sticky note must not lose it to the click that made it
+    ev.preventDefault();
+    if (editing) { endEdit(); return; }
     if (ev.pointerType === 'pen') penSeen.current = true;
     svg.current!.setPointerCapture(ev.pointerId);
     pointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
