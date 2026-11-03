@@ -401,6 +401,7 @@ export function BoardEditor() {
   const screen = (x: number, y: number) => ({ left: x * view.z + view.x, top: y * view.z + view.y });
   return (
     <div className="fill-view relative flex flex-col">
+      <h1 className="sr-only">{board.title}</h1>
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 pb-2 pt-1 md:px-6">
         <Link href="/app/study/whiteboard" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('Boards', 'السبورات')}</Link>
         <input aria-label={tx('Board title', 'عنوان السبورة')} defaultValue={board.title} onBlur={(e) => boards.rename(board.id, e.target.value)} className="min-w-0 flex-1 truncate rounded-[10px] bg-transparent px-2 py-1.5 text-[0.9375rem] font-medium outline-none hover:bg-surface focus:bg-surface" />
