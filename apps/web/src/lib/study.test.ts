@@ -45,7 +45,7 @@ describe('notes to flashcards', () => {
 
 describe('study streak', () => {
   const at = (daysAgo: number) => NOW - daysAgo * DAY;
-  const state = (days: number[]): StudyState => ({ decks: [], cards: [], notes: [], topics: [], quizzes: [], sessions: days.map((d, i) => ({ id: `s${i}`, startedAt: at(d), minutes: 25, label: '' })) });
+  const state = (days: number[]): StudyState => ({ decks: [], cards: [], notes: [], topics: [], quizzes: [], xp: { total: 0, days: {}, goal: 50 }, achievements: {}, sessions: days.map((d, i) => ({ id: `s${i}`, startedAt: at(d), minutes: 25, label: '' })) });
   it('counts consecutive days ending today', () => expect(studyStreak(state([0, 1, 2, 4]), new Date(NOW))).toBe(3));
   it('still counts if today has nothing yet but yesterday does', () => expect(studyStreak(state([1, 2]), new Date(NOW))).toBe(2));
   it('is 0 after a missed day', () => expect(studyStreak(state([2, 3]), new Date(NOW))).toBe(0));

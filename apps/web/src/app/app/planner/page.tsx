@@ -8,6 +8,7 @@ import { useApp, useEndpoint } from '@/components/providers/app-provider';
 import { applyTaskState } from '@/lib/merge';
 import { Page, PageHeader } from '@/components/shared/page';
 import { TaskList } from '@/components/shared/task-list';
+import { DetailsButton, ItemSheet, openOn, type DetailItem } from '@/components/shared/item-sheet';
 import { Button } from '@/components/ui/button';
 import { Check } from '@/components/ui/check';
 import { DialogContent } from '@/components/ui/dialog';
@@ -22,7 +23,7 @@ const AREA_COLOR: Record<Task['area'], string> = {
   academics: 'var(--chart-1)', extracurriculars: 'var(--chart-2)', goals: 'var(--chart-3)', wellbeing: 'var(--chart-3)', applications: 'var(--chart-4)',
 };
 
-type Item = { id: string; kind: 'upcoming' | 'block' | 'session' | 'task'; title: string; time?: string; color: string; done?: boolean; minutes?: number };
+type Item = { id: string; kind: 'upcoming' | 'block' | 'session' | 'task'; title: string; time?: string; color: string; done?: boolean; minutes?: number; detail: DetailItem };
 
 function AddBlock({ defaultDate, open, setOpen }: { defaultDate: string; open: boolean; setOpen: (v: boolean) => void }) {
   const { update, tx, toast } = useApp();
@@ -72,20 +73,30 @@ export default function PlannerPage() {
   const [offset, setOffset] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
   const [addDate, setAddDate] = useState(world.today);
+  const [detail, setDetail] = useState<DetailItem | null>(null);
+  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
+  // drag a study block you planned onto another day
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const moveBlock = (id: string, date: string) => update((u) => ({ ...u, planner: u.planner.map((b) => (b.id === id ? { ...b, date } : b)) }));
+  const tick = (it: Item, v: boolean) => {
+    if (it.kind === 'block') update((u) => ({ ...u, plannerDone: { ...u.plannerDone, [it.id]: v } }));
+    if (it.kind === 'task' && it.detail.kind === 'task') { const tid = it.detail.task.id; update((u) => ({ ...u, taskDone: { ...u.taskDone, [tid]: v } })); }
+  };
   const weekStart = addDays(startOfWeek(world.today), offset * 7);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const byDay = useMemo(() => {
     const m: Record<string, Item[]> = {};
     for (const d of days) m[d] = [];
-    for (const u of dash.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)' });
-    for (const b of user.planner) if (m[b.date]) m[b.date]!.push({ id: b.id, kind: 'block', title: b.title, time: b.start, minutes: b.minutes, color: AREA_COLOR[b.area], done: !!user.plannerDone[b.id] });
+    for (const u of dash.upcoming) if (m[u.date]) m[u.date]!.push({ id: u.id, kind: 'upcoming', title: u.title, color: u.type === 'exam' || u.type === 'test' ? 'var(--danger)' : 'var(--warning)', detail: { kind: 'upcoming', item: u } });
+    for (const b of user.planner) if (m[b.date]) m[b.date]!.push({ id: b.id, kind: 'block', title: b.title, time: b.start, minutes: b.minutes, color: AREA_COLOR[b.area], done: !!user.plannerDone[b.id], detail: { kind: 'block', block: b } });
     // today's tasks (incl. ones teachers set) sit in today's column too, so the week never looks empty next to the task list
     if (m[world.today]) for (const t of dash.today) {
       const time = t.due && /^\d{2}:\d{2}$/.test(t.due) ? t.due : undefined;
-      m[world.today]!.push({ id: `task-${t.id}`, kind: 'task', title: t.title, time, minutes: t.minutes, color: AREA_COLOR[t.area] ?? 'var(--chart-1)', done: !!(t.id in user.taskDone ? user.taskDone[t.id] : t.done) });
+      m[world.today]!.push({ id: `task-${t.id}`, kind: 'task', title: t.title, time, minutes: t.minutes, color: AREA_COLOR[t.area] ?? 'var(--chart-1)', done: !!(t.id in user.taskDone ? user.taskDone[t.id] : t.done), detail: { kind: 'task', task: t, date: world.today } });
     }
-    for (const a of world.extracurriculars.activities) for (const s of a.sessions) if (m[s.date] && s.date <= world.today) m[s.date]!.push({ id: s.id, kind: 'session', title: a.name, minutes: s.minutes, color: 'var(--chart-2)', done: true });
+    for (const a of world.extracurriculars.activities) for (const s of a.sessions) if (m[s.date] && s.date <= world.today) m[s.date]!.push({ id: s.id, kind: 'session', title: a.name, minutes: s.minutes, color: 'var(--chart-2)', done: true, detail: { kind: 'session', id: s.id, activity: a.name, date: s.date, minutes: s.minutes } });
     for (const d of days) m[d]!.sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,26 +123,33 @@ export default function PlannerPage() {
           {days.map((d) => {
             const isToday = d === world.today;
             return (
-              <motion.div key={d} variants={fadeUp} className={cn('card flex min-h-[220px] min-w-0 flex-col p-3', isToday && 'border-transparent ring-[1.5px] ring-[var(--accent)]')}>
+              <motion.div key={d} variants={fadeUp}
+                onDragOver={(e) => { if (dragging) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (over !== d) setOver(d); } }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver((o) => (o === d ? null : o)); }}
+                onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData('text/murshid-block') || dragging; if (id) moveBlock(id, d); setDragging(null); setOver(null); }}
+                className={cn('card flex min-h-[220px] min-w-0 flex-col p-3 transition-shadow', isToday && 'border-transparent ring-[1.5px] ring-[var(--accent)]', over === d && 'ring-2 ring-[var(--brand-light)]')}>
                 <div className="mb-2 flex items-baseline justify-between">
                   <span className="text-xs font-medium text-muted-foreground">{formatDate(d, locale, { weekday: 'short' })}</span>
                   <span className={cn('text-lg font-semibold tabular', isToday && 'text-primary')}>{formatDate(d, locale, { day: 'numeric' })}</span>
                 </div>
                 <ul className="flex flex-1 flex-col gap-1.5">
-                  {byDay[d]!.slice(0, 6).map((it) => (
-                    <li key={it.id} className="group flex items-start gap-1.5 rounded-md border-s-[3px] bg-surface-2 px-2 py-1.5 text-xs" style={{ borderInlineStartColor: it.color }}>
-                      {it.kind === 'block' && <Check checked={!!it.done} label={it.title} className="mt-px size-4 border" onChange={(v) => update((u) => ({ ...u, plannerDone: { ...u.plannerDone, [it.id]: v } }))} />}
+                  {byDay[d]!.slice(0, showAll[d] ? undefined : 6).map((it) => (
+                    <li key={it.id} {...openOn(() => setDetail(it.detail))} title={tx('Double-click for details', 'انقر مرتين للتفاصيل')}
+                      draggable={it.kind === 'block'} onDragStart={(e) => { if (it.kind !== 'block') return; e.dataTransfer.setData('text/murshid-block', it.id); e.dataTransfer.effectAllowed = 'move'; setDragging(it.id); }} onDragEnd={() => { setDragging(null); setOver(null); }}
+                      className={cn('group flex cursor-pointer select-none items-start gap-1.5 rounded-md border-s-[3px] bg-surface-2 px-2 py-1.5 text-xs transition-[background-color,box-shadow] hover:bg-[color-mix(in_oklab,var(--text)_6%,var(--surface-2))] focus-within:ring-2 focus-within:ring-[var(--brand-light)]', it.kind === 'block' && 'cursor-grab active:cursor-grabbing', dragging === it.id && 'opacity-50')} style={{ borderInlineStartColor: it.color }}>
+                      {(it.kind === 'block' || it.kind === 'task') && <Check checked={!!it.done} label={it.title} className="mt-px size-4 border" onChange={(v) => tick(it, v)} />}
                       <span className="min-w-0 flex-1">
                         <span className={cn('line-clamp-2 font-medium', it.done && (it.kind === 'block' || it.kind === 'task') && 'text-muted-foreground line-through')}>{it.title}</span>
                         <span className="text-muted-foreground tabular">{it.time ? `${it.time} · ` : ''}{it.minutes ? `${it.minutes}m` : it.kind === 'upcoming' ? tx('Due', 'موعد') : it.kind === 'task' ? tx('Task', 'مهمة') : ''}</span>
                       </span>
+                      <DetailsButton label={tx(`Details: ${it.title}`, `التفاصيل: ${it.title}`)} onOpen={() => setDetail(it.detail)} className="-me-1" />
                       {it.kind === 'block' && (
                         <button aria-label={tx('Remove', 'إزالة')} onClick={() => update((u) => ({ ...u, planner: u.planner.filter((b) => b.id !== it.id) }))} className="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100"><Trash2 className="size-3 text-muted-foreground" /></button>
                       )}
                     </li>
                   ))}
                   {byDay[d]!.length === 0 && <li className="px-1 py-2 text-[0.6875rem] text-muted-foreground">{tx('Nothing planned yet', 'لا شيء مخطط بعد')}</li>}
-                  {byDay[d]!.length > 6 && <li className="px-1 text-[0.6875rem] text-muted-foreground">+{byDay[d]!.length - 6} {tx('more', 'أخرى')}</li>}
+                  {byDay[d]!.length > 6 && <li><button type="button" onClick={() => setShowAll((x) => ({ ...x, [d]: !x[d] }))} className="px-1 text-[0.6875rem] text-muted-foreground hover:text-foreground hover:underline">{showAll[d] ? tx('Show fewer', 'عرض أقل') : `+${byDay[d]!.length - 6} ${tx('more', 'أخرى')}`}</button></li>}
                 </ul>
                 <button onClick={() => { setAddDate(d); setAddOpen(true); }} className="mt-2 inline-flex h-8 items-center justify-center gap-1 rounded-md text-xs text-muted-foreground hover:bg-surface-2 hover:text-foreground"><Plus className="size-3.5" />{tx('Add', 'إضافة')}</button>
               </motion.div>
@@ -139,11 +157,13 @@ export default function PlannerPage() {
           })}
         </motion.div>
         <div className="card h-fit p-5">
-          <p className="card-title mb-3">{tx("Today's tasks", "مهام اليوم")}</p>
-          <TaskList tasks={dash.today} />
+          <p className="card-title mb-1">{tx("Today's tasks", "مهام اليوم")}</p>
+          <p className="mb-3 text-xs text-muted-foreground">{tx('Double-click anything for details. Drag your own blocks to another day.', 'انقر مرتين على أي عنصر للتفاصيل. اسحب أوقاتك إلى يوم آخر.')}</p>
+          <TaskList tasks={dash.today} onOpen={(t) => setDetail({ kind: 'task', task: t, date: world.today })} />
         </div>
       </div>
       <AddBlock key={addDate} defaultDate={addDate} open={addOpen} setOpen={setAddOpen} />
+      <ItemSheet item={detail} onOpenChange={(o) => { if (!o) setDetail(null); }} />
     </Page>
   );
 }

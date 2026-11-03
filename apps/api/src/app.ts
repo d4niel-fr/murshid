@@ -20,6 +20,8 @@ import { registerSchools } from './schools/routes';
 import { SchoolStore } from './schools/store';
 import { DemoStore } from './v1/store';
 import { createChatEngine, type ChatEngine } from './v1/chat';
+import { registerStudy } from './v1/study';
+import { registerLive } from './v1/live';
 import type { ChatProvider } from '@murshid/agent-gateway';
 import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
 import { BillingStore, registerBilling } from './billing/routes';
@@ -149,6 +151,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerPlanner(api);
   registerAgent(api);
   registerV1(api, store, engine);
+  registerStudy(api, store, engine);
+  registerLive(api);
   registerAdmin(api, store, (id) => schools.licenceOf(id));
   registerSchools(api, schools, store, (c) => demoView(c, store));
   registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);

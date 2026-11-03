@@ -10,7 +10,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@murshid/design', '@murshid/grade-bands', '@murshid/survey'],
+  transpilePackages: ['@murshid/design', '@murshid/grade-bands', '@murshid/survey', '@murshid/study'],
   ...(siteUrl ? { env: { NEXT_PUBLIC_SITE_URL: siteUrl } } : {}),
   async rewrites() {
     if (onVercel) return []; // Vercel routes /api and /admin to their own services before this app sees them

@@ -77,6 +77,8 @@ export function FocusView() {
   useEffect(() => {
     if (started.current) return; started.current = true;
     const m = Number(params.get('start'));
+    const what = params.get('label');
+    if (what) setLabel(what.slice(0, 60));
     if (m) { const md: Mode = m >= 50 ? 'deep' : 'focus'; setMode(md); setEndAt(Date.now() + MINUTES[md] * 60_000); }
   }, [params]);
 

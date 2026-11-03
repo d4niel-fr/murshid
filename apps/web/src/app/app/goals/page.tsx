@@ -90,7 +90,7 @@ export default function GoalsPage() {
         {world.goals.map((g) => {
           const days = diffDays(g.due, world.today);
           return (
-            <Card key={g.id} id={g.id} className="col-span-12 md:col-span-6 xl:col-span-4">
+            <Card key={g.id} id={g.id} className="col-span-12 select-none md:col-span-6 xl:col-span-4" onDoubleClick={(e) => { if (!(e.target as HTMLElement).closest('button,a,input,textarea')) router.push(`/app/insights?area=${encodeURIComponent(g.id)}`); }} title={tx('Double-click for its progress chart', 'انقر مرتين لرسم التقدم')}>
               <div className="flex items-start gap-4">
                 <ProgressRing value={g.progress * 100} size={76} stroke={8} color={AREA[g.area].color} locale={locale} />
                 <div className="min-w-0 flex-1">

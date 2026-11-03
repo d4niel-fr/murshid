@@ -62,7 +62,7 @@ function View() {
           const on = sel.includes(s.id);
           const pct = s.scale === 'ib7' ? (s.current / 7) * 100 : s.current;
           return (
-            <Card key={s.id} interactive className={cn('col-span-12 cursor-pointer md:col-span-6 xl:col-span-4', on && 'border-transparent ring-[1.5px] ring-[var(--accent)]')} onClick={() => toggle(s.id)} role="button" aria-pressed={on}>
+            <Card key={s.id} interactive className={cn('col-span-12 cursor-pointer select-none md:col-span-6 xl:col-span-4', on && 'border-transparent ring-[1.5px] ring-[var(--accent)]')} onClick={() => toggle(s.id)} onDoubleClick={() => router.push(`/app/insights?area=${encodeURIComponent(s.id)}`)} title={tx('Click to compare · double-click for its chart', 'انقر للمقارنة · انقر مرتين للرسم البياني')} role="button" aria-pressed={on}>
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{s.name}</p>

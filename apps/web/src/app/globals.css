@@ -129,7 +129,8 @@
 [data-overlay="true"] .nav-rail-icon, [data-overlay="true"] .nav-divider { display: none; }
 .shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }
 /* full-height views (chat) fill what is left under the top bar */
-.fill-view { height: calc(100dvh - var(--topbar-h)); }
+/* full-height views (chat, whiteboard) stop above the phone tab bar */
+.fill-view { height: calc(100dvh - var(--topbar-h) - var(--tabbar-h)); }
 /* a phone on its side: a slimmer top bar leaves room for the page */
 @media (max-height: 560px) { :root { --topbar-h: 3.5rem; } }
 

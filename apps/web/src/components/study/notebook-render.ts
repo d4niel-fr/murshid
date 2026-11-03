@@ -1,6 +1,6 @@
 'use client';
 
-import { PAGE_H, PAGE_W, widthAt, type Notebook, type Paper, type Stroke } from '@/lib/notebook';
+import { PAGE_H, PAGE_W, widthAt, type Notebook, type Paper, type Stroke, type NoteText } from '@/lib/notebook';
 
 /** Drawing a notebook page: the paper, then each stroke (shared by the editor, exports and hand-ins). */
 export function drawPaper(ctx: CanvasRenderingContext2D, paper: Paper, dark: boolean) {
@@ -40,6 +40,10 @@ export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
     ctx.beginPath(); ctx.moveTo(pts[0]![0], pts[0]![1]);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
     ctx.stroke();
+  } else if (s.shape) {
+    ctx.lineWidth = s.size; ctx.beginPath(); ctx.moveTo(pts[0]![0], pts[0]![1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]![0], pts[i]![1]);
+    ctx.stroke();
   } else if (pts.length === 1) {
     ctx.beginPath(); ctx.arc(pts[0]![0], pts[0]![1], widthAt(s, pts[0]![2]) / 2, 0, Math.PI * 2); ctx.fill();
   } else {
@@ -58,11 +62,23 @@ export function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
   ctx.restore();
 }
 
+/** Typed text boxes on a page. */
+export function drawTexts(ctx: CanvasRenderingContext2D, texts: NoteText[] | undefined) {
+  if (!texts?.length) return;
+  ctx.save(); ctx.textBaseline = 'alphabetic';
+  for (const t of texts) {
+    ctx.fillStyle = t.color; ctx.font = `500 ${t.size}px Onest, system-ui, sans-serif`;
+    t.text.split('\n').forEach((line, i) => ctx.fillText(line, t.x, t.y + i * t.size * 1.3));
+  }
+  ctx.restore();
+}
+
 /** A page as a canvas at `scale` (1 = 1000 x 1414), on white paper, ready to export or upload. */
 export function pageCanvas(nb: Notebook, index: number, scale = 1.2): HTMLCanvasElement {
   const c = document.createElement('canvas'); c.width = Math.round(PAGE_W * scale); c.height = Math.round(PAGE_H * scale);
   const ctx = c.getContext('2d')!; ctx.scale(scale, scale);
   drawPaper(ctx, nb.paper, false);
   for (const st of nb.pages[index]?.strokes ?? []) drawStroke(ctx, st);
+  drawTexts(ctx, nb.pages[index]?.texts);
   return c;
 }

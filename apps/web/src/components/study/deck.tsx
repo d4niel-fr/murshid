@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Check, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, Brain, CalendarClock, Check, Copy, Download, Grid3x3, Lightbulb, Link2, MessageCircle, PenLine, Pencil, Plus, Radio, Star, Swords, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { MyMascot } from '@/components/mascot/my-mascot';
@@ -17,6 +17,8 @@ import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { Ago } from '@/components/shared/ago';
 import { cardsFromText, isDue, preview, study, SUBJECTS, useStudy, type Card, type Grade } from '@/lib/study';
+import { ChallengeMode, LearnMode, MatchMode, TestMode, WriteMode } from './modes';
+import { download, explain, shareLink, type ExplainStyle } from '@/lib/study-ai';
 import { useAutosave } from '@/lib/use-autosave';
 import { cn } from '@/lib/utils';
 import { count } from '@/lib/plural';
@@ -77,6 +79,10 @@ function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean;
         </div>
       </button>
       <p className="sr-only" aria-live="polite">{flipped ? `${tx('Answer', 'الإجابة')}: ${card.back}` : `${tx('Question', 'السؤال')}: ${card.front}`}</p>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button type="button" onClick={() => study.star(card.id)} aria-pressed={!!card.starred} className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:bg-surface hover:text-foreground"><Star className={cn('size-4', card.starred && 'fill-[var(--warning)] text-[var(--warning)]')} />{card.starred ? tx('Starred', 'مميّزة') : tx('Star', 'ميّز')}</button>
+        {flipped && <ExplainBar card={card} />}
+      </div>
       <AnimatePresence>
         {flipped && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label={tx('How well did you know it?', 'ما مدى معرفتك بها؟')}>
@@ -88,6 +94,32 @@ function StudySession({ deckId, cram, onDone }: { deckId: string; cram: boolean;
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- explain a card */
+function ExplainBar({ card }: { card: Card }) {
+  const { tx, client } = useApp();
+  const s = useStudy();
+  const [out, setOut] = useState<{ style: ExplainStyle; text: string } | null>(null);
+  const [busy, setBusy] = useState<ExplainStyle | null>(null);
+  useEffect(() => { setOut(null); }, [card.id]);
+  const deck = s.decks.find((d) => d.id === card.deckId);
+  const context = s.notes.filter((n) => n.subject === deck?.subject).map((n) => n.body).join('\n\n').slice(0, 6000);
+  const go = async (style: ExplainStyle) => { setBusy(style); try { const r = await explain(client.devUser, card.front, card.back, style, context); setOut({ style, text: r.text }); } finally { setBusy(null); } };
+  const btn = (style: ExplainStyle, Icon: typeof Lightbulb, label: string) => (
+    <button type="button" onClick={() => void go(style)} disabled={busy !== null} aria-pressed={out?.style === style} className={cn('inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm transition-colors disabled:opacity-60', out?.style === style ? 'bg-[var(--deep)] text-white' : 'bg-surface text-foreground hover:bg-surface-2')}><Icon className="size-4" />{busy === style ? tx('Thinking…', 'أفكر…') : label}</button>
+  );
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-end gap-2">
+      <div className="flex flex-wrap justify-end gap-1.5">
+        {btn('simple', Lightbulb, tx('Explain simply', 'اشرح ببساطة'))}
+        {btn('example', BookOpenCheck, tx('Example', 'مثال'))}
+        {btn('mnemonic', Brain, tx('Memory hook', 'طريقة للحفظ'))}
+        <Link href={`/app/chat?q=${encodeURIComponent(tx(`Help me understand: ${card.front} (${card.back})`, `ساعدني أن أفهم: ${card.front} (${card.back})`))}`} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface px-3 text-sm hover:bg-surface-2"><MessageCircle className="size-4" />{tx('Ask Murshid', 'اسأل مرشد')}</Link>
+      </div>
+      {out && <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} dir="auto" className="w-full rounded-[18px] bg-surface p-4 text-start text-[0.9375rem] leading-relaxed" aria-live="polite">{out.text}</motion.p>}
     </div>
   );
 }
@@ -186,7 +218,17 @@ export function DeckView() {
   if (!deck) {
     return <Page><EmptyState title={tx('This deck isn’t here', 'هذه المجموعة غير موجودة')} action={<Button asChild><Link href="/app/study/flashcards">{tx('All decks', 'كل المجموعات')}</Link></Button>}>{tx('It may have been deleted on this device.', 'ربما حُذفت على هذا الجهاز.')}</EmptyState></Page>;
   }
-  if ((mode === 'study' || mode === 'quiz') && !mounted) return <Page><h1 className="sr-only">{mode === 'quiz' ? tx(`Quiz: ${deck.title}`, `اختبار: ${deck.title}`) : tx(`Studying ${deck.title}`, `دراسة ${deck.title}`)}</h1><LoadingState /></Page>;
+  const only = params.get('only');
+  const MODES = ['study', 'quiz', 'learn', 'write', 'match', 'test', 'challenge'];
+  if (mode && MODES.includes(mode) && !mounted) return <Page><h1 className="sr-only">{tx(`Studying ${deck.title}`, `دراسة ${deck.title}`)}</h1><LoadingState /></Page>;
+  if (mounted && cards.length) {
+    const h = <h1 className="sr-only">{tx(`${deck.title}: ${mode}`, `${deck.title}: ${mode}`)}</h1>;
+    if (mode === 'learn') return <Page>{h}<LearnMode deckId={deck.id} only={only} onDone={() => setMode(null)} /></Page>;
+    if (mode === 'write') return <Page>{h}<WriteMode deckId={deck.id} only={only} onDone={() => setMode(null)} /></Page>;
+    if (mode === 'match') return <Page>{h}<MatchMode deckId={deck.id} onDone={() => setMode(null)} /></Page>;
+    if (mode === 'test') return <Page>{h}<TestMode deckId={deck.id} only={only} onDone={() => setMode(null)} /></Page>;
+    if (mode === 'challenge') return <Page>{h}<ChallengeMode deckId={deck.id} onDone={() => setMode(null)} /></Page>;
+  }
   if (mode === 'study' && cards.length) return <Page><h1 className="sr-only">{tx(`Studying ${deck.title}`, `دراسة ${deck.title}`)}</h1><StudySession deckId={deck.id} cram={params.get('all') === '1'} onDone={() => setMode(null)} /></Page>;
   if (mode === 'quiz' && cards.length >= 2) return <Page><h1 className="sr-only">{tx(`Quiz: ${deck.title}`, `اختبار: ${deck.title}`)}</h1><Quiz deckId={deck.id} onDone={() => setMode(null)} /></Page>;
 
@@ -208,6 +250,7 @@ export function DeckView() {
     { key: 'back', header: tx('Back', 'الخلف'), value: (c) => c.back, cell: (c) => editing === c.id ? <Textarea aria-label={tx('Back', 'الخلف')} value={edit.back} onChange={(e) => setEdit({ ...edit, back: e.target.value })} className="min-h-16" /> : <span className="text-muted-foreground">{c.back}</span> },
     { key: 'due', header: tx('Next review', 'المراجعة القادمة'), value: (c) => c.due, cell: (c) => <span className={cn('whitespace-nowrap text-xs', isDue(c, now) ? 'font-medium text-[var(--warning)]' : 'text-muted-foreground')}>{isDue(c, now) ? tx('Due now', 'مستحقة الآن') : <Ago ts={c.due} locale={locale} />}</span> },
     { key: 'reps', header: tx('Streak', 'التتابع'), value: (c) => c.reps, align: 'end', cell: (c) => c.reps },
+    { key: 'star', header: tx('Star', 'تمييز'), value: (c) => (c.starred ? 1 : 0), align: 'end', cell: (c) => <button type="button" onClick={() => study.star(c.id)} aria-pressed={!!c.starred} aria-label={c.starred ? tx('Unstar card', 'ألغِ التمييز') : tx('Star card', 'ميّز البطاقة')} className="grid size-8 place-items-center rounded-full hover:bg-surface"><Star className={cn('size-4', c.starred ? 'fill-[var(--warning)] text-[var(--warning)]' : 'text-muted-foreground')} /></button> },
     { key: 'act', header: '', sortable: false, align: 'end', cell: (c) => editing === c.id ? (
       <span className="inline-flex gap-1"><Button size="icon-sm" aria-label={tx('Save card', 'حفظ البطاقة')} onClick={() => { study.updateCard(c.id, edit); setEditing(null); }}><Check /></Button><Button size="icon-sm" variant="ghost" aria-label={tx('Cancel', 'إلغاء')} onClick={() => setEditing(null)}><X /></Button></span>
     ) : (
@@ -228,15 +271,24 @@ export function DeckView() {
               <Button type="submit" size="icon" aria-label={tx('Save', 'حفظ')}><Check /></Button>
             </form>
           ) : (
-            <h1 className="display flex items-center gap-3 text-[2.25rem] sm:text-[2.75rem]">{deck.title}<button type="button" onClick={() => { setTitle(deck.title); setRename(true); }} aria-label={tx('Rename deck', 'إعادة تسمية المجموعة')} className="grid size-9 place-items-center rounded-full bg-surface text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button></h1>
+            <h1 className="display flex items-center gap-3 text-[2.25rem] sm:text-[2.75rem]" onDoubleClick={() => { setTitle(deck.title); setRename(true); }} title={tx('Double-click to rename', 'انقر مرتين لإعادة التسمية')}>{deck.title}<button type="button" onClick={() => { setTitle(deck.title); setRename(true); }} aria-label={tx('Rename deck', 'إعادة تسمية المجموعة')} className="grid size-9 place-items-center rounded-full bg-surface text-muted-foreground hover:text-foreground"><Pencil className="size-4" /></button></h1>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SaveButton id={`deck:${deck.id}`} kind="deck" title={deck.title} href={`/app/study/flashcards/${deck.id}`} iconOnly />
           <ShareButton title={deck.title} iconOnly />
-          {cards.length >= 2 && <Button variant="secondary" onClick={() => setMode('quiz')}>{tx('Quiz', 'اختبار')}</Button>}
+          <Button variant="secondary" size="icon" aria-label={tx('Copy a link to share this deck', 'انسخ رابطاً لمشاركة المجموعة')} title={tx('Share a copy', 'شارك نسخة')} onClick={() => { void navigator.clipboard?.writeText(shareLink(deck, cards)).then(() => toast({ title: tx('Link copied', 'نُسخ الرابط'), description: tx('Anyone with it can add a copy of this deck.', 'يمكن لمن لديه الرابط إضافة نسخة من المجموعة.') })); }}><Link2 /></Button>
+          <Button variant="secondary" size="icon" aria-label={tx('Download as CSV (Quizlet, Anki, Excel)', 'تنزيل CSV (Quizlet وAnki وExcel)')} title={tx('Download CSV', 'تنزيل CSV')} onClick={() => download(`${deck.title.replace(/[^\p{L}\p{N}]+/gu, '-')}.csv`, '\ufeff' + cards.map((c) => [c.front, c.back].map((x) => `"${x.replace(/"/g, '""')}"`).join(',')).join('\n'), 'text/csv')}><Download /></Button>
           <Button disabled={!cards.length} onClick={() => router.replace(`/app/study/flashcards/${deck.id}?mode=study${due ? '' : '&all=1'}`)}>{due ? tx(`Study ${due} due`, `ادرس ${due} مستحقة`) : tx('Review all', 'راجع الكل')}</Button>
         </div>
+      </div>
+
+      {cards.length > 0 && <ModePicker deckId={deck.id} cards={cards} />}
+      <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        {deck.source && <span className="rounded-full bg-surface px-3 py-1.5">{deck.source}</span>}
+        <label className="inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1"><CalendarClock className="size-4" />{tx('Test on', 'الاختبار في')}
+          <input type="date" value={deck.examDate ?? ''} onChange={(e) => study.setDeck(deck.id, { examDate: e.target.value || undefined })} className="bg-transparent text-foreground outline-none" aria-label={tx('Test date for this deck', 'موعد اختبار هذه المجموعة')} /></label>
+        {deck.examDate && (() => { const days = Math.ceil((new Date(`${deck.examDate}T00:00:00`).getTime() - Date.now()) / 86_400_000); const left = cards.filter((c) => (c.learn ?? 0) < 3).length; return days > 0 ? <span>{tx(`${days} days to go · learn about ${Math.ceil(left / days)} cards a day`, `${days} يوماً متبقية · تعلّم نحو ${Math.ceil(left / days)} بطاقات يومياً`)}</span> : null; })()}
       </div>
 
       <section className="card mb-6 p-5">
@@ -264,12 +316,12 @@ export function DeckView() {
       </section>
 
       {cards.length ? (
-        <DataTable rows={cards} columns={columns} rowKey={(c) => c.id} initialSort={{ key: 'due', dir: 'asc' }} caption={tx('Cards in this deck', 'بطاقات هذه المجموعة')} filterPlaceholder={tx('Filter cards', 'تصفية البطاقات')} />
+        <DataTable rows={cards} columns={columns} rowKey={(c) => c.id} onRowOpen={(c) => { if (editing !== c.id) { setEditing(c.id); setEdit({ front: c.front, back: c.back }); } }} initialSort={{ key: 'due', dir: 'asc' }} caption={tx('Cards in this deck', 'بطاقات هذه المجموعة')} filterPlaceholder={tx('Filter cards', 'تصفية البطاقات')} />
       ) : (
         <EmptyState compact title={tx('No cards yet', 'لا توجد بطاقات بعد')}>{tx('Add one above, or paste a list. Tip: in Notes, lines like “term :: meaning” become cards in one click.', 'أضف بطاقة أعلاه أو الصق قائمة. نصيحة: في الملاحظات، تتحول سطور «مصطلح :: معنى» إلى بطاقات بنقرة.')}</EmptyState>
       )}
       <div className="mt-8 flex justify-end">
-        <Button variant="ghost" className="text-[var(--danger)]" onClick={() => { if (window.confirm(tx('Delete this deck and its cards?', 'حذف هذه المجموعة وبطاقاتها؟'))) { study.removeDeck(deck.id); router.push('/app/study/flashcards'); } }}><Trash2 />{tx('Delete deck', 'حذف المجموعة')}</Button>
+        <Button variant="ghost" className="text-[var(--danger)]" onClick={() => { const kept = { deck, cards }; study.removeDeck(deck.id); router.push('/app/study/flashcards'); toast({ title: tx('Deck deleted', 'حُذفت المجموعة'), description: deck.title, tone: 'info', action: { label: tx('Undo', 'تراجع'), onClick: () => study.restoreDeck(kept.deck, kept.cards) } }); }}><Trash2 />{tx('Delete deck', 'حذف المجموعة')}</Button>
       </div>
     </Page>
   );
@@ -277,3 +329,38 @@ export function DeckView() {
 
 export { SUBJECTS };
 export function SubjectSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) { return <Select {...props}>{SUBJECTS.map((x) => <option key={x}>{x}</option>)}</Select>; }
+
+/** Every way to study a deck, Learn first. */
+function ModePicker({ deckId, cards }: { deckId: string; cards: Card[] }) {
+  const { tx } = useApp();
+  const router = useRouter();
+  const starred = cards.filter((c) => c.starred).length;
+  const mastered = cards.filter((c) => (c.learn ?? 0) >= 3).length;
+  const due = cards.filter((c) => isDue(c)).length;
+  const [onlyStarred, setOnlyStarred] = useState(false);
+  const go = (m: string) => m === 'live' ? router.push(`/app/study/live/host?deck=${deckId}`) : router.replace(`/app/study/flashcards/${deckId}?mode=${m}${m === 'study' && !due ? '&all=1' : ''}${onlyStarred && ['learn', 'write', 'test'].includes(m) ? '&only=starred' : ''}`);
+  const modes: { id: string; icon: typeof Brain; title: string; sub: string; min: number; main?: boolean }[] = [
+    { id: 'learn', icon: Brain, title: tx('Learn', 'تعلّم'), sub: tx(`Memorise step by step · ${mastered}/${cards.length} mastered`, `احفظ خطوة بخطوة · ${mastered}/${cards.length} متقنة`), min: 1, main: true },
+    { id: 'study', icon: Copy, title: tx('Flashcards', 'البطاقات'), sub: due ? tx(`${due} due for review`, `${due} مستحقة للمراجعة`) : tx('Flip and rate yourself', 'اقلب وقيّم نفسك'), min: 1 },
+    { id: 'write', icon: PenLine, title: tx('Write', 'اكتب'), sub: tx('Type every answer', 'اكتب كل إجابة'), min: 1 },
+    { id: 'match', icon: Grid3x3, title: tx('Match', 'طابق'), sub: tx('Pair them against the clock', 'طابق ضد الوقت'), min: 3 },
+    { id: 'test', icon: BookOpenCheck, title: tx('Test', 'اختبار'), sub: tx('Mixed questions, marked at the end', 'أسئلة متنوعة تُصحح في النهاية'), min: 2 },
+    { id: 'challenge', icon: Swords, title: tx('Challenge', 'تحدٍّ'), sub: tx('Three lives, beat your score', 'ثلاث محاولات، اهزم رقمك'), min: 3 },
+    { id: 'live', icon: Radio, title: tx('Live quiz', 'اختبار مباشر'), sub: tx('Play it with your class', 'العبها مع صفك'), min: 4 },
+  ];
+  return (
+    <section className="mb-4" aria-label={tx('Ways to study', 'طرق الدراسة')}>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7">
+        {modes.map(({ id, icon: Icon, title, sub, min, main }) => (
+          <button key={id} type="button" onClick={() => go(id)} disabled={cards.length < min}
+            className={cn('flex min-h-[7.5rem] flex-col items-start gap-2 rounded-[22px] p-4 text-start transition-colors disabled:opacity-40', main ? 'bg-[var(--deep)] text-white hover:bg-[color-mix(in_oklab,var(--deep)_88%,white)]' : 'bg-surface hover:bg-surface-2')}>
+            <Icon className="size-5" />
+            <span className="text-[0.9375rem] font-medium">{title}</span>
+            <span className={cn('text-xs leading-snug', main ? 'text-white/75' : 'text-muted-foreground')}>{cards.length < min ? tx(`Needs ${min}+ cards`, `يحتاج ${min}+ بطاقات`) : sub}</span>
+          </button>
+        ))}
+      </div>
+      {starred > 0 && <label className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground"><input type="checkbox" className="size-4 accent-[var(--deep)]" checked={onlyStarred} onChange={(e) => setOnlyStarred(e.target.checked)} />{tx(`Only my ${starred} starred cards (Learn, Write, Test)`, `بطاقاتي المميّزة فقط (${starred})`)}</label>}
+    </section>
+  );
+}

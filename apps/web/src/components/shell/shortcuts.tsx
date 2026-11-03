@@ -69,6 +69,18 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
     [tx('Study', 'الدراسة'), [
       [['Space'], tx('Flip a flashcard / start or pause the timer', 'اقلب البطاقة / ابدأ المؤقت أو أوقفه')], [['1', '2', '3', '4'], tx('Rate a card: again, hard, good, easy', 'قيّم البطاقة: مجدداً، صعبة، جيدة، سهلة')],
       [['R'], tx('Reset the focus timer', 'إعادة ضبط مؤقت التركيز')], [['Esc'], tx('Close a dialog or end a session', 'إغلاق نافذة أو إنهاء جلسة')],
+      [['1', '2', '3', '4'], tx('Pick an answer in Learn, quizzes and Challenge', 'اختر إجابة في التعلم والاختبارات والتحدي')],
+    ]],
+    [tx('Planner and lists', 'المخطط والقوائم'), [
+      [[tx('Double-click', 'نقر مزدوج')], tx('Open any task, block, deadline or card for details', 'افتح أي مهمة أو وقت أو موعد أو بطاقة للتفاصيل')],
+      [['D'], tx('Tick the open item as done', 'ضع علامة تم على العنصر المفتوح')],
+      [[tx('Drag', 'سحب')], tx('Move a study block to another day', 'انقل وقت الدراسة إلى يوم آخر')],
+    ]],
+    [tx('Whiteboard and notebook', 'السبورة والدفتر'), [
+      [['V', 'H', 'P', 'M', 'E'], tx('Select, move board, pen, highlighter, eraser', 'تحديد، تحريك، قلم، تمييز، ممحاة')],
+      [['R', 'O', 'L', 'A', 'T', 'S'], tx('Box, ellipse, line, arrow, text, sticky note', 'مستطيل، بيضوي، خط، سهم، نص، ملاحظة لاصقة')],
+      [[mod, 'Z'], tx('Undo (add Shift to redo)', 'تراجع (مع Shift للإعادة)')], [[mod, 'D'], tx('Duplicate the selection', 'تكرار التحديد')],
+      [['Space'], tx('Hold and drag to move the board', 'اضغط واسحب لتحريك السبورة')], [[mod, tx('scroll', 'تمرير')], tx('Zoom', 'تكبير')],
     ]],
   ];
   return (

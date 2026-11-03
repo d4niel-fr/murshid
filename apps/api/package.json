@@ -19,7 +19,8 @@
     "hono": "^4.6.14",
     "zod": "^4.1.0",
     "@murshid/documents": "workspace:*",
-    "@murshid/survey": "workspace:*"
+    "@murshid/survey": "workspace:*",
+    "@murshid/study": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

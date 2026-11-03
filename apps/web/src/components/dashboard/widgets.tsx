@@ -27,6 +27,7 @@ import { diffDays, formatDate, relativeDay, weekdayIndex } from '@/lib/dates';
 import { pressable } from '@/lib/motion';
 import { buildChartSpec, fmtScore } from '@/lib/progress';
 import type { Activity, Dashboard, LinkKey, UpcomingItem } from '@/lib/types';
+import { DetailsButton, ItemSheet, openOn, type DetailItem } from '@/components/shared/item-sheet';
 import { cn } from '@/lib/utils';
 
 const seeAll = (href: string, label: string) => (
@@ -110,8 +111,9 @@ export function RingsWidget({ data }: { data: Dashboard }) {
 const TYPE_ICON: Record<UpcomingItem['type'], typeof BookOpen> = { test: BookOpen, exam: BookOpen, homework: FileText, event: CalendarClock, competition: Medal, deadline: Target, session: ActivityIcon };
 
 export function UpcomingWidget({ data }: { data: Dashboard }) {
-  const { t, locale, world, bt } = useApp();
+  const { t, locale, world, bt, tx } = useApp();
   const items = data.upcoming.filter((u) => u.date >= world.today).slice(0, 5);
+  const [detail, setDetail] = useState<DetailItem | null>(null);
   return (
     <Card className="col-span-12">
       <CardHeader title={bt('upcoming.title') !== 'upcoming.title' ? bt('upcoming.title') : t('dash.upcoming')} action={seeAll('/app/planner', t('dash.viewAll'))} />
@@ -120,7 +122,7 @@ export function UpcomingWidget({ data }: { data: Dashboard }) {
           const d = diffDays(u.date, world.today);
           const Icon = TYPE_ICON[u.type] ?? CalendarClock;
           return (
-            <li key={u.id} className="relative flex gap-3 pb-4 last:pb-0">
+            <li key={u.id} {...openOn(() => setDetail({ kind: 'upcoming', item: u }))} title={tx('Double-click for details', 'انقر مرتين للتفاصيل')} className="group relative flex cursor-pointer select-none gap-3 rounded-[12px] pb-4 last:pb-0">
               {i < items.length - 1 && <span className="absolute start-[15px] top-8 bottom-0 w-0.5 bg-border" aria-hidden />}
               <span className={cn('relative z-10 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent bg-surface-2', d <= 2 && 'tint-warning border-[color-mix(in_oklab,var(--warning)_40%,transparent)]')}>
                 <Icon className="size-4" />
@@ -129,10 +131,12 @@ export function UpcomingWidget({ data }: { data: Dashboard }) {
                 <p className="truncate text-sm font-medium">{u.title}</p>
                 <p className="text-xs text-muted-foreground">{formatDate(u.date, locale, { weekday: 'short', day: 'numeric', month: 'short' })} · <span className={d <= 2 ? 'font-medium text-[var(--warning)]' : ''}>{relativeDay(u.date, world.today, locale)}</span></p>
               </div>
+              <DetailsButton label={tx(`Details: ${u.title}`, `التفاصيل: ${u.title}`)} onOpen={() => setDetail({ kind: 'upcoming', item: u })} className="mt-1" />
             </li>
           );
         })}
       </ol>
+      <ItemSheet item={detail} onOpenChange={(o) => { if (!o) setDetail(null); }} />
     </Card>
   );
 }

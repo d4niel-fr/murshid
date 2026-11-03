@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowLeft, Bold, CheckSquare, Download, Heading2, Italic, Layers, Link2, List, Pin, PinOff, Plus, Quote, Search, Table2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bold, BookOpenCheck, CheckSquare, Download, Heading2, Italic, Layers, Link2, List, ListCollapse, Mic, MicOff, Pin, PinOff, Plus, Quote, Search, Table2, Trash2, Wand2 } from 'lucide-react';
+import { generateCards, summarise } from '@murshid/study';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Page, PageHeader } from '@/components/shared/page';
@@ -122,6 +123,42 @@ export function NoteEditor() {
   }, [title, body, tags]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.title = `${title || tx('Untitled note', 'ملاحظة بلا عنوان')} · Murshid`; }, [title, tx]);
 
+  // lecture dictation: the browser's speech recognition writes what it hears into the note
+  const [listening, setListening] = useState(false);
+  const [interim, setInterim] = useState('');
+  const rec = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => () => rec.current?.stop(), []);
+  const dictate = () => {
+    if (listening) { rec.current?.stop(); return; }
+    const W = window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any };
+    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!SR) { toast({ title: tx('Dictation needs Chrome, Edge or Safari', 'الإملاء يحتاج Chrome أو Edge أو Safari'), tone: 'info' }); return; }
+    const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = locale === 'ar' ? 'ar-AE' : 'en-GB';
+    r.onresult = (e: any) => {
+      let fin = ''; let mid = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) fin += t; else mid += t; }
+      if (fin) setBody((b) => `${b}${b && !/\s$/.test(b) ? ' ' : ''}${fin.trim().replace(/^./, (c: string) => c.toUpperCase())}${/[.?!]$/.test(fin.trim()) ? '' : '.'}`);
+      setInterim(mid);
+    };
+    r.onend = () => { setListening(false); setInterim(''); rec.current = null; };
+    r.onerror = (e: any) => { if (e.error === 'not-allowed') toast({ title: tx('Allow the microphone to dictate', 'اسمح بالميكروفون للإملاء'), tone: 'danger' }); };
+    r.start(); rec.current = r; setListening(true);
+    if (!body.includes('## Lecture')) setBody((b) => `${b}${b.trim() ? '\n\n' : ''}## Lecture ${new Date().toLocaleDateString(locale === 'ar' ? 'ar-AE' : 'en-GB')}\n\n`);
+  };
+  const addSummary = () => {
+    const sum = summarise(body.replace(/^## Summary[\s\S]*?(?=\n## |$)/m, ''), 4);
+    if (!sum.length) { toast({ title: tx('Write a little more first', 'اكتب أكثر قليلاً أولاً'), tone: 'info' }); return; }
+    const block = `## Summary\n\n${sum.map((x) => `- ${x}`).join('\n')}\n\n`;
+    setBody((b) => (/^## Summary/m.test(b) ? b.replace(/^## Summary[\s\S]*?(?=\n## |$)/m, block.trimEnd()) : block + b));
+    toast({ title: tx('Summary added at the top', 'أُضيف ملخص في الأعلى'), tone: 'success' });
+  };
+  const quizMe = () => {
+    const made = generateCards(`${title}\n${body}`, { max: 20 });
+    if (made.length < 2) { toast({ title: tx('Not enough in this note to quiz you yet', 'لا يكفي محتوى الملاحظة لاختبارك بعد'), tone: 'info' }); return; }
+    const deckId = study.createDeck(tx(`Quiz: ${title || 'my note'}`, `اختبار: ${title || 'ملاحظتي'}`), note!.subject, made, tx('From a note', 'من ملاحظة'));
+    router.push(`/app/study/flashcards/${deckId}?mode=test`);
+  };
+
   const toc = useMemo(() => headings(body), [body]);
   const pairs = useMemo(() => cardsFromText(body), [body]);
   if (!note) return <Page><EmptyState title={tx('This note isn’t here', 'هذه الملاحظة غير موجودة')} action={<Button asChild><Link href="/app/study/notes">{tx('All notes', 'كل الملاحظات')}</Link></Button>}>{tx('It may have been deleted on this device.', 'ربما حُذفت على هذا الجهاز.')}</EmptyState></Page>;
@@ -186,7 +223,8 @@ export function NoteEditor() {
                 <div role="toolbar" aria-label={tx('Formatting', 'التنسيق')} className="flex flex-wrap gap-0.5 border-b border-border p-1.5">
                   {tools.map(([label, Icon, run]) => <button key={label} type="button" onClick={run} title={label} aria-label={label} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-[var(--bg)] hover:text-foreground"><Icon className="size-4" /></button>)}
                 </div>
-                <Textarea ref={ta} value={body} onChange={(e) => setBody(e.target.value)} aria-label={tx('Note text', 'نص الملاحظة')} spellCheck
+                {listening && <p className="flex items-center gap-2 border-b border-border bg-[color-mix(in_oklab,var(--danger)_8%,transparent)] px-4 py-2 text-xs" aria-live="polite"><span className="size-2 animate-pulse rounded-full bg-[var(--danger)]" />{tx('Listening… speak and Murshid writes it down.', 'أستمع… تحدث ويكتب مرشد.')} <span className="truncate text-muted-foreground">{interim}</span></p>}
+                <Textarea ref={ta} dir="auto" value={body} onChange={(e) => setBody(e.target.value)} aria-label={tx('Note text', 'نص الملاحظة')} spellCheck
                   placeholder={tx('Start writing… Use ## for headings, - for lists, - [ ] for a checklist, and “term :: meaning” for flashcards.', 'ابدأ الكتابة… استخدم ## للعناوين و- للقوائم و- [ ] للمهام و«مصطلح :: معنى» للبطاقات.')}
                   className="min-h-[56vh] rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[0.875rem] leading-relaxed focus:ring-0" />
               </div>
@@ -204,6 +242,14 @@ export function NoteEditor() {
             <p className="text-sm font-medium">{tx('Flashcards in this note', 'بطاقات في هذه الملاحظة')}</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{pairs.length ? tx(`${pairs.length} lines written as “term :: meaning”.`, `${pairs.length} سطر بصيغة «مصطلح :: معنى».`) : tx('Write lines like “Momentum :: p = mv” and turn them into a deck.', 'اكتب سطوراً مثل «الزخم :: p = mv» وحوّلها إلى مجموعة.')}</p>
             <Button size="sm" variant="secondary" className="mt-3 w-full" disabled={!pairs.length} onClick={makeCards}><Layers />{tx('Make flashcards', 'أنشئ بطاقات')}</Button>
+          </div>
+          <div className="flex flex-col gap-2 rounded-[var(--radius)] bg-surface p-4">
+            <p className="text-sm font-medium">{tx('Study this note', 'ادرس هذه الملاحظة')}</p>
+            <Button size="sm" asChild><Link href={`/app/study/create?note=${note.id}`}><Wand2 />{tx('Make cards with Murshid', 'أنشئ بطاقات مع مرشد')}</Link></Button>
+            <Button size="sm" variant="secondary" onClick={quizMe}><BookOpenCheck />{tx('Quiz me on it', 'اختبرني فيها')}</Button>
+            <Button size="sm" variant="secondary" onClick={addSummary}><ListCollapse />{tx('Add a summary', 'أضف ملخصاً')}</Button>
+            <Button size="sm" variant={listening ? 'danger' : 'secondary'} onClick={dictate} aria-pressed={listening}>{listening ? <MicOff /> : <Mic />}{listening ? tx('Stop dictating', 'أوقف الإملاء') : tx('Dictate a lecture', 'أملِ محاضرة')}</Button>
+            <p className="text-xs leading-relaxed text-muted-foreground">{tx('Dictation types what you or your teacher say, in this note.', 'يكتب الإملاء ما تقوله أنت أو معلمك في هذه الملاحظة.')}</p>
           </div>
         </aside>
       </div>
