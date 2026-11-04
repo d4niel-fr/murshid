@@ -14,9 +14,11 @@ import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
 import { DialogContent } from '@/components/ui/dialog';
 import { Input, Select } from '@/components/ui/input';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 import { SUBJECTS } from '@/lib/study';
 import { cn } from '@/lib/utils';
+import { Subject, SubjectOptions } from '@/components/shared/subject';
+import { colourName } from '@/lib/colour-names';
 import {
   BOARD_INK, bbox, boards, hit, moveEl, STICKY, strokePath, unionBox, useBoards, wrap,
   type Background, type Board, type Box, type El, type Pt, type ShapeEl, type View,
@@ -61,9 +63,9 @@ function Pattern({ id, bg, view }: { id: string; bg: Background; view: View }) {
   const ox = view.x % s; const oy = view.y % s;
   return (
     <pattern id={id} width={s} height={s} patternUnits="userSpaceOnUse" x={ox} y={oy}>
-      {bg === 'dots' && <circle cx={s / 2} cy={s / 2} r={Math.max(0.8, 1.1 * view.z)} className="fill-[color-mix(in_oklab,var(--text)_22%,transparent)]" />}
-      {bg === 'grid' && <path d={`M${s} 0H0V${s}`} fill="none" strokeWidth={1} className="stroke-[color-mix(in_oklab,var(--text)_10%,transparent)]" />}
-      {bg === 'lined' && <path d={`M0 ${s - 0.5}H${s}`} fill="none" strokeWidth={1} className="stroke-[color-mix(in_oklab,var(--brand)_22%,transparent)]" />}
+      {bg === 'dots' && <circle cx={s / 2} cy={s / 2} r={Math.max(0.8, 1.1 * view.z)} style={{ fill: 'var(--paper-mark)' }} />}
+      {bg === 'grid' && <path d={`M${s} 0H0V${s}`} fill="none" strokeWidth={1} style={{ stroke: 'var(--paper-line)' }} />}
+      {bg === 'lined' && <path d={`M0 ${s - 0.5}H${s}`} fill="none" strokeWidth={1} style={{ stroke: 'var(--paper-mark)' }} />}
     </pattern>
   );
 }
@@ -73,7 +75,7 @@ export function BoardThumb({ board, className }: { board: Board; className?: str
   const b = unionBox(board.elements) ?? { x: 0, y: 0, w: 400, h: 300 };
   const pad = 30;
   return (
-    <svg viewBox={`${b.x - pad} ${b.y - pad} ${Math.max(b.w, 200) + pad * 2} ${Math.max(b.h, 150) + pad * 2}`} preserveAspectRatio="xMidYMid meet" className={className} aria-hidden>
+    <svg viewBox={`${b.x - pad} ${b.y - pad} ${Math.max(b.w, 200) + pad * 2} ${Math.max(b.h, 150) + pad * 2}`} preserveAspectRatio="xMidYMid meet" className={className} style={{ direction: 'ltr' }} aria-hidden>
       {board.elements.map((e) => <ElView key={e.id} e={e} />)}
     </svg>
   );
@@ -99,11 +101,11 @@ export function BoardsView() {
           {list.map((b) => (
             <li key={b.id} className="group relative">
               <Link href={`/app/study/whiteboard/${b.id}`} onDoubleClick={() => router.push(`/app/study/whiteboard/${b.id}`)} className="lift card block overflow-hidden">
-                <span className="block aspect-[16/10] bg-[var(--bg)] p-3"><BoardThumb board={b} className="size-full" /></span>
-                <span className="block border-t border-border p-4"><span className="block truncate font-medium">{b.title}</span><span className="text-xs text-muted-foreground">{b.subject} · {tx(count(b.elements.length, 'item'), `${b.elements.length} عنصر`)} · <Ago ts={b.updatedAt} locale={locale} /></span></span>
+                <span className="paper block aspect-[16/10] p-3"><BoardThumb board={b} className="size-full" /></span>
+                <span className="block border-t border-border p-4"><span className="block truncate font-medium">{b.title}</span><span className="text-xs text-muted-foreground"><Subject name={b.subject} /> · {tx(count(b.elements.length, 'item'), nAr(b.elements.length, 'item'))} · <Ago ts={b.updatedAt} locale={locale} /></span></span>
               </Link>
               <span className="absolute end-3 top-3 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
-                <button type="button" onClick={() => { const id = boards.duplicate(b.id); if (id) toast({ title: tx('Board copied', 'نُسخت السبورة') }); }} aria-label={tx(`Duplicate ${b.title}`, `تكرار ${b.title}`)} className="grid size-9 place-items-center rounded-full bg-[var(--popover)] shadow-sm"><Copy className="size-4" /></button>
+                <button type="button" onClick={() => { const id = boards.duplicate(b.id, tx('copy', 'نسخة')); if (id) toast({ title: tx('Board copied', 'نُسخت السبورة') }); }} aria-label={tx(`Duplicate ${b.title}`, `تكرار ${b.title}`)} className="grid size-9 place-items-center rounded-full bg-[var(--popover)] shadow-sm"><Copy className="size-4" /></button>
                 <button type="button" onClick={() => remove(b)} aria-label={tx(`Delete ${b.title}`, `حذف ${b.title}`)} className="grid size-9 place-items-center rounded-full bg-[var(--popover)] text-[var(--danger)] shadow-sm"><Trash2 className="size-4" /></button>
               </span>
             </li>
@@ -114,7 +116,7 @@ export function BoardsView() {
         <DialogContent title={tx('New board', 'سبورة جديدة')}>
           <form onSubmit={(e) => { e.preventDefault(); create(); }} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Title', 'العنوان')}<Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Photosynthesis mind map', 'مثل: خريطة ذهنية للبناء الضوئي')} /></label>
-            <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Subject', 'المادة')}<Select value={subject} onChange={(e) => setSubject(e.target.value)}>{SUBJECTS.map((x) => <option key={x}>{x}</option>)}</Select></label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Subject', 'المادة')}<Select value={subject} onChange={(e) => setSubject(e.target.value)}><SubjectOptions list={SUBJECTS} /></Select></label>
             <fieldset><legend className="mb-1.5 text-sm font-medium">{tx('Background', 'الخلفية')}</legend>
               <div className="grid grid-cols-4 gap-2">{(['dots', 'grid', 'lined', 'blank'] as const).map((k) => <button key={k} type="button" aria-pressed={bg === k} onClick={() => setBg(k)} className={cn('h-11 rounded-[14px] border text-sm', bg === k ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border')}>{{ dots: tx('Dots', 'نقاط'), grid: tx('Grid', 'مربعات'), lined: tx('Lines', 'أسطر'), blank: tx('Blank', 'فارغة') }[k]}</button>)}</div>
             </fieldset>
@@ -151,7 +153,7 @@ async function readImage(file: File): Promise<{ src: string; w: number; h: numbe
 
 export function BoardEditor() {
   const { id } = useParams<{ id: string }>();
-  const { tx, toast } = useApp();
+  const { tx, toast, locale } = useApp();
   const { boards: list } = useBoards();
   const board = list.find((b) => b.id === id);
   const [els, setEls] = useState<El[]>(() => board?.elements ?? []);
@@ -177,7 +179,16 @@ export function BoardEditor() {
 
   // load once the store is ready (it reads localStorage after the first render)
   const loaded = useRef(false);
-  useEffect(() => { if (board && !loaded.current) { loaded.current = true; setEls(board.elements); setView(board.view); } }, [board]);
+  useEffect(() => {
+    if (!board || loaded.current) return;
+    loaded.current = true; setEls(board.elements); setView(board.view);
+    // a board drawn on a big screen, opened on a small one: if the saved view leaves some of it off screen, fit it
+    requestAnimationFrame(() => {
+      const r = svg.current?.getBoundingClientRect(); const u = unionBox(board.elements); if (!r || !u) return;
+      const v = board.view; const left = u.x * v.z + v.x; const top = u.y * v.z + v.y;
+      if (left < 0 || top < 0 || left + u.w * v.z > r.width || top + u.h * v.z > r.height) fit(board.elements);
+    });
+  }, [board]); // eslint-disable-line react-hooks/exhaustive-deps
   // save (debounced)
   useEffect(() => { if (!loaded.current || !board) return; const t = setTimeout(() => boards.setElements(board.id, els), 300); return () => clearTimeout(t); }, [els]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!loaded.current || !board) return; const t = setTimeout(() => boards.setView(board.id, view), 400); return () => clearTimeout(t); }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -192,8 +203,8 @@ export function BoardEditor() {
     const px = cx - r.left; const py = cy - r.top;
     return { z, x: px - ((px - v.x) / v.z) * z, y: py - ((py - v.y) / v.z) * z };
   });
-  const fit = () => {
-    const b = unionBox(els); const r = svg.current?.getBoundingClientRect(); if (!r) return;
+  const fit = (list: El[] = els) => {
+    const b = unionBox(list); const r = svg.current?.getBoundingClientRect(); if (!r) return;
     if (!b) { setView({ x: 0, y: 0, z: 1 }); return; }
     const z = Math.max(0.1, Math.min(2, Math.min((r.width - 80) / Math.max(1, b.w), (r.height - 80) / Math.max(1, b.h))));
     setView({ z, x: r.width / 2 - (b.x + b.w / 2) * z, y: r.height / 2 - (b.y + b.h / 2) * z });
@@ -413,13 +424,13 @@ export function BoardEditor() {
         <Button size="sm" variant="secondary" onClick={() => void exportPng()} disabled={!els.length}><Download />{tx('PNG', 'PNG')}</Button>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden border-y border-border bg-[var(--bg)] md:mx-6 md:rounded-[24px] md:border"
+      <div className="paper relative min-h-0 flex-1 overflow-hidden border-y border-border md:mx-6 md:rounded-[24px] md:border"
         onDragOver={(e) => { if ([...e.dataTransfer.items].some((i) => i.kind === 'file')) e.preventDefault(); }}
         onDrop={(e) => { e.preventDefault(); void insertImages([...e.dataTransfer.files]); }}
         onPaste={(e) => { const files = [...e.clipboardData.files]; if (files.length) { e.preventDefault(); void insertImages(files); } }}>
-        <svg ref={svg} className="absolute inset-0 size-full touch-none select-none" style={{ cursor }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel}
+        <svg ref={svg} className="absolute inset-0 size-full touch-none select-none" style={{ cursor, direction: 'ltr' }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onWheel={onWheel}
           onDoubleClick={(ev) => { const [x, y] = toWorld(ev.clientX, ev.clientY); const h = topHit(x, y); if (h && (h.type === 'text' || h.type === 'sticky')) { setSel([h.id]); setEditing(h.id); } else if (!h && tool === 'select') { addEl({ id: newId(), type: 'text', color: ink, x, y, text: '', size: 24 }, true); } }}
-          role="img" aria-label={tx(`Whiteboard with ${els.length} items`, `سبورة فيها ${els.length} عنصر`)}>
+          role="img" aria-label={tx(`Whiteboard with ${els.length} items`, `سبورة فيها ${nAr(els.length, 'item')}`)}>
           <defs><Pattern id="wb-bg" bg={board.background} view={view} /></defs>
           {board.background !== 'blank' && <rect data-bg width="100%" height="100%" fill="url(#wb-bg)" />}
           <g data-world transform={`translate(${view.x} ${view.y}) scale(${view.z})`}>
@@ -448,7 +459,7 @@ export function BoardEditor() {
               style={editEl.type === 'sticky'
                 ? { left: pos.left, top: pos.top, width: editEl.w * view.z, height: editEl.h * view.z, fontSize: 17 * view.z, background: editEl.color, padding: 14 * view.z, borderRadius: 10 * view.z }
                 : { left: pos.left, top: pos.top, minWidth: 160, width: Math.max(160, b.w * view.z + 40), height: Math.max(editEl.size * 1.6, b.h) * view.z + 16, fontSize: editEl.size * view.z, color: editEl.color, fontWeight: 500 }}
-              className={cn('absolute z-10 resize-none overflow-hidden border-0 leading-[1.25] outline-none', editEl.type === 'sticky' ? 'text-[#1f2937] shadow-lg' : 'bg-transparent ring-2 ring-[var(--brand-light)]')} />
+              className={cn('absolute z-10 resize-none overflow-hidden border-0 text-left leading-[1.25] outline-none', editEl.type === 'sticky' ? 'text-[#1f2937] shadow-lg' : 'bg-transparent ring-2 ring-[var(--brand-light)]')} />
           );
         })()}
 
@@ -480,12 +491,12 @@ export function BoardEditor() {
         <div className="absolute inset-x-3 top-3 flex flex-col items-start gap-2 sm:end-auto">
           <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-[var(--popover)] p-2 shadow-sm">
             {(tool === 'sticky' ? STICKY : BOARD_INK).map((c) => (
-              <button key={c} type="button" onClick={() => (tool === 'sticky' ? setStickyColor(c) : recolor(c))} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} aria-pressed={(tool === 'sticky' ? stickyColor : ink) === c}
+              <button key={c} type="button" onClick={() => (tool === 'sticky' ? setStickyColor(c) : recolor(c))} aria-label={colourName(c, locale)} title={colourName(c, locale)} aria-pressed={(tool === 'sticky' ? stickyColor : ink) === c}
                 className={cn('size-7 shrink-0 rounded-full ring-offset-2 ring-offset-[var(--popover)]', (tool === 'sticky' ? stickyColor : ink) === c && 'ring-2 ring-[var(--text)]')} style={{ background: c }} />
             ))}
             {tool !== 'sticky' && <>
               <span className="mx-1 h-5 w-px bg-border" />
-              {[2, 3, 6].map((w) => <button key={w} type="button" onClick={() => setSize(w)} aria-pressed={size === w} aria-label={tx(`Thickness ${w}`, `السماكة ${w}`)} className={cn('grid size-7 shrink-0 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-[var(--text)]" style={{ width: w + 2, height: w + 2 }} /></button>)}
+              {[2, 3, 6].map((w) => <button key={w} type="button" onClick={() => setSize(w)} aria-pressed={size === w} aria-label={[tx('Thin', 'رفيع'), tx('Medium', 'متوسط'), tx('Thick', 'عريض')][[2, 3, 6].indexOf(w)]} className={cn('grid size-7 shrink-0 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-[var(--text)]" style={{ width: w + 2, height: w + 2 }} /></button>)}
               {(tool === 'rect' || tool === 'ellipse') && <button type="button" onClick={() => setFill((f) => !f)} aria-pressed={fill} className={cn('h-7 shrink-0 rounded-full px-2.5 text-xs', fill ? 'bg-[var(--deep)] text-white' : 'bg-surface')}>{tx('Fill', 'تعبئة')}</button>}
             </>}
           </div>
@@ -504,9 +515,9 @@ export function BoardEditor() {
           <button type="button" onClick={() => { const r = svg.current!.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); }} aria-label={tx('Zoom out', 'تصغير')} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Minus className="size-4" /></button>
           <button type="button" onClick={() => setView((v) => ({ ...v, z: 1 }))} className="h-8 min-w-12 rounded-full px-1 text-xs tabular hover:bg-surface-2" aria-label={tx('Reset zoom', 'إعادة التكبير')}>{Math.round(view.z * 100)}%</button>
           <button type="button" onClick={() => { const r = svg.current!.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); }} aria-label={tx('Zoom in', 'تكبير')} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Plus className="size-4" /></button>
-          <button type="button" onClick={fit} aria-label={tx('Fit everything', 'عرض الكل')} title={`${tx('Fit everything', 'عرض الكل')} (⌘0)`} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Presentation className="size-4" /></button>
+          <button type="button" onClick={() => fit()} aria-label={tx('Fit everything', 'عرض الكل')} title={`${tx('Fit everything', 'عرض الكل')} (⌘0)`} className="grid size-8 place-items-center rounded-full hover:bg-surface-2"><Presentation className="size-4" /></button>
         </div>
-        {!els.length && <p className="pointer-events-none absolute inset-x-0 top-1/3 text-center text-sm text-muted-foreground">{tx('Draw anywhere. Two fingers or the scroll wheel move the board; pinch or ⌘ + scroll to zoom.', 'ارسم في أي مكان. حرّك السبورة بإصبعين أو بعجلة الفأرة؛ كبّر بالقرص أو ⌘ + التمرير.')}</p>}
+        {!els.length && <p className="pointer-events-none absolute inset-x-0 top-1/3 px-6 text-center text-sm text-[var(--paper-muted)]">{tx('Draw anywhere. Two fingers or the scroll wheel move the board; pinch or ⌘ + scroll to zoom.', 'ارسم في أي مكان. حرّك السبورة بإصبعين أو بعجلة الفأرة؛ كبّر بالقرص أو ⌘ + التمرير.')}</p>}
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { DialogContent } from '@/components/ui/dialog';
 import { useNotebooks, type Notebook } from '@/lib/notebook';
 import { fromCanvas, type Prepared } from '@/lib/upload';
 import { cn } from '@/lib/utils';
+import { nAr } from '@/lib/plural';
 
 /** Pick pages from the student's handwritten notebooks; each page is rendered to a JPEG and handed back. */
 export function NotebookPicker({ open, onOpenChange, onPick, assignmentId }: { open: boolean; onOpenChange: (o: boolean) => void; onPick: (files: Prepared[]) => void; assignmentId?: string }) {
@@ -62,7 +63,7 @@ export function NotebookPicker({ open, onOpenChange, onPick, assignmentId }: { o
             </ul>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" className="min-h-10 text-sm text-muted-foreground hover:text-foreground" onClick={() => setChosen(chosen.length === nb.pages.length ? [] : nb.pages.map((_, i) => i))}>{chosen.length === nb.pages.length ? tx('Clear', 'مسح') : tx('Select all', 'تحديد الكل')}</button>
-              <Button disabled={!chosen.length || busy} onClick={() => void add()}>{busy ? tx('Preparing…', 'جارٍ التجهيز…') : chosen.length ? tx(`Add ${chosen.length} page${chosen.length === 1 ? '' : 's'}`, `أضف ${chosen.length} صفحة`) : tx('Choose pages', 'اختر صفحات')}</Button>
+              <Button disabled={!chosen.length || busy} onClick={() => void add()}>{busy ? tx('Preparing…', 'جارٍ التجهيز…') : chosen.length ? tx(`Add ${chosen.length} page${chosen.length === 1 ? '' : 's'}`, `أضف ${nAr(chosen.length, 'page', true)}`) : tx('Choose pages', 'اختر صفحات')}</Button>
             </div>
           </>
         )}

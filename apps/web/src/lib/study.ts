@@ -45,11 +45,12 @@ export function review(card: Card, grade: Grade, now = Date.now()): Card {
 }
 
 /** What each grade button would schedule, for the labels under them. */
-export function preview(card: Card, now = Date.now()): Record<Grade, string> {
+export function preview(card: Card, now = Date.now(), locale: 'en' | 'ar' = 'en'): Record<Grade, string> {
   const out = {} as Record<Grade, string>;
+  const [m, d, mo] = locale === 'ar' ? [' د', ' ي', ' ش'] : ['m', 'd', 'mo'];
   for (const g of [0, 1, 2, 3] as Grade[]) {
     const next = review(card, g, now); const ms = next.due - now;
-    out[g] = ms < DAY ? `${Math.round(ms / 60_000)}m` : ms < 30 * DAY ? `${Math.round(ms / DAY)}d` : `${Math.round(ms / (30 * DAY))}mo`;
+    out[g] = ms < DAY ? `${Math.round(ms / 60_000)}${m}` : ms < 30 * DAY ? `${Math.round(ms / DAY)}${d}` : `${Math.round(ms / (30 * DAY))}${mo}`;
   }
   return out;
 }

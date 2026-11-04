@@ -53,10 +53,10 @@ export const boards = {
   setBackground(id: string, background: Background) { touch(id, (b) => ({ ...b, background })); },
   setElements(id: string, elements: El[]) { touch(id, (b) => ({ ...b, elements })); },
   setView(id: string, view: View) { boardStore.set((s) => ({ boards: s.boards.map((b) => (b.id === id ? { ...b, view } : b)) })); },
-  duplicate(id: string): string | null {
+  duplicate(id: string, copy = 'copy'): string | null {
     const b = boardStore.get().boards.find((x) => x.id === id); if (!b) return null;
     const nid = uid('wb_'); const now = Date.now();
-    boardStore.set((s) => ({ boards: [{ ...b, id: nid, title: `${b.title} (copy)`, createdAt: now, updatedAt: now }, ...s.boards] }));
+    boardStore.set((s) => ({ boards: [{ ...b, id: nid, title: `${b.title} (${copy})`, createdAt: now, updatedAt: now }, ...s.boards] }));
     return nid;
   },
   remove(id: string): Board | undefined {

@@ -10,7 +10,7 @@ import { MyMascot } from '@/components/mascot/my-mascot';
 import { isTyping } from '@/components/shell/shortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 import { study, useStudy, type Card } from '@/lib/study';
 import { cn } from '@/lib/utils';
 
@@ -96,7 +96,7 @@ function ChoiceList({ options, answer, picked, onPick }: { options: string[]; an
         return (
           <li key={k}><button type="button" onClick={() => onPick(k)} disabled={picked !== null}
             className={cn('flex h-full min-h-14 w-full items-start gap-3 rounded-[18px] border px-4 py-3 text-start text-[0.9375rem] transition-colors', state === 'right' ? 'border-transparent tint-success' : state === 'wrong' ? 'border-transparent tint-danger' : 'border-border hover:border-foreground disabled:opacity-60')}>
-            <kbd className="mt-0.5 rounded-md border border-current/20 px-1.5 text-[0.6875rem]">{k + 1}</kbd><span dir="auto" className="flex-1">{o}</span>{state === 'right' && <Check className="size-4" />}
+            <kbd className="mt-0.5 rounded-md border border-current/20 px-1.5 text-[0.6875rem] pointer-coarse:hidden">{k + 1}</kbd><span dir="auto" className="flex-1">{o}</span>{state === 'right' && <Check className="size-4" />}
           </button></li>
         );
       })}
@@ -214,7 +214,7 @@ export function WriteMode({ deckId, only, onDone }: { deckId: string; only?: str
       <Finish title={`${right} / ${queue.length}`} mood={right >= queue.length * 0.7 ? 'happy' : 'thinking'} actions={<>
         <Button onClick={() => { study.dueNow(missed); onDone(); }}>{tx('Done', 'تم')}</Button>
         {missed.length > 0 && <Button variant="secondary" asChild><Link href={`/app/study/flashcards/${deckId}?mode=learn`}>{tx('Learn the missed ones', 'تعلّم ما فاتك')}</Link></Button>}
-      </>}><p className="text-muted-foreground">{missed.length ? tx(`${count(missed.length, 'card')} to practise. They are due now, so they come back first.`, `${missed.length} بطاقة للتدرب. صارت مستحقة لتعود أولاً.`) : tx('Every answer from memory. Excellent.', 'كل الإجابات من الذاكرة. ممتاز.')}</p></Finish>
+      </>}><p className="text-muted-foreground">{missed.length ? tx(`${count(missed.length, 'card')} to practise. They are due now, so they come back first.`, `${nAr(missed.length, 'card')} للتدرب. صارت مستحقة لتعود أولاً.`) : tx('Every answer from memory. Excellent.', 'كل الإجابات من الذاكرة. ممتاز.')}</p></Finish>
     );
   }
   return (
@@ -278,7 +278,7 @@ export function MatchMode({ deckId, onDone }: { deckId: string; onDone: () => vo
   }
   return (
     <div className="mx-auto max-w-3xl">
-      <ModeBar onEnd={onDone} done={gone.size / 2} total={tiles.length / 2} right={<span className="inline-flex items-center gap-1 tabular text-sm font-medium"><Timer className="size-4" />{secs}s</span>} />
+      <ModeBar onEnd={onDone} done={gone.size / 2} total={tiles.length / 2} right={<span className="inline-flex items-center gap-1 tabular text-sm font-medium"><Timer className="size-4" />{tx(`${secs}s`, `${secs} ث`)}</span>} />
       <p className="mb-3 text-sm text-muted-foreground">{tx('Tap a term, then its meaning. A wrong pair adds a second.', 'انقر مصطلحاً ثم معناه. الزوج الخاطئ يضيف ثانية.')}</p>
       <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
         <AnimatePresence>
@@ -393,7 +393,7 @@ export function TestMode({ deckId, only, onDone }: { deckId: string; only?: stri
       {q.kind === 'blank' ? <Prompt label={tx('Fill the blank', 'املأ الفراغ')} text={q.blankText!} extra={<p dir="auto" className="mt-3 text-sm text-muted-foreground">{q.prompt}</p>} />
         : q.kind === 'tf' ? <Prompt label={tx('True or false?', 'صح أم خطأ؟')} text={q.prompt} extra={<p dir="auto" className="mt-4 rounded-2xl bg-surface p-4 text-[1.0625rem]">{q.statement}</p>} />
         : <Prompt label={q.kind === 'mc' ? tx('Pick the answer', 'اختر الإجابة') : tx('Write the answer', 'اكتب الإجابة')} text={q.prompt} />}
-      {q.kind === 'mc' && <ol className="grid gap-2 sm:grid-cols-2">{q.options!.map((o, k) => <li key={k}><button type="button" aria-pressed={answers[i] === o} onClick={() => set(o)} className={cn('flex min-h-14 w-full items-start gap-3 rounded-[18px] border px-4 py-3 text-start text-[0.9375rem]', answers[i] === o ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border hover:border-foreground')}><kbd className="mt-0.5 rounded-md border border-current/20 px-1.5 text-[0.6875rem]">{k + 1}</kbd><span dir="auto">{o}</span></button></li>)}</ol>}
+      {q.kind === 'mc' && <ol className="grid gap-2 sm:grid-cols-2">{q.options!.map((o, k) => <li key={k}><button type="button" aria-pressed={answers[i] === o} onClick={() => set(o)} className={cn('flex min-h-14 w-full items-start gap-3 rounded-[18px] border px-4 py-3 text-start text-[0.9375rem]', answers[i] === o ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border hover:border-foreground')}><kbd className="mt-0.5 rounded-md border border-current/20 px-1.5 text-[0.6875rem] pointer-coarse:hidden">{k + 1}</kbd><span dir="auto">{o}</span></button></li>)}</ol>}
       {q.kind === 'tf' && <div className="grid grid-cols-2 gap-2">{(['true', 'false'] as const).map((v) => <button key={v} type="button" aria-pressed={answers[i] === v} onClick={() => set(v)} className={cn('h-14 rounded-[18px] border text-base font-medium', answers[i] === v ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border hover:border-foreground')}>{v === 'true' ? tx('True', 'صح') : tx('False', 'خطأ')}</button>)}</div>}
       {(q.kind === 'type' || q.kind === 'blank') && <Input dir="auto" value={answers[i] ?? ''} onChange={(e) => set(e.target.value)} aria-label={tx('Your answer', 'إجابتك')} placeholder={tx('Type your answer', 'اكتب إجابتك')} className="h-12 text-base" autoFocus />}
       <div className="mt-5 flex items-center justify-between gap-2">
@@ -439,7 +439,7 @@ export function ChallengeMode({ deckId, onDone }: { deckId: string; onDone: () =
   if (cards.length < 3) return <Finish title={tx('Add a few more cards', 'أضف بطاقات أكثر')} mood="thinking" actions={<Button onClick={onDone}>{tx('Back', 'رجوع')}</Button>}><p className="text-muted-foreground">{tx('Challenge needs at least 3 cards.', 'يحتاج التحدي 3 بطاقات على الأقل.')}</p></Finish>;
   if (over || !q) {
     return (
-      <Finish title={tx(`${points} points`, `${points} نقطة`)} mood={points >= 10 ? 'happy' : 'thinking'} actions={<>
+      <Finish title={tx(`${points} points`, nAr(points, 'point'))} mood={points >= 10 ? 'happy' : 'thinking'} actions={<>
         <Button autoFocus onClick={() => { setQs(make()); setI(0); setLives(3); setCombo(0); setPoints(0); setLeft(LIMIT); setOver(false); setRecord(false); }}><RotateCcw />{tx('Play again', 'العب مجدداً')}</Button>
         <Button variant="secondary" onClick={onDone}>{tx('Back to deck', 'العودة إلى المجموعة')}</Button>
       </>}><p className="text-muted-foreground">{record ? tx('A new personal best!', 'رقم شخصي جديد!') : deck?.best?.challenge !== undefined ? tx(`Your best: ${deck.best.challenge}`, `أفضل نتيجة: ${deck.best.challenge}`) : ''}</p><XpChip xp={points} /></Finish>

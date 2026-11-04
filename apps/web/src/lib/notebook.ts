@@ -154,3 +154,8 @@ export function lassoed(strokes: Stroke[], loop: Pt[]): string[] {
   if (loop.length < 3) return [];
   return strokes.filter((s) => s.points.filter((p) => inside([p[0], p[1]], loop)).length >= s.points.length * 0.6).map((s) => s.id);
 }
+/** Text boxes whose middle is inside the loop (`box` gives each one's bounds). */
+export function lassoedTexts(texts: NoteText[], loop: Pt[], box: (t: NoteText) => { x: number; y: number; w: number; h: number }): string[] {
+  if (loop.length < 3) return [];
+  return texts.filter((t) => { const b = box(t); return inside([b.x + b.w / 2, b.y + b.h / 2], loop); }).map((t) => t.id);
+}

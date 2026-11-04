@@ -1,6 +1,6 @@
 'use client';
 
-import { drawPaper, drawStroke, drawTexts, pageCanvas } from './notebook-render';
+import { drawPaper, drawStroke, drawTexts, pageCanvas, textBounds } from './notebook-render';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,10 +12,15 @@ import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input, Select } from '@/components/ui/input';
-import { HIGHLIGHT, hits, INK, lassoed, notebooks, PAGE_H, PAGE_W, recognise, simplify, useNotebooks, type Notebook, type NoteText, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
+import { HIGHLIGHT, hits, INK, lassoed, lassoedTexts, notebooks, PAGE_H, PAGE_W, recognise, simplify, useNotebooks, type Notebook, type NoteText, type Paper, type Pt, type Stroke, type Tool } from '@/lib/notebook';
 import { SUBJECTS } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { Ago } from '@/components/shared/ago';
+import { Subject, SubjectOptions } from '@/components/shared/subject';
+import { colourName } from '@/lib/colour-names';
+
+/** One page's contents, for undo. */
+type Snap = { strokes: Stroke[]; texts: NoteText[] };
 
 /* ------------------------------------------------------------------ drawing */
 const PAPER_LABEL: Record<Paper, [string, string]> = { lined: ['Lined', 'مسطّر'], cornell: ['Cornell', 'كورنيل'], grid: ['Grid', 'مربعات'], dotted: ['Dotted', 'منقّط'], blank: ['Blank', 'فارغ'] };
@@ -49,7 +54,7 @@ export function NotebookList() {
                   <BookOpen className="absolute bottom-4 end-4 size-5 text-white/70" aria-hidden />
                 </span>
                 <span className="mt-2 block truncate text-sm font-medium">{n.title}</span>
-                <span className="block text-xs text-muted-foreground">{n.subject} · {n.pages.length} {n.pages.length === 1 ? tx('page', 'صفحة') : tx('pages', 'صفحات')} · <Ago ts={n.updatedAt} locale={locale} /></span>
+                <span className="block text-xs text-muted-foreground"><Subject name={n.subject} /> · {n.pages.length} {n.pages.length === 1 ? tx('page', 'صفحة') : tx('pages', 'صفحات')} · <Ago ts={n.updatedAt} locale={locale} /></span>
               </Link>
             </li>
           ))}
@@ -59,7 +64,7 @@ export function NotebookList() {
         <DialogContent title={tx('New notebook', 'دفتر جديد')}>
           <form onSubmit={(e) => { e.preventDefault(); create(); }} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Title', 'العنوان')}<Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Chemistry: moles', 'مثال: الكيمياء: المول')} autoFocus /></label>
-            <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Subject', 'المادة')}<Select value={subject} onChange={(e) => setSubject(e.target.value)}>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</Select></label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">{tx('Subject', 'المادة')}<Select value={subject} onChange={(e) => setSubject(e.target.value)}><SubjectOptions list={SUBJECTS} /></Select></label>
             <fieldset><legend className="mb-1.5 text-sm font-medium">{tx('Paper', 'الورق')}</legend>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">{(Object.keys(PAPER_LABEL) as Paper[]).map((p) => (
                 <button key={p} type="button" onClick={() => setPaper(p)} aria-pressed={paper === p} className={cn('h-11 rounded-[14px] border text-sm transition-colors', paper === p ? 'border-[var(--deep)] bg-[var(--deep)] text-white' : 'border-border hover:border-foreground/40')}>{tx(...PAPER_LABEL[p])}</button>
@@ -75,7 +80,7 @@ export function NotebookList() {
 
 /* ------------------------------------------------------------------ editor */
 export function NotebookEditor({ id }: { id: string }) {
-  const { tx, toast, prefs } = useApp();
+  const { tx, toast, prefs, locale } = useApp();
   const state = useNotebooks();
   const nb = state.notebooks.find((n) => n.id === id);
   const [index, setIndex] = useState(0);
@@ -89,7 +94,7 @@ export function NotebookEditor({ id }: { id: string }) {
   const [editText, setEditText] = useState<NoteText | null>(null);
   const [textSize, setTextSize] = useState(26);
   const lasso = useRef<Pt[] | null>(null);
-  const moving = useRef<{ from: Pt; before: Stroke[] } | null>(null);
+  const moving = useRef<{ from: Pt; before: Snap } | null>(null);
   const texts = useRef<NoteText[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -99,10 +104,11 @@ export function NotebookEditor({ id }: { id: string }) {
   const base = useRef<HTMLCanvasElement>(null);
   const live = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<Stroke[]>([]);
-  const undo = useRef<Stroke[][]>([]);
-  const redo = useRef<Stroke[][]>([]);
+  // undo covers ink and text boxes together, so a moved or deleted selection comes back whole
+  const undo = useRef<Snap[]>([]);
+  const redo = useRef<Snap[]>([]);
   const current = useRef<Stroke | null>(null);
-  const erasing = useRef<{ before: Stroke[] } | null>(null);
+  const erasing = useRef<{ before: Snap } | null>(null);
   const active = useRef<number | null>(null);
   const scale = useRef(1);
   const [, force] = useState(0);
@@ -129,8 +135,11 @@ export function NotebookEditor({ id }: { id: string }) {
   const editingId = useRef<string | null>(null);
   /** The dashed box around lassoed strokes, on the top canvas. */
   const selBox = useCallback((ids: string[]) => {
-    const picked = strokes.current.filter((s) => ids.includes(s.id)); if (!picked.length) return null;
-    const xs = picked.flatMap((s) => s.points.map((p) => p[0])); const ys = picked.flatMap((s) => s.points.map((p) => p[1]));
+    const picked = strokes.current.filter((s) => ids.includes(s.id));
+    const boxes = texts.current.filter((t) => ids.includes(t.id)).map(textBounds);
+    if (!picked.length && !boxes.length) return null;
+    const xs = [...picked.flatMap((s) => s.points.map((p) => p[0])), ...boxes.flatMap((b) => [b.x, b.x + b.w])];
+    const ys = [...picked.flatMap((s) => s.points.map((p) => p[1])), ...boxes.flatMap((b) => [b.y, b.y + b.h])];
     return { x: Math.min(...xs) - 10, y: Math.min(...ys) - 10, w: Math.max(...xs) - Math.min(...xs) + 20, h: Math.max(...ys) - Math.min(...ys) + 20 };
   }, []);
   const drawSel = useCallback((ids: string[]) => {
@@ -156,20 +165,31 @@ export function NotebookEditor({ id }: { id: string }) {
     return () => ro.disconnect();
   }, [fit, redraw]);
 
-  const commit = useCallback((next: Stroke[], before: Stroke[]) => {
-    undo.current = [...undo.current.slice(-49), before]; redo.current = [];
-    strokes.current = next;
-    if (nb && page) notebooks.setStrokes(nb.id, page.id, next);
+  const snap = (): Snap => ({ strokes: strokes.current, texts: texts.current });
+  /** Show and save a page state (only the parts that changed are written). */
+  const apply = useCallback((next: Snap) => {
+    if (nb && page) {
+      if (next.strokes !== strokes.current) notebooks.setStrokes(nb.id, page.id, next.strokes);
+      if (next.texts !== texts.current) notebooks.setTexts(nb.id, page.id, next.texts);
+    }
+    strokes.current = next.strokes; texts.current = next.texts;
     redraw(); force((n) => n + 1);
   }, [nb, page, redraw]);
+  /** `before` must be the state as last saved: pass it explicitly when the refs were changed live (drag, eraser). */
+  const commit = useCallback((next: Partial<Snap>, before: Snap = { strokes: strokes.current, texts: texts.current }) => {
+    undo.current = [...undo.current.slice(-49), before]; redo.current = [];
+    strokes.current = before.strokes; texts.current = before.texts;
+    apply({ strokes: next.strokes ?? before.strokes, texts: next.texts ?? before.texts });
+  }, [apply]);
+  const clearSel = () => { setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); };
   const doUndo = useCallback(() => {
-    const prev = undo.current.pop(); if (!prev || !nb || !page) return;
-    redo.current.push(strokes.current); strokes.current = prev; notebooks.setStrokes(nb.id, page.id, prev); redraw(); force((n) => n + 1);
-  }, [nb, page, redraw]);
+    const prev = undo.current.pop(); if (!prev) return;
+    redo.current.push({ strokes: strokes.current, texts: texts.current }); apply(prev); clearSel();
+  }, [apply]); // eslint-disable-line react-hooks/exhaustive-deps
   const doRedo = useCallback(() => {
-    const next = redo.current.pop(); if (!next || !nb || !page) return;
-    undo.current.push(strokes.current); strokes.current = next; notebooks.setStrokes(nb.id, page.id, next); redraw(); force((n) => n + 1);
-  }, [nb, page, redraw]);
+    const next = redo.current.pop(); if (!next) return;
+    undo.current.push({ strokes: strokes.current, texts: texts.current }); apply(next); clearSel();
+  }, [apply]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -200,15 +220,15 @@ export function NotebookEditor({ id }: { id: string }) {
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
     active.current = e.pointerId;
     const pt = toPage(e);
-    if (tool === 'eraser') { erasing.current = { before: strokes.current }; eraseAt(pt); return; }
+    if (tool === 'eraser') { erasing.current = { before: snap() }; eraseAt(pt); return; }
     if (tool === 'lasso') {
       const b = selBox(sel);
-      if (b && pt[0] >= b.x && pt[0] <= b.x + b.w && pt[1] >= b.y && pt[1] <= b.y + b.h) { moving.current = { from: pt, before: strokes.current }; return; }
+      if (b && pt[0] >= b.x && pt[0] <= b.x + b.w && pt[1] >= b.y && pt[1] <= b.y + b.h) { moving.current = { from: pt, before: snap() }; return; }
       setSel([]); lasso.current = [pt]; return;
     }
     if (tool === 'text') {
       active.current = null;
-      const hitText = texts.current.find((t) => pt[0] >= t.x - 6 && pt[0] <= t.x + Math.max(...t.text.split('\n').map((l) => l.length), 2) * t.size * 0.56 && pt[1] >= t.y - t.size && pt[1] <= t.y + (t.text.split('\n').length - 1) * t.size * 1.3 + 8);
+      const hitText = [...texts.current].reverse().find((t) => { const b = textBounds(t); return pt[0] >= b.x - 6 && pt[0] <= b.x + b.w + 6 && pt[1] >= b.y - 4 && pt[1] <= b.y + b.h + 4; });
       const t = hitText ?? { id: `tx${Date.now().toString(36)}`, x: pt[0], y: pt[1] + textSize * 0.4, text: '', size: textSize, color: ink };
       editingId.current = t.id; setEditText(t); redraw(); return;
     }
@@ -223,7 +243,8 @@ export function NotebookEditor({ id }: { id: string }) {
       const ctx = live.current!.getContext('2d')!;
       if (moving.current) {
         const pt = toPage(e.nativeEvent); const dx = pt[0] - moving.current.from[0]; const dy = pt[1] - moving.current.from[1];
-        strokes.current = moving.current.before.map((st) => (sel.includes(st.id) ? { ...st, points: st.points.map((q) => [q[0] + dx, q[1] + dy, q[2]] as Pt) } : st));
+        strokes.current = moving.current.before.strokes.map((st) => (sel.includes(st.id) ? { ...st, points: st.points.map((q) => [q[0] + dx, q[1] + dy, q[2]] as Pt) } : st));
+        texts.current = moving.current.before.texts.map((t) => (sel.includes(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t));
         redraw(); drawSel(sel); return;
       }
       if (!lasso.current) return;
@@ -242,46 +263,57 @@ export function NotebookEditor({ id }: { id: string }) {
     if (active.current !== e.pointerId) return;
     active.current = null;
     if (tool === 'eraser') {
-      const before = erasing.current?.before ?? strokes.current; erasing.current = null;
-      if (before !== strokes.current) { const next = strokes.current; strokes.current = before; commit(next, before); }
+      const before = erasing.current?.before ?? snap(); erasing.current = null;
+      if (before.strokes !== strokes.current) commit({ strokes: strokes.current }, before);
       return;
     }
     if (tool === 'lasso') {
-      if (moving.current) { const before = moving.current.before; moving.current = null; const next = strokes.current; strokes.current = before; commit(next, before); drawSel(sel); return; }
+      if (moving.current) { const before = moving.current.before; moving.current = null; commit({ strokes: strokes.current, texts: texts.current }, before); drawSel(sel); return; }
       const loop = lasso.current; lasso.current = null;
-      const ids = loop ? lassoed(strokes.current, loop) : [];
+      const ids = loop ? [...lassoed(strokes.current, loop), ...lassoedTexts(texts.current, loop, textBounds)] : [];
       setSel(ids); drawSel(ids); return;
     }
     const s = current.current; current.current = null;
     live.current!.getContext('2d')!.clearRect(0, 0, PAGE_W, PAGE_H);
     if (!s) return;
-    const before = strokes.current;
     const pts = simplify(s.points);
     // the shape tool tidies a rough line, box, circle or triangle
     const neat = tool === 'shape' ? recognise(pts) : null;
-    commit([...before, neat ? { ...s, points: neat, shape: true } : { ...s, points: pts }], before);
+    commit({ strokes: [...strokes.current, neat ? { ...s, points: neat, shape: true } : { ...s, points: pts }] });
   };
 
-  const selected = strokes.current.filter((st) => sel.includes(st.id));
-  const delSel = () => { if (!sel.length) return; const before = strokes.current; commit(before.filter((st) => !sel.includes(st.id)), before); setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); };
-  const dupSel = () => { if (!sel.length) return; const before = strokes.current; const copies = selected.map((st) => ({ ...st, id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, points: st.points.map((q) => [q[0] + 24, q[1] + 24, q[2]] as Pt) })); commit([...before, ...copies], before); const ids = copies.map((c) => c.id); setSel(ids); drawSel(ids); };
-  const recolorSel = (c: string) => { if (!sel.length) return; const before = strokes.current; commit(before.map((st) => (sel.includes(st.id) && st.tool === 'pen' ? { ...st, color: c } : st)), before); drawSel(sel); };
+  const rid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const delSel = () => { if (!sel.length) return; commit({ strokes: strokes.current.filter((st) => !sel.includes(st.id)), texts: texts.current.filter((t) => !sel.includes(t.id)) }); clearSel(); };
+  const dupSel = () => {
+    if (!sel.length) return;
+    const sc = strokes.current.filter((st) => sel.includes(st.id)).map((st) => ({ ...st, id: rid('s'), points: st.points.map((q) => [q[0] + 24, q[1] + 24, q[2]] as Pt) }));
+    const tc = texts.current.filter((t) => sel.includes(t.id)).map((t) => ({ ...t, id: rid('tx'), x: t.x + 24, y: t.y + 24 }));
+    commit({ strokes: [...strokes.current, ...sc], texts: [...texts.current, ...tc] });
+    const ids = [...sc, ...tc].map((c) => c.id); setSel(ids); drawSel(ids);
+  };
+  const recolorSel = (c: string) => {
+    if (!sel.length) return;
+    commit({ strokes: strokes.current.map((st) => (sel.includes(st.id) && st.tool === 'pen' ? { ...st, color: c } : st)), texts: texts.current.map((t) => (sel.includes(t.id) ? { ...t, color: c } : t)) });
+    drawSel(sel);
+  };
   const saveText = () => {
     const t = editText; editingId.current = null; setEditText(null);
     if (!t || !nb || !page) { redraw(); return; }
+    const old = texts.current.find((x) => x.id === t.id);
+    if ((old?.text ?? '') === t.text && old?.color === t.color) { redraw(); return; } // nothing changed
     const others = texts.current.filter((x) => x.id !== t.id);
-    texts.current = t.text.trim() ? [...others, t] : others;
-    notebooks.setTexts(nb.id, page.id, texts.current); redraw();
+    commit({ texts: t.text.trim() ? [...others, t] : others });
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement; if (el.closest('input,textarea,select,[contenteditable]')) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && sel.length) { e.preventDefault(); delSel(); }
-      if (e.key === 'Escape' && sel.length) { setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); }
+      if (e.key === 'Escape' && sel.length) clearSel();
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && sel.length) { e.preventDefault(); dupSel(); }
     };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   });
-  useEffect(() => { if (tool !== 'lasso' && sel.length) { setSel([]); live.current?.getContext('2d')?.clearRect(0, 0, PAGE_W, PAGE_H); } }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tool !== 'lasso' && sel.length) clearSel(); }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const exportPng = () => {
     if (!nb || !page) return;
@@ -324,9 +356,20 @@ export function NotebookEditor({ id }: { id: string }) {
   return (
     <div className="mx-auto w-full max-w-[920px] px-3 pb-10 pt-3 md:px-6">
       <h1 className="sr-only">{nb.title}</h1>
-      <div className="mb-2 flex items-center gap-2">
-        <Link href="/app/study/notebook" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{tx('Notebooks', 'الدفاتر')}</Link>
-        <input aria-label={tx('Notebook title', 'عنوان الدفتر')} defaultValue={nb.title} onBlur={(e) => notebooks.rename(nb.id, e.target.value)} className="min-w-0 flex-1 truncate rounded-[10px] bg-transparent px-2 py-1.5 text-[0.9375rem] font-medium outline-none hover:bg-surface focus:bg-surface" />
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <Link href="/app/study/notebook" className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('Notebooks', 'الدفاتر')}</Link>
+        <input aria-label={tx('Notebook title', 'عنوان الدفتر')} defaultValue={nb.title} onBlur={(e) => notebooks.rename(nb.id, e.target.value)} className="min-w-[8rem] flex-1 truncate rounded-[10px] bg-transparent px-2 py-1.5 text-[0.9375rem] font-medium outline-none hover:bg-surface focus:bg-surface" />
+        <div className="ms-auto flex shrink-0 items-center gap-1">
+          <button type="button" onClick={() => setPenOnly((v) => !v)} aria-pressed={penOnly} title={tx('Only the stylus draws (palm rejection)', 'القلم فقط يرسم (تجاهل راحة اليد)')} aria-label={penOnly ? tx('Stylus only', 'القلم فقط') : tx('Finger draws', 'الإصبع يرسم')}
+            className={cn('inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors', penOnly ? 'bg-surface-2 text-foreground' : 'text-muted-foreground hover:bg-surface-2')}>
+            <Hand className="size-4" /><span className="max-sm:sr-only">{penOnly ? tx('Stylus only', 'القلم فقط') : tx('Finger draws', 'الإصبع يرسم')}</span>
+          </button>
+          <Select aria-label={tx('Paper', 'الورق')} value={nb.paper} onChange={(e) => notebooks.setPaper(nb.id, e.target.value as Paper)} className="h-10 w-auto shrink-0 rounded-full py-0 text-sm">
+            {(Object.keys(PAPER_LABEL) as Paper[]).map((p) => <option key={p} value={p}>{tx(...PAPER_LABEL[p])}</option>)}
+          </Select>
+          {iconBtn(exportPng, Download, tx('Save page as image', 'حفظ الصفحة كصورة'))}
+          {iconBtn(printAll, Printer, tx('Print or save as PDF', 'طباعة أو حفظ PDF'))}
+        </div>
       </div>
       {nb.assignmentId && (
         <Link href={`/app/school/assignments/${encodeURIComponent(nb.assignmentId)}`} className="mb-3 flex items-center gap-3 rounded-2xl bg-[color-mix(in_oklab,var(--deep)_7%,transparent)] px-4 py-3 text-sm hover:bg-[color-mix(in_oklab,var(--deep)_11%,transparent)]">
@@ -344,35 +387,29 @@ export function NotebookEditor({ id }: { id: string }) {
         {toolBtn('shape', Shapes, tx('Shapes: draw a rough line, box or circle and it straightens', 'الأشكال: ارسم خطاً أو مربعاً أو دائرة تقريبية فتُعدَّل'))}
         {toolBtn('text', Type, tx('Text box', 'مربع نص'))}
         <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
-        {tool === 'text' && [18, 26, 38].map((ts) => <button key={ts} type="button" onClick={() => setTextSize(ts)} aria-pressed={textSize === ts} aria-label={tx(`Text size ${ts}`, `حجم النص ${ts}`)} className={cn('grid size-10 shrink-0 place-items-center rounded-full font-medium', textSize === ts && 'bg-surface-2')} style={{ fontSize: ts / 2.2 }}>A</button>)}
+        {tool === 'text' && [18, 26, 38].map((ts) => <button key={ts} type="button" onClick={() => setTextSize(ts)} aria-pressed={textSize === ts} aria-label={[tx('Small text', 'نص صغير'), tx('Medium text', 'نص متوسط'), tx('Large text', 'نص كبير')][[18, 26, 38].indexOf(ts)]} className={cn('grid size-10 shrink-0 place-items-center rounded-full font-medium', textSize === ts && 'bg-surface-2')} style={{ fontSize: ts / 2.2 }}>A</button>)}
         {tool !== 'eraser' && tool !== 'lasso' && colours.map((c) => (
-          <button key={c} type="button" onClick={() => (tool === 'highlighter' ? setMark(c) : setInk(c))} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} aria-pressed={colour === c}
+          <button key={c} type="button" onClick={() => (tool === 'highlighter' ? setMark(c) : setInk(c))} aria-label={colourName(c, locale)} title={colourName(c, locale)} aria-pressed={colour === c}
             className={cn('grid size-10 shrink-0 place-items-center rounded-full', colour === c && 'bg-surface-2')}><span className="size-5 rounded-full ring-1 ring-black/10" style={{ background: c }} /></button>
         ))}
         {(tool === 'pen' || tool === 'highlighter' || tool === 'shape') && [2, 4, 7].map((w) => (
-          <button key={w} type="button" onClick={() => setSize(w)} aria-label={tx(`Size ${w}`, `الحجم ${w}`)} aria-pressed={size === w}
+          <button key={w} type="button" onClick={() => setSize(w)} aria-label={[tx('Thin', 'رفيع'), tx('Medium', 'متوسط'), tx('Thick', 'عريض')][[2, 4, 7].indexOf(w)]} aria-pressed={size === w}
             className={cn('grid size-10 shrink-0 place-items-center rounded-full', size === w && 'bg-surface-2')}><span className="rounded-full bg-foreground" style={{ width: w + 3, height: w + 3 }} /></button>
         ))}
         <span className="mx-1 h-6 w-px shrink-0 bg-border" aria-hidden />
         {iconBtn(doUndo, Undo2, tx('Undo', 'تراجع'), !undo.current.length)}
         {iconBtn(doRedo, Redo2, tx('Redo', 'إعادة'), !redo.current.length)}
-        <button type="button" onClick={() => setPenOnly((v) => !v)} aria-pressed={penOnly} title={tx('Only the stylus draws (palm rejection)', 'القلم فقط يرسم (تجاهل راحة اليد)')}
-          className={cn('inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors', penOnly ? 'bg-surface-2 text-foreground' : 'text-muted-foreground hover:bg-surface-2')}>
-          <Hand className="size-4" />{penOnly ? tx('Stylus only', 'القلم فقط') : tx('Finger draws', 'الإصبع يرسم')}
-        </button>
-        <Select aria-label={tx('Paper', 'الورق')} value={nb.paper} onChange={(e) => notebooks.setPaper(nb.id, e.target.value as Paper)} className="h-10 w-auto shrink-0 rounded-full py-0 text-sm">
-          {(Object.keys(PAPER_LABEL) as Paper[]).map((p) => <option key={p} value={p}>{tx(...PAPER_LABEL[p])}</option>)}
-        </Select>
-        {iconBtn(exportPng, Download, tx('Save page as image', 'حفظ الصفحة كصورة'))}
-        {iconBtn(printAll, Printer, tx('Print or save as PDF', 'طباعة أو حفظ PDF'))}
       </div>
 
+      {/* the selection bar floats over the page (it takes no room), so the page never jumps under the pen */}
       {sel.length > 0 && (
-        <div className="sticky top-[calc(var(--topbar-h)+4rem)] z-20 mb-2 flex flex-wrap items-center gap-1 rounded-full border border-border bg-[var(--popover)] p-1 shadow-sm">
+        <div className="sticky top-[calc(var(--topbar-h)+4rem)] z-20 h-0">
+        <div className="absolute inset-x-2 top-0 flex flex-wrap items-center gap-1 rounded-full border border-border bg-[var(--popover)] p-1 shadow-[var(--shadow-2)] sm:inset-x-auto sm:start-2">
           <span className="px-3 text-xs text-muted-foreground">{tx(`${sel.length} selected · drag to move`, `${sel.length} محدد · اسحب للتحريك`)}</span>
-          {INK.map((c) => <button key={c} type="button" onClick={() => recolorSel(c)} aria-label={tx(`Colour ${c}`, `اللون ${c}`)} className="grid size-9 place-items-center rounded-full hover:bg-surface-2"><span className="size-4 rounded-full ring-1 ring-black/10" style={{ background: c }} /></button>)}
+          {INK.map((c) => <button key={c} type="button" onClick={() => recolorSel(c)} aria-label={tx(`Make it ${colourName(c, 'en').toLowerCase()}`, `لوّنه ${colourName(c, 'ar')}`)} className="grid size-9 place-items-center rounded-full hover:bg-surface-2"><span className="size-4 rounded-full ring-1 ring-black/10" style={{ background: c }} /></button>)}
           {iconBtn(dupSel, Copy, tx('Duplicate', 'تكرار'))}
           {iconBtn(delSel, Trash2, tx('Delete', 'حذف'))}
+        </div>
         </div>
       )}
       <div className="overflow-auto rounded-[14px]" onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom((z) => Math.max(1, Math.min(3, Math.round((z - e.deltaY * 0.004) * 10) / 10))); } }}>

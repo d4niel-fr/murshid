@@ -130,6 +130,10 @@
 .shell-main { transition: padding-inline-start 200ms cubic-bezier(.22,1,.36,1); }
 /* full-height views (chat) fill what is left under the top bar */
 /* full-height views (chat, whiteboard) stop above the phone tab bar */
+/* Whiteboards stay paper-light in both themes, so every ink colour keeps its contrast; dark mode only dims the white. */
+.paper { --paper: #ffffff; --paper-mark: rgb(15 47 99 / 0.22); --paper-line: rgb(15 47 99 / 0.1); --paper-muted: #5b6372; background-color: var(--paper); }
+.dark .paper { --paper: #e6e9ef; --paper-mark: rgb(15 47 99 / 0.28); --paper-line: rgb(15 47 99 / 0.14); }
+
 .fill-view { height: calc(100dvh - var(--topbar-h) - var(--tabbar-h)); }
 /* a phone on its side: a slimmer top bar leaves room for the page */
 @media (max-height: 560px) { :root { --topbar-h: 3.5rem; } }
@@ -140,5 +144,6 @@
 }
 
 /* A grid with no explicit columns sizes its one column to its widest content, so long text or a wide child pushes the
-   page sideways on phones. Give those grids a column that can shrink. Zero specificity: any grid-cols-* class wins. */
-:where(.grid:not([class^="grid-cols-"]):not([class*=" grid-cols-"])) { grid-template-columns: minmax(0, 1fr); }
+   page sideways on phones. Give those grids a column that can shrink. In the base layer, so every grid-cols-* utility
+   wins, responsive ones (sm:, lg:) included: unlayered, this rule used to beat them and kept those grids single-column. */
+@layer base { .grid { grid-template-columns: minmax(0, 1fr); } }

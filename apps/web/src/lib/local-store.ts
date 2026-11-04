@@ -14,6 +14,9 @@ export interface LocalStore<T> {
   use(): T;
 }
 
+/** Fired on `window` when a write does not fit in this device's storage. */
+export const STORAGE_FULL = 'murshid:storage-full';
+
 export function createLocalStore<T>(key: string, initial: () => T, opts: { version?: number; migrate?: (raw: unknown) => T | null } = {}): LocalStore<T> {
   const storageKey = `murshid:${key}:v${opts.version ?? 1}`;
   let state: T | undefined;
@@ -36,11 +39,20 @@ export function createLocalStore<T>(key: string, initial: () => T, opts: { versi
   const emit = () => { for (const l of listeners) l(); };
   // another tab changed it: reload and re-render
   const onStorage = (e: StorageEvent) => { if (e.key === storageKey) { state = load(); emit(); } };
+  const write = () => {
+    timer = null;
+    try { window.localStorage.setItem(storageKey, JSON.stringify(state)); }
+    catch (e) {
+      // out of room (often pictures on boards and notebooks): say so once, instead of losing work silently
+      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) window.dispatchEvent(new CustomEvent(STORAGE_FULL, { detail: { key } }));
+    }
+  };
+  // a tab closed inside the debounce window still saves what was just done
+  const flush = () => { if (timer) { clearTimeout(timer); write(); } };
   const persist = () => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
-      try { window.localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* quota or private mode */ }
-    }, 120);
+    else if (typeof window !== 'undefined') window.addEventListener('pagehide', flush, { once: true });
+    timer = setTimeout(write, 120);
   };
 
   const store: LocalStore<T> = {

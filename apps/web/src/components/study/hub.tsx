@@ -12,9 +12,10 @@ import { fadeUp, stagger } from '@/lib/motion';
 import { ACHIEVEMENTS, isDue, study, studyStreak, useStudy, weekFocusMinutes, xpStats } from '@/lib/study';
 import { useBoards } from '@/lib/whiteboard';
 import { cn } from '@/lib/utils';
-import { count, countAr } from '@/lib/plural';
+import { count, countAr, nAr } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
 import { useNotebooks } from '@/lib/notebook';
+import { Subject } from '@/components/shared/subject';
 
 export function StudyHub() {
   const { tx, locale, world } = useApp();
@@ -39,14 +40,14 @@ export function StudyHub() {
     [tx('Cards due', 'بطاقات مستحقة'), due, tx('ready to review', 'جاهزة للمراجعة')],
     [tx('Study streak', 'أيام متتالية'), streak, streak === 1 ? tx('day', 'يوم') : tx('days', 'أيام')],
     [tx('Focus this week', 'تركيز هذا الأسبوع'), week, tx('minutes', 'دقيقة')],
-    [tx('Topics confident', 'مواضيع متقنة'), `${confident}%`, tx(`of ${count(s.topics.length, 'topic')}`, `من ${s.topics.length} موضوعاً`)],
+    [tx('Topics confident', 'مواضيع متقنة'), `${confident}%`, tx(`of ${count(s.topics.length, 'topic')}`, `من ${nAr(s.topics.length, 'topic', true)}`)],
   ];
   const tools = [
     { href: '/app/study/flashcards', icon: Layers, title: tx('Flashcards', 'البطاقات التعليمية'), body: tx('Spaced repetition: each card comes back just before you would forget it.', 'تكرار متباعد: تعود كل بطاقة قبل أن تنساها مباشرة.'), meta: tx(`${count(s.decks.length, 'deck')} · ${due} due`, `${s.decks.length} مجموعات · ${due} مستحقة`) },
     { href: '/app/study/notes', icon: FileText, title: tx('Notes', 'الملاحظات'), body: tx('Headings, checklists and tables. Saves as you type; turns “term :: meaning” lines into cards.', 'عناوين وقوائم وجداول. تُحفظ أثناء الكتابة؛ وتحوّل سطور «مصطلح :: معنى» إلى بطاقات.'), meta: tx(count(s.notes.length, 'note'), `${s.notes.length} ملاحظات`) },
     { href: '/app/study/notebook', icon: PenLine, title: tx('Notebook', 'الدفتر'), body: tx('Write by hand with a stylus or finger: pen, highlighter, eraser, lined or grid paper.', 'اكتب بخط يدك بالقلم أو الإصبع: قلم وقلم تمييز وممحاة وورق مسطّر أو مربعات.'), meta: tx(count(nbs.notebooks.length, 'notebook'), `${nbs.notebooks.length} دفاتر`) },
     { href: '/app/study/whiteboard', icon: Presentation, title: tx('Whiteboard', 'السبورة'), body: tx('An endless board: draw, add shapes, arrows, sticky notes, text and pictures. Pinch or scroll to zoom.', 'سبورة بلا حدود: ارسم وأضف أشكالاً وأسهماً وملاحظات لاصقة ونصاً وصوراً. كبّر بالقرص أو التمرير.'), meta: tx(count(boards.boards.length, 'board'), `${boards.boards.length} سبورات`) },
-    { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${week} دقيقة هذا الأسبوع`) },
+    { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${nAr(week, 'minute')} هذا الأسبوع`) },
     { href: '/app/study/topics', icon: ListChecks, title: tx('Topic tracker', 'متتبع المواضيع'), body: tx('Rate each topic from “not started” to “confident” and revise the shaky ones first.', 'قيّم كل موضوع من «لم أبدأ» إلى «متقن» وراجع الضعيفة أولاً.'), meta: tx(`${shaky.length} to revise`, `${shaky.length} للمراجعة`) },
   ];
 
@@ -98,8 +99,8 @@ export function StudyHub() {
           <div className="flex items-center gap-5">
             <GoalRing value={xp.today} goal={xp.goal} />
             <div className="min-w-0 flex-1 text-sm">
-              <p className="font-medium">{xp.today >= xp.goal ? tx('Daily goal done!', 'أنجزت هدف اليوم!') : tx(`${xp.goal - xp.today} XP to today’s goal`, `${xp.goal - xp.today} نقطة لهدف اليوم`)}</p>
-              <p className="mt-1 text-muted-foreground">{tx(`${lvl.need - lvl.into} XP to level ${lvl.level + 1}. Earn XP in Learn, Write, Match, Tests and reviews.`, `${lvl.need - lvl.into} نقطة للمستوى ${lvl.level + 1}. اجمع النقاط في التعلم والكتابة والمطابقة والاختبارات والمراجعة.`)}</p>
+              <p className="font-medium">{xp.today >= xp.goal ? tx('Daily goal done!', 'أنجزت هدف اليوم!') : tx(`${xp.goal - xp.today} XP to today’s goal`, `${nAr(xp.goal - xp.today, 'point')} لهدف اليوم`)}</p>
+              <p className="mt-1 text-muted-foreground">{tx(`${lvl.need - lvl.into} XP to level ${lvl.level + 1}. Earn XP in Learn, Write, Match, Tests and reviews.`, `${nAr(lvl.need - lvl.into, 'point')} للمستوى ${lvl.level + 1}. اجمع النقاط في التعلم والكتابة والمطابقة والاختبارات والمراجعة.`)}</p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${(lvl.into / lvl.need) * 100}%` }} /></div>
               <label className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground">{tx('Daily goal', 'الهدف اليومي')}
                 <select value={xp.goal} onChange={(e) => study.setGoal(Number(e.target.value))} className="rounded-full bg-surface px-2 py-1 text-foreground">{[20, 50, 100, 150, 250].map((g) => <option key={g} value={g}>{g} XP</option>)}</select></label>
@@ -139,7 +140,7 @@ export function StudyHub() {
             <ul className="flex flex-col">
               {decksDue.map(({ d, n }) => (
                 <li key={d.id} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
-                  <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem] font-medium">{d.title}</span><span className="text-xs text-muted-foreground">{d.subject}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem] font-medium">{d.title}</span><span className="text-xs text-muted-foreground"><Subject name={d.subject} /></span></span>
                   <span className="tabular text-sm text-muted-foreground">{n} {tx('due', 'مستحقة')}</span>
                   <Button size="sm" asChild><Link href={`/app/study/flashcards/${d.id}?mode=study`}>{tx('Study', 'ادرس')}</Link></Button>
                 </li>
@@ -153,7 +154,7 @@ export function StudyHub() {
           <ul className="flex flex-col">
             {notes.map((n) => (
               <li key={n.id}><Link href={`/app/study/notes/${n.id}`} className="flex items-center gap-3 rounded-[14px] px-2 py-2.5 transition-colors hover:bg-[var(--bg)]">
-                <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem]">{n.title || tx('Untitled note', 'ملاحظة بلا عنوان')}</span><span className="text-xs text-muted-foreground">{n.subject} · <Ago ts={n.updatedAt} locale={locale} /></span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-[0.9375rem]">{n.title || tx('Untitled note', 'ملاحظة بلا عنوان')}</span><span className="text-xs text-muted-foreground"><Subject name={n.subject} /> · <Ago ts={n.updatedAt} locale={locale} /></span></span>
               </Link></li>
             ))}
           </ul>
@@ -163,7 +164,7 @@ export function StudyHub() {
           <motion.section variants={fadeUp} className="card col-span-12 p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="card-title flex items-center gap-2"><Sparkles className="size-4" />{tx('Revise next', 'راجع التالي')}</h2>
               <Button size="sm" variant="secondary" asChild><Link href={`/app/chat?q=${encodeURIComponent(`Make me a revision plan for ${shaky.slice(0, 3).map((t) => t.name).join(', ')}`)}`}>{tx('Ask Murshid for a plan', 'اطلب خطة من مرشد')}</Link></Button></div>
-            <div className="flex flex-wrap gap-2">{shaky.map((t) => <span key={t.id} className={cn('rounded-full px-3 py-1.5 text-[0.8125rem]', t.confidence === 0 ? 'tint-danger' : 'tint-warning')}>{t.subject}: {t.name}</span>)}</div>
+            <div className="flex flex-wrap gap-2">{shaky.map((t) => <span key={t.id} className={cn('rounded-full px-3 py-1.5 text-[0.8125rem]', t.confidence === 0 ? 'tint-danger' : 'tint-warning')}><Subject name={t.subject} />: {t.name}</span>)}</div>
           </motion.section>
         )}
       </motion.div>
@@ -203,7 +204,7 @@ function League({ week, className }: { week: number; className?: string }) {
           return (
             <li key={r.name} className={cn('flex items-center gap-3 rounded-[14px] px-2 py-2 text-sm', r.me && 'bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] font-medium')}>
               <span className={cn('grid size-7 place-items-center rounded-full text-xs tabular', pos <= 3 ? 'bg-[var(--deep)] text-white' : 'bg-surface text-muted-foreground')}>{pos}</span>
-              <span className="flex-1">{r.me ? `${r.name} (${world.dashboard.student.firstName})` : r.name}</span>
+              <span className="flex-1">{r.me ? `${r.name} (${world.dashboard.student.firstName})` : <bdi>{r.name}</bdi>}</span>
               <span className="tabular text-muted-foreground">{r.xp} XP</span>
             </li>
           );

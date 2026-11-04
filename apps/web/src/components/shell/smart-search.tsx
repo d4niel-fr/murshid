@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, Bookmark, ClipboardList, Clock, CornerDownLeft, FileText, HelpCircle, Languages, Layers, MessageCircle, Moon, PenLine, Plus, Search, Sparkles, Timer, Type } from 'lucide-react';
+import { BookOpen, Bookmark, ClipboardList, Clock, CornerDownLeft, FileText, HelpCircle, Languages, Layers, MessageCircle, Moon, PenLine, Plus, Presentation, Radio, Search, Sparkles, Timer, Type, WandSparkles } from 'lucide-react';
 import { Dialog as D } from 'radix-ui';
 import { useApp } from '@/components/providers/app-provider';
 import { DialogContent } from '@/components/ui/dialog';
@@ -13,15 +13,17 @@ import { getSchool } from '@/lib/school-api';
 import { subjectName } from '@/lib/subjects';
 import { TEXT_SIZES } from '@/lib/prefs';
 import { study, useStudy } from '@/lib/study';
+import { boards as boardsApi, useBoards } from '@/lib/whiteboard';
+import { useNotebooks } from '@/lib/notebook';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS } from './icons';
 import { appNav } from './nav';
 
-type Group = 'ask' | 'recent' | 'pages' | 'assignments' | 'notes' | 'decks' | 'opportunities' | 'help' | 'actions';
+type Group = 'ask' | 'recent' | 'pages' | 'assignments' | 'notes' | 'decks' | 'boards' | 'opportunities' | 'help' | 'actions';
 interface Item { id: string; group: Group; label: string; hint?: string; icon: ReactNode; run: () => void; text?: string }
 
 const GROUP_LABEL: Record<Group, [string, string]> = {
-  ask: ['', ''], recent: ['Recently viewed', 'شوهد مؤخراً'], pages: ['Pages', 'الصفحات'], assignments: ['From your teachers', 'من معلميك'], notes: ['Notes', 'الملاحظات'], decks: ['Flashcards', 'البطاقات'],
+  ask: ['', ''], recent: ['Recently viewed', 'شوهد مؤخراً'], pages: ['Pages', 'الصفحات'], assignments: ['From your teachers', 'من معلميك'], notes: ['Notes', 'الملاحظات'], decks: ['Flashcards', 'البطاقات'], boards: ['Boards and notebooks', 'السبورات والدفاتر'],
   opportunities: ['Opportunities', 'الفرص'], help: ['Help', 'المساعدة'], actions: ['Actions', 'إجراءات'],
 };
 
@@ -64,6 +66,8 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
   }, [open, work, client.devUser]);
   const router = useRouter();
   const st = useStudy();
+  const wb = useBoards();
+  const nbs = useNotebooks();
   const lib = useLibrary();
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
@@ -81,7 +85,10 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
     }
     const extra: [string, string, string, ReactNode][] = [
       ['/app/study', tx('Study tools', 'أدوات الدراسة'), 'study hub flashcards notes focus timer quiz topics', <BookOpen key="i" className="size-4" />],
-      ['/app/study/flashcards', tx('Flashcards', 'البطاقات التعليمية'), 'cards spaced repetition decks revise', <Layers key="i" className="size-4" />],
+      ['/app/study/create', tx('Create with Murshid', 'أنشئ مع مرشد'), 'make generate ai flashcards notes from slides pdf powerpoint lecture quizlet anki upload paste اصنع بطاقات ملاحظات', <WandSparkles key="i" className="size-4" />],
+      ['/app/study/flashcards', tx('Flashcards', 'البطاقات التعليمية'), 'cards spaced repetition decks revise learn write match test challenge', <Layers key="i" className="size-4" />],
+      ['/app/study/whiteboard', tx('Whiteboard', 'السبورة'), 'whiteboard board draw diagram mind map sketch canvas sticky سبورة رسم', <Presentation key="i" className="size-4" />],
+      ['/app/study/live', tx('Join a live quiz', 'انضم إلى اختبار مباشر'), 'live quiz game code join kahoot class multiplayer اختبار مباشر رمز', <Radio key="i" className="size-4" />],
       ['/app/study/notes', tx('Notes', 'الملاحظات'), 'notes write summary', <FileText key="i" className="size-4" />],
       ['/app/study/focus', tx('Focus timer', 'مؤقت التركيز'), 'pomodoro timer focus concentrate', <Timer key="i" className="size-4" />],
       ['/app/study/notebook', tx('Notebook (handwriting)', 'الدفتر (كتابة يدوية)'), 'handwriting pen stylus pencil draw write goodnotes notebook ink', <PenLine key="i" className="size-4" />],
@@ -101,8 +108,12 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       pages.push({ id: `p:${href}`, group: 'pages', label, icon, run: go(href), text: `${label} ${text}` });
     }
     const assignments: Item[] = (work ?? []).map((a) => ({ id: `w:${a.id}`, group: 'assignments', label: a.title, hint: subjectName(a.subject, locale), icon: <ClipboardList className="size-4" />, run: go(`/app/school/assignments/${encodeURIComponent(a.id)}`), text: `${a.title} ${a.subject} ${subjectName(a.subject, locale)} ${a.teacher}` }));
-    const notes: Item[] = st.notes.map((n) => ({ id: `n:${n.id}`, group: 'notes', label: n.title || tx('Untitled note', 'ملاحظة بلا عنوان'), hint: n.subject, icon: <FileText className="size-4" />, run: go(`/app/study/notes/${n.id}`), text: `${n.title} ${n.subject} ${n.tags.join(' ')} ${n.body.slice(0, 600)}` }));
-    const decks: Item[] = st.decks.map((d) => ({ id: `d:${d.id}`, group: 'decks', label: d.title, hint: `${d.subject} · ${st.cards.filter((c) => c.deckId === d.id).length}`, icon: <Layers className="size-4" />, run: go(`/app/study/flashcards/${d.id}`), text: `${d.title} ${d.subject}` }));
+    const notes: Item[] = st.notes.map((n) => ({ id: `n:${n.id}`, group: 'notes', label: n.title || tx('Untitled note', 'ملاحظة بلا عنوان'), hint: subjectName(n.subject, locale), icon: <FileText className="size-4" />, run: go(`/app/study/notes/${n.id}`), text: `${n.title} ${n.subject} ${n.tags.join(' ')} ${n.body.slice(0, 600)}` }));
+    const decks: Item[] = st.decks.map((d) => ({ id: `d:${d.id}`, group: 'decks', label: d.title, hint: `${subjectName(d.subject, locale)} · ${st.cards.filter((c) => c.deckId === d.id).length}`, icon: <Layers className="size-4" />, run: go(`/app/study/flashcards/${d.id}`), text: `${d.title} ${d.subject} ${subjectName(d.subject, locale)}` }));
+    const boardItems: Item[] = [
+      ...wb.boards.map((b) => ({ id: `b:${b.id}`, group: 'boards' as const, label: b.title, hint: tx('Whiteboard', 'سبورة'), icon: <Presentation className="size-4" />, run: go(`/app/study/whiteboard/${b.id}`), text: `${b.title} ${b.subject} ${subjectName(b.subject, locale)} whiteboard board ${b.elements.flatMap((e) => (e.type === 'text' || e.type === 'sticky' ? [e.text] : [])).join(' ').slice(0, 400)}` })),
+      ...nbs.notebooks.map((n) => ({ id: `k:${n.id}`, group: 'boards' as const, label: n.title, hint: tx('Notebook', 'دفتر'), icon: <PenLine className="size-4" />, run: go(`/app/study/notebook/${n.id}`), text: `${n.title} ${n.subject} ${subjectName(n.subject, locale)} notebook handwriting ${n.pages.flatMap((p) => (p.texts ?? []).map((t) => t.text)).join(' ').slice(0, 400)}` })),
+    ];
     const opps: Item[] = world.opportunities.map((o) => ({ id: `o:${o.id}`, group: 'opportunities', label: o.title, hint: o.org, icon: I('Sparkles'), run: go(`/app/opportunities?q=${encodeURIComponent(o.title)}`), text: `${o.title} ${o.org} ${o.kind} ${o.tags.join(' ')} ${o.location}` }));
     const help: Item[] = FAQS.map((f) => ({ id: `f:${f.id}`, group: 'help', label: f.q[locale], icon: <HelpCircle className="size-4" />, run: go(`/faq#${f.id}`), text: `${f.q[locale]} ${f.a[locale]}` }));
     const ti = TEXT_SIZES.indexOf(prefs.textSize ?? 'md');
@@ -113,10 +124,12 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       { id: 'a:smaller', group: 'actions', label: tx('Smaller text', 'نص أصغر'), hint: '−', icon: <Type className="size-3" />, run: () => setPrefs({ textSize: TEXT_SIZES[Math.max(0, ti - 1)] }), text: 'text size smaller font' },
       { id: 'a:note', group: 'actions', label: tx('New note', 'ملاحظة جديدة'), hint: 'Shift N', icon: <Plus className="size-4" />, run: () => { const id = study.addNote(); router.push(`/app/study/notes/${id}`); }, text: 'create note write' },
       { id: 'a:deck', group: 'actions', label: tx('New flashcard deck', 'مجموعة بطاقات جديدة'), icon: <Plus className="size-4" />, run: () => { const id = study.addDeck(tx('New deck', 'مجموعة جديدة'), 'Other'); router.push(`/app/study/flashcards/${id}`); toast({ title: tx('Deck created', 'أُنشئت المجموعة') }); }, text: 'create deck flashcards' },
+      { id: 'a:make', group: 'actions', label: tx('Make flashcards from my material', 'اصنع بطاقات من موادي'), icon: <WandSparkles className="size-4" />, run: go('/app/study/create'), text: 'create make generate flashcards notes quiz from slides pdf upload' },
+      { id: 'a:board', group: 'actions', label: tx('New whiteboard', 'سبورة جديدة'), icon: <Plus className="size-4" />, run: () => { const id = boardsApi.create(tx('Untitled board', 'سبورة بلا عنوان'), 'Other'); router.push(`/app/study/whiteboard/${id}`); }, text: 'create new whiteboard board draw diagram' },
       { id: 'a:focus', group: 'actions', label: tx('Start a 25-minute focus', 'ابدأ تركيزاً لمدة 25 دقيقة'), icon: <Timer className="size-4" />, run: () => router.push('/app/study/focus?start=25'), text: 'pomodoro timer focus start' },
     ];
-    return [...pages, ...assignments, ...notes, ...decks, ...opps, ...help, ...actions];
-  }, [band, locale, st, world, prefs.theme, prefs.textSize, tx, work]); // eslint-disable-line react-hooks/exhaustive-deps
+    return [...pages, ...assignments, ...notes, ...decks, ...boardItems, ...opps, ...help, ...actions];
+  }, [band, locale, st, wb, nbs, world, prefs.theme, prefs.textSize, tx, work]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const results = useMemo(() => {
     const query = q.trim();
@@ -130,7 +143,7 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
     const per: Partial<Record<Group, number>> = {};
     const out = ranked.filter(({ item }) => { per[item.group] = (per[item.group] ?? 0) + 1; return per[item.group]! <= 5; })
       .map(({ item, hits }) => ({ item, hits: item.text ? [] : hits }));
-    const order: Group[] = ['pages', 'actions', 'assignments', 'notes', 'decks', 'opportunities', 'help'];
+    const order: Group[] = ['pages', 'actions', 'assignments', 'notes', 'decks', 'boards', 'opportunities', 'help'];
     out.sort((a, b) => order.indexOf(a.item.group) - order.indexOf(b.item.group));
     const ask = { item: { id: 'ask', group: 'ask' as const, hint: undefined as string | undefined, label: `${tx('Ask Murshid', 'اسأل مرشد')}: “${query}”`, icon: <MessageCircle className="size-4 text-primary" />, run: go(`/app/chat?q=${encodeURIComponent(query)}`) }, hits: [] as number[] };
     // a page, action or assignment whose name or keywords contain the words typed goes first, so Enter opens it;

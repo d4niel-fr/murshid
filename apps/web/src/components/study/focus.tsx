@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { study, todayFocusMinutes, useStudy, weekFocusMinutes } from '@/lib/study';
+import { nAr } from '@/lib/plural';
 
 type Mode = 'focus' | 'short' | 'long' | 'deep';
 const MINUTES: Record<Mode, number> = { focus: 25, short: 5, long: 15, deep: 50 };
@@ -55,7 +56,7 @@ export function FocusView() {
         setEndAt(null); chime();
         if (mode === 'focus' || mode === 'deep') {
           study.logFocus(MINUTES[mode], label || tx('Focus', 'تركيز'));
-          toast({ title: tx('Session complete', 'اكتملت الجلسة'), description: tx(`${MINUTES[mode]} minutes logged. Take a short break.`, `سُجّلت ${MINUTES[mode]} دقيقة. خذ استراحة قصيرة.`) });
+          toast({ title: tx('Session complete', 'اكتملت الجلسة'), description: tx(`${MINUTES[mode]} minutes logged. Take a short break.`, `سُجّلت ${nAr(MINUTES[mode], 'minute')}. خذ استراحة قصيرة.`) });
           setMode('short'); setLeft(MINUTES.short * 60_000);
         } else { toast({ title: tx('Break over', 'انتهت الاستراحة'), tone: 'info' }); setMode('focus'); setLeft(MINUTES.focus * 60_000); }
       }
@@ -120,7 +121,7 @@ export function FocusView() {
         </section>
         <section className="card col-span-12 p-6 lg:col-span-5">
           <h2 className="card-title">{tx('Your focus this week', 'تركيزك هذا الأسبوع')}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{tx(`${today} min today · ${week} min in the last 7 days`, `${today} دقيقة اليوم · ${week} دقيقة في آخر 7 أيام`)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{tx(`${today} min today · ${week} min in the last 7 days`, `${nAr(today, 'minute')} اليوم · ${nAr(week, 'minute')} في آخر 7 أيام`)}</p>
           <div className="mt-6 flex h-40 items-end gap-2" role="img" aria-label={tx('Minutes of focus per day for the last 7 days', 'دقائق التركيز يومياً لآخر 7 أيام')}>
             {days.map(({ d, m }) => (
               <div key={d.toISOString()} className="flex flex-1 flex-col items-center gap-1.5">

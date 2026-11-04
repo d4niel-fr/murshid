@@ -10,6 +10,7 @@ import { mockWorld, type MockWorld } from '@/lib/mock/data';
 import { spring } from '@/lib/motion';
 import { PREFS_COOKIE, serializePrefs, type Prefs } from '@/lib/prefs';
 import { Toaster, type ToastInput, type ToastItem } from '@/components/ui/toaster';
+import { STORAGE_FULL } from '@/lib/local-store';
 
 interface AppCtx {
   prefs: Prefs;
@@ -126,6 +127,21 @@ export function AppProvider({ initialPrefs, children }: { initialPrefs: Prefs; c
     setToasts((ts) => [...ts.slice(-2), { ...input, id }]);
     setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), input.duration ?? 3200);
   }, []);
+
+  // this device ran out of room for saved work: tell the student once a minute at most, in their language
+  const localeRef = useRef(locale); localeRef.current = locale;
+  useEffect(() => {
+    let last = 0;
+    const on = () => {
+      if (Date.now() - last < 60_000) return; last = Date.now();
+      const ar = localeRef.current === 'ar';
+      toast({ tone: 'danger', duration: 9000,
+        title: ar ? 'لم يعد هناك مكان على هذا الجهاز' : 'This device is out of room',
+        description: ar ? 'لم يُحفظ آخر تغيير. احذف بعض الصور من السبورات أو الدفاتر، أو صدّر بياناتك من الإعدادات.' : 'Your last change was not saved. Remove some pictures from boards or notebooks, or export your data from Settings.' });
+    };
+    window.addEventListener(STORAGE_FULL, on);
+    return () => window.removeEventListener(STORAGE_FULL, on);
+  }, [toast]);
 
   const value = useMemo<AppCtx>(() => ({
     prefs, setPrefs, band, bandConfig: BANDS[band], locale, dir: locale === 'ar' ? 'rtl' : 'ltr',
