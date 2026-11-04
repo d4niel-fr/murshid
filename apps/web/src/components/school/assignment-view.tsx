@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { Files } from './files';
 import { AssignmentAction } from './form-assignment';
 import { NotebookPicker } from './notebook-picker';
+import { nAr } from '@/lib/plural';
 
 type Pending = { key: string; name: string; preview?: string; state: 'uploading' | 'error'; error?: string };
 type Attached = FileRef & { preview?: string };
@@ -95,7 +96,7 @@ export function AssignmentView({ id }: { id: string }) {
           <span className="text-sm text-muted-foreground">{subjectName(a.subject, locale)} · <bdi>{a.teacher}</bdi></span>
         </div>
         <h1 dir="auto" className="text-[1.75rem] font-medium leading-tight tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-[2.25rem]">{a.title}</h1>
-        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="size-4" />{tx(`Due ${friendlyDates(a.dueDate, 'en')}, ${a.dueTime}`, `التسليم ${friendlyDates(a.dueDate, 'ar')}، ${a.dueTime}`)} · {tx(`about ${a.minutes} min`, `حوالي ${a.minutes} دقيقة`)}</p>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="size-4" />{tx(`Due ${friendlyDates(a.dueDate, 'en')}, ${a.dueTime}`, `التسليم ${friendlyDates(a.dueDate, 'ar')}، ${a.dueTime}`)} · {tx(`about ${a.minutes} min`, `حوالي ${nAr(a.minutes, 'minute', true)}`)}</p>
       </header>
 
       {data.reminders.length > 0 && (

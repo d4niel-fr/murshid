@@ -8,13 +8,14 @@ import { useApp } from '@/components/providers/app-provider';
 import { Page, PageHeader } from '@/components/shared/page';
 import { EmptyState } from '@/components/shared/states';
 import { Button } from '@/components/ui/button';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 import { study, SUBJECTS } from '@/lib/study';
 import { readShareLink } from '@/lib/study-ai';
+import { subjectName } from '@/lib/subjects';
 
 /** Opens a shared deck link (the cards are inside the link) and adds a copy to this student's decks. */
 export function ImportDeckView() {
-  const { tx, toast } = useApp();
+  const { tx, toast, locale } = useApp();
   const router = useRouter();
   const [deck, setDeck] = useState<ReturnType<typeof readShareLink> | undefined>(undefined);
   useEffect(() => { setDeck(readShareLink(window.location.hash)); }, []);
@@ -29,7 +30,7 @@ export function ImportDeckView() {
   };
   return (
     <Page>
-      <PageHeader eyebrow={tx('Shared deck', 'مجموعة مشتركة')} title={deck.title} subtitle={`${deck.subject} · ${tx(count(deck.cards.length, 'card'), `${deck.cards.length} بطاقة`)}`}
+      <PageHeader eyebrow={tx('Shared deck', 'مجموعة مشتركة')} title={deck.title} subtitle={`${subjectName(deck.subject, locale)} · ${tx(count(deck.cards.length, 'card'), nAr(deck.cards.length, 'card'))}`}
         actions={<Button onClick={add}><Layers />{tx('Add to my decks', 'أضف إلى مجموعاتي')}</Button>} />
       <ol className="grid gap-2 md:grid-cols-2">
         {deck.cards.slice(0, 40).map((c, i) => <li key={i} className="card p-4 text-sm"><p dir="auto" className="font-medium">{c.front}</p><p dir="auto" className="mt-1 text-muted-foreground">{c.back}</p></li>)}

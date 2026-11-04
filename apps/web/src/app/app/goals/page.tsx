@@ -17,7 +17,7 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { demoStudents } from '@/lib/bands';
 import { addDays, diffDays, formatDate } from '@/lib/dates';
 import type { Goal } from '@/lib/types';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 
 const AREA: Record<Goal['area'], { en: string; ar: string; color: string }> = {
   academics: { en: 'Academics', ar: 'الدراسة', color: 'var(--chart-1)' },
@@ -99,7 +99,7 @@ export default function GoalsPage() {
                     {g.id.startsWith('ug-') && <button type="button" onClick={() => removeGoal(g)} className="ms-auto inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs text-muted-foreground hover:bg-surface-2 hover:text-foreground"><Trash2 className="size-3.5" />{tx('Remove', 'حذف')}</button>}
                   </div>
                   <p className="font-semibold leading-snug [overflow-wrap:anywhere]">{g.title}</p>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(g.due, locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {days >= 0 ? tx(`${count(days, 'day')} left`, `متبقي ${days} يوماً`) : tx('Past due', 'متأخر')}</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(g.due, locale, { day: 'numeric', month: 'short', year: 'numeric' })} · {days >= 0 ? tx(`${count(days, 'day')} left`, `يتبقى ${nAr(days, 'day')}`) : tx('Past due', 'متأخر')}</p>
                 </div>
               </div>
               <ul className="mt-4 flex flex-col gap-1 border-t border-border pt-3">

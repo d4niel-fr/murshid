@@ -2,25 +2,29 @@
 
 import { PAGE_H, PAGE_W, widthAt, type Notebook, type Paper, type Stroke, type NoteText } from '@/lib/notebook';
 
-/** Drawing a notebook page: the paper, then each stroke (shared by the editor, exports and hand-ins). */
-export function drawPaper(ctx: CanvasRenderingContext2D, paper: Paper, dark: boolean) {
-  ctx.fillStyle = dark ? '#0b1626' : '#ffffff';
+/**
+ * Drawing a notebook page: the paper, then each stroke (shared by the editor, exports and hand-ins).
+ * Paper stays light in both themes so every ink colour reads the same as on export; `dim` only softens the white
+ * for dark mode, so a bright page does not glare in a dark room.
+ */
+export function drawPaper(ctx: CanvasRenderingContext2D, paper: Paper, dim: boolean) {
+  ctx.fillStyle = dim ? '#e6e9ef' : '#ffffff';
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
-  const line = dark ? 'rgba(148,163,184,0.22)' : 'rgba(15,47,99,0.13)';
+  const line = dim ? 'rgba(15,47,99,0.16)' : 'rgba(15,47,99,0.13)';
   ctx.strokeStyle = line; ctx.fillStyle = line; ctx.lineWidth = 1.2;
   if (paper === 'cornell') {
     for (let y = 160; y < PAGE_H - 300; y += 40) { ctx.beginPath(); ctx.moveTo(300, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
-    ctx.strokeStyle = dark ? 'rgba(148,163,184,0.5)' : 'rgba(15,47,99,0.32)'; ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(15,47,99,0.32)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(40, 120); ctx.lineTo(PAGE_W - 40, 120); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(280, 120); ctx.lineTo(280, PAGE_H - 280); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(40, PAGE_H - 280); ctx.lineTo(PAGE_W - 40, PAGE_H - 280); ctx.stroke();
-    ctx.fillStyle = dark ? 'rgba(148,163,184,0.55)' : 'rgba(15,47,99,0.4)'; ctx.font = '500 22px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(15,47,99,0.4)'; ctx.font = '500 22px system-ui, sans-serif';
     ctx.fillText('CUES', 56, 156); ctx.fillText('NOTES', 316, 156); ctx.fillText('SUMMARY', 56, PAGE_H - 244);
     return;
   }
   if (paper === 'lined') {
     for (let y = 120; y < PAGE_H - 40; y += 40) { ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(PAGE_W - 40, y); ctx.stroke(); }
-    ctx.strokeStyle = dark ? 'rgba(248,113,113,0.35)' : 'rgba(220,38,38,0.28)';
+    ctx.strokeStyle = 'rgba(220,38,38,0.28)';
     ctx.beginPath(); ctx.moveTo(110, 40); ctx.lineTo(110, PAGE_H - 40); ctx.stroke();
   } else if (paper === 'grid') {
     for (let x = 40; x <= PAGE_W - 40; x += 40) { ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, PAGE_H - 40); ctx.stroke(); }
@@ -71,6 +75,16 @@ export function drawTexts(ctx: CanvasRenderingContext2D, texts: NoteText[] | und
     t.text.split('\n').forEach((line, i) => ctx.fillText(line, t.x, t.y + i * t.size * 1.3));
   }
   ctx.restore();
+}
+
+let measurer: CanvasRenderingContext2D | null = null;
+/** The box a text box covers on its page (measured with the same font it is drawn in). */
+export function textBounds(t: NoteText): { x: number; y: number; w: number; h: number } {
+  measurer ??= typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  const lines = t.text.split('\n');
+  let w = Math.max(...lines.map((l) => l.length), 1) * t.size * 0.56;
+  if (measurer) { measurer.font = `500 ${t.size}px Onest, system-ui, sans-serif`; w = Math.max(...lines.map((l) => measurer!.measureText(l).width), t.size); }
+  return { x: t.x, y: t.y - t.size, w, h: (lines.length - 1) * t.size * 1.3 + t.size * 1.3 };
 }
 
 /** A page as a canvas at `scale` (1 = 1000 x 1414), on white paper, ready to export or upload. */

@@ -12,9 +12,11 @@ import { Input, Select } from '@/components/ui/input';
 import { fadeUp, stagger } from '@/lib/motion';
 import { study, SUBJECTS, useStudy, type Confidence } from '@/lib/study';
 import { cn } from '@/lib/utils';
+import { Subject, SubjectOptions } from '@/components/shared/subject';
+import { subjectName } from '@/lib/subjects';
 
 export function TopicsView() {
-  const { tx } = useApp();
+  const { tx, locale } = useApp();
   const s = useStudy();
   const [renaming, setRenaming] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
@@ -33,9 +35,9 @@ export function TopicsView() {
         subtitle={tx('Rate how well you know each topic. Before an exam, the shaky ones are where your revision time goes first.', 'قيّم مدى معرفتك بكل موضوع. قبل الامتحان، تبدأ المراجعة بالمواضيع الضعيفة.')}
         actions={weakest.length ? <Button variant="secondary" asChild><Link href={`/app/chat?q=${encodeURIComponent(`Make me a revision plan for ${weakest.map((t) => `${t.subject} ${t.name}`).join(', ')}`)}`}><MessageCircle />{tx('Plan my revision', 'خطط مراجعتي')}</Link></Button> : undefined} />
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <Select aria-label={tx('Subject', 'المادة')} value={filter} onChange={(e) => setFilter(e.target.value)} className="h-10 w-auto min-w-[180px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option>{subjects.map((x) => <option key={x}>{x}</option>)}</Select>
+        <Select aria-label={tx('Subject', 'المادة')} value={filter} onChange={(e) => setFilter(e.target.value)} className="h-10 w-auto min-w-[180px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option><SubjectOptions list={subjects} /></Select>
         <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (!subjects.includes(newSubject)) study.addTopic(newSubject, tx('First topic', 'الموضوع الأول')); setFilter(newSubject); }}>
-          <Select aria-label={tx('Add a subject', 'أضف مادة')} value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="h-10 w-auto rounded-full">{SUBJECTS.filter((x) => !subjects.includes(x)).map((x) => <option key={x}>{x}</option>)}</Select>
+          <Select aria-label={tx('Add a subject', 'أضف مادة')} value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="h-10 w-auto rounded-full"><SubjectOptions list={SUBJECTS.filter((x) => !subjects.includes(x))} /></Select>
           <Button type="submit" variant="secondary" size="md"><Plus />{tx('Add subject', 'أضف مادة')}</Button>
         </form>
         <div className="ms-auto flex flex-wrap gap-1.5" aria-hidden>{LEVELS.map(([, l, tone]) => <span key={l} className={cn('rounded-full px-2.5 py-1 text-[0.6875rem] font-medium', tone)}>{l}</span>)}</div>
@@ -47,8 +49,8 @@ export function TopicsView() {
             const pct = items.length ? Math.round((items.reduce((a, t) => a + t.confidence, 0) / (items.length * 3)) * 100) : 0;
             return (
               <motion.section key={subject} variants={fadeUp} className="card col-span-12 p-5 lg:col-span-6">
-                <div className="mb-1 flex items-center justify-between"><h2 className="card-title">{subject}</h2><span className="text-sm tabular text-muted-foreground">{pct}%</span></div>
-                <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={tx(`${subject} readiness`, `جاهزية ${subject}`)}><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${pct}%` }} /></div>
+                <div className="mb-1 flex items-center justify-between"><h2 className="card-title"><Subject name={subject} /></h2><span className="text-sm tabular text-muted-foreground">{pct}%</span></div>
+                <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={tx(`${subject} readiness`, `جاهزية ${subjectName(subject, locale)}`)}><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${pct}%` }} /></div>
                 <ul className="flex flex-col">
                   {items.map((t) => (
                     <li key={t.id} className="group flex flex-wrap items-center gap-2 border-b border-border py-2.5 last:border-0">
@@ -70,7 +72,7 @@ export function TopicsView() {
                   ))}
                 </ul>
                 <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); study.addTopic(subject, draft[subject] ?? ''); setDraft({ ...draft, [subject]: '' }); }}>
-                  <Input aria-label={tx(`New ${subject} topic`, `موضوع ${subject} جديد`)} value={draft[subject] ?? ''} onChange={(e) => setDraft({ ...draft, [subject]: e.target.value })} placeholder={tx('Add a topic', 'أضف موضوعاً')} className="h-9 rounded-full text-sm" maxLength={60} />
+                  <Input aria-label={tx(`New ${subject} topic`, `موضوع جديد في ${subjectName(subject, locale)}`)} value={draft[subject] ?? ''} onChange={(e) => setDraft({ ...draft, [subject]: e.target.value })} placeholder={tx('Add a topic', 'أضف موضوعاً')} className="h-9 rounded-full text-sm" maxLength={60} />
                   <Button type="submit" size="sm" variant="secondary" disabled={!(draft[subject] ?? '').trim()}><Plus />{tx('Add', 'أضف')}</Button>
                 </form>
               </motion.section>

@@ -1,4 +1,5 @@
 /** Date helpers. Calendar dates are YYYY-MM-DD in Asia/Dubai (the product's home timezone). */
+import { nAr } from './plural';
 export const TZ = 'Asia/Dubai';
 
 export function todayISO(now: Date = new Date()): string {
@@ -53,7 +54,7 @@ export function relativeDay(iso: string, today: string, locale: 'en' | 'ar'): st
     if (d === 0) return 'اليوم';
     if (d === 1) return 'غداً';
     if (d === -1) return 'أمس';
-    return d > 0 ? `بعد ${d} أيام` : `قبل ${-d} أيام`;
+    return d > 0 ? `بعد ${nAr(d, 'day', true)}` : `قبل ${nAr(-d, 'day', true)}`;
   }
   if (d === 0) return 'Today';
   if (d === 1) return 'Tomorrow';

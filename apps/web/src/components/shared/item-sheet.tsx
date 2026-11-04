@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Dialog as D } from 'radix-ui';
 import { ArrowRight, CalendarClock, Clock3, Copy, Layers, Maximize2, MessageCircle, MoveRight, Tag, Timer, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { Button } from '@/components/ui/button';
 import { Check } from '@/components/ui/check';
@@ -13,6 +13,7 @@ import { addDays, formatDate } from '@/lib/dates';
 import type { PlannerBlock } from '@/lib/merge';
 import type { Task, UpcomingItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { nAr } from '@/lib/plural';
 
 /** Anything that shows up in the planner or the task list, with what the detail view needs to know about it. */
 export type DetailItem =
@@ -46,13 +47,22 @@ export function ItemSheet({ item, onOpenChange }: { item: DetailItem | null; onO
   const key = item ? detailKey(item) : '';
   const [note, setNote] = useState('');
   useEffect(() => { setNote(key ? user.itemNotes?.[key] ?? '' : ''); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  // notes save as you type (debounced)
-  useEffect(() => {
-    if (!key) return;
-    if ((user.itemNotes?.[key] ?? '') === note) return;
-    const t = setTimeout(() => update((u) => ({ ...u, itemNotes: { ...u.itemNotes, [key]: note } })), 400);
-    return () => clearTimeout(t);
-  }, [note, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  // notes save as you type (debounced), and whatever is still waiting saves the moment the sheet closes or
+  // another item opens, so the last few keystrokes are never lost
+  const pending = useRef<{ key: string; note: string } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const updateRef = useRef(update); updateRef.current = update;
+  const saveNote = useCallback(() => {
+    clearTimeout(timer.current);
+    const p = pending.current; if (!p) return; pending.current = null;
+    updateRef.current((u) => {
+      const notes = { ...u.itemNotes };
+      if (p.note.trim()) notes[p.key] = p.note; else delete notes[p.key];
+      return { ...u, itemNotes: notes };
+    });
+  }, []);
+  useEffect(() => saveNote, [key, saveNote]);
+  const typeNote = (v: string) => { setNote(v); if (!key) return; pending.current = { key, note: v }; clearTimeout(timer.current); timer.current = setTimeout(saveNote, 400); };
 
   if (!item) return <D.Root open={false} onOpenChange={onOpenChange}><span /></D.Root>;
 
@@ -67,7 +77,7 @@ export function ItemSheet({ item, onOpenChange }: { item: DetailItem | null; onO
   const done = block ? !!user.plannerDone[block.id] : task ? !!(task.id in user.taskDone ? user.taskDone[task.id] : task.done) : item.kind === 'session';
   const canTick = !!block || !!task;
   const days = Math.round((new Date(`${date}T00:00:00`).getTime() - new Date(`${world.today}T00:00:00`).getTime()) / 86_400_000);
-  const when = days === 0 ? tx('Today', 'اليوم') : days === 1 ? tx('Tomorrow', 'غداً') : days === -1 ? tx('Yesterday', 'أمس') : days > 1 ? tx(`In ${days} days`, `بعد ${days} أيام`) : tx(`${-days} days ago`, `قبل ${-days} أيام`);
+  const when = days === 0 ? tx('Today', 'اليوم') : days === 1 ? tx('Tomorrow', 'غداً') : days === -1 ? tx('Yesterday', 'أمس') : days > 1 ? tx(`In ${days} days`, `بعد ${nAr(days, 'day', true)}`) : tx(`${-days} days ago`, `قبل ${nAr(-days, 'day', true)}`);
   const color = area ? AREA[area][2] : item.kind === 'upcoming' ? (item.item.type === 'exam' || item.item.type === 'test' ? 'var(--danger)' : 'var(--warning)') : 'var(--chart-2)';
   const kindLabel = item.kind === 'block' ? tx('Study block you planned', 'وقت خططت له')
     : item.kind === 'task' ? tx("Today's task", 'مهمة اليوم')
@@ -106,13 +116,13 @@ export function ItemSheet({ item, onOpenChange }: { item: DetailItem | null; onO
             <button type="button" onClick={() => setDone(!done)} className={cn('flex min-h-14 items-center gap-3 rounded-2xl border px-4 text-start transition-colors', done ? 'border-transparent tint-success' : 'border-border hover:bg-surface')}>
               <Check checked={done} label={tx('Done', 'تم')} onChange={setDone} />
               <span className="flex-1 text-[0.9375rem] font-medium">{done ? tx('Done', 'تم') : tx('Mark as done', 'وضع علامة تم')}</span>
-              <span className="text-xs text-muted-foreground">{tx('or press D', 'أو اضغط D')}</span>
+              <span className="text-xs text-muted-foreground pointer-coarse:hidden">{tx('or press D', 'أو اضغط D')}</span>
             </button>
           )}
 
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <Fact icon={<CalendarClock className="size-4" />} label={tx('When', 'متى')} value={`${formatDate(date, locale, { weekday: 'short', day: 'numeric', month: 'short' })}${time ? ` · ${time}` : ''}`} sub={when} />
-            {minutes ? <Fact icon={<Clock3 className="size-4" />} label={tx('How long', 'المدة')} value={tx(`${minutes} min`, `${minutes} دقيقة`)} /> : null}
+            {minutes ? <Fact icon={<Clock3 className="size-4" />} label={tx('How long', 'المدة')} value={tx(`${minutes} min`, nAr(minutes, 'minute'))} /> : null}
             {area && <Fact icon={<Tag className="size-4" />} label={tx('Area', 'المجال')} value={tx(AREA[area][0], AREA[area][1])} />}
             {item.kind === 'upcoming' && <Fact icon={<Tag className="size-4" />} label={tx('Type', 'النوع')} value={tx(...UPCOMING[item.item.type])} />}
           </dl>
@@ -133,7 +143,7 @@ export function ItemSheet({ item, onOpenChange }: { item: DetailItem | null; onO
 
           <div>
             <Label htmlFor="is-note">{tx('Your notes', 'ملاحظاتك')}</Label>
-            <Textarea id="is-note" dir="auto" rows={3} value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} placeholder={tx('Page numbers, what to bring, where you got stuck…', 'أرقام الصفحات، ما تحتاج إحضاره، أين توقفت…')} />
+            <Textarea id="is-note" dir="auto" rows={3} value={note} onChange={(e) => typeNote(e.target.value)} onBlur={saveNote} maxLength={2000} placeholder={tx('Page numbers, what to bring, where you got stuck…', 'أرقام الصفحات، ما تحتاج إحضاره، أين توقفت…')} />
             <p className="mt-1 text-xs text-muted-foreground">{tx('Only you see this. Saved on this device.', 'لا يراها غيرك. تُحفظ على هذا الجهاز.')}</p>
           </div>
 

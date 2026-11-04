@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { DialogContent } from '@/components/ui/dialog';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import type { Session } from '@/lib/types';
+import { nAr } from '@/lib/plural';
 
 /** Log an activity session (minutes + optional metric). Stored locally; charts and rings update immediately. */
 export function LogSessionDialog({ trigger, activityId, open: openProp, onOpenChange }: { trigger?: ReactNode; activityId?: string; open?: boolean; onOpenChange?: (v: boolean) => void }) {
@@ -31,7 +32,7 @@ export function LogSessionDialog({ trigger, activityId, open: openProp, onOpenCh
     if (lastMetric && metric !== '' && !Number.isNaN(Number(metric))) s.metric = { name: lastMetric.name, unit: lastMetric.unit, value: Number(metric) };
     update((u) => ({ ...u, sessions: { ...u.sessions, [act.id]: [...(u.sessions[act.id] ?? []), s] } }));
     setOpen(false);
-    toast({ title: tx(`Logged ${mins} min of ${act.name}`, `تم تسجيل ${mins} دقيقة من ${act.name}`), description: tx('Your charts and progress rings are updated.', 'تم تحديث الرسوم وحلقات التقدّم.') });
+    toast({ title: tx(`Logged ${mins} min of ${act.name}`, `تم تسجيل ${nAr(mins, 'minute', true)} من ${act.name}`), description: tx('Your charts and progress rings are updated.', 'تم تحديث الرسوم وحلقات التقدّم.') });
   };
 
   return (

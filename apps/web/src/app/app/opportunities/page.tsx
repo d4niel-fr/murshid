@@ -17,7 +17,7 @@ import { Segmented } from '@/components/ui/segmented';
 import { diffDays, formatDate } from '@/lib/dates';
 import { fadeUp } from '@/lib/motion';
 import type { Application, Opportunity } from '@/lib/types';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 
 type Tab = 'discover' | 'saved' | 'applications';
 const KINDS: (Opportunity['kind'] | 'all')[] = ['all', 'hackathon', 'competition', 'olympiad', 'summer', 'internship', 'volunteering', 'scholarship'];
@@ -103,7 +103,7 @@ function View() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold leading-snug">{a.title}</p>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(a.deadline, locale)} · {days >= 0 ? tx(`${count(days, 'day')} left`, `متبقي ${days} يوماً`) : tx('Closed', 'مغلق')}</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><CalendarClock className="size-3.5" />{formatDate(a.deadline, locale)} · {days >= 0 ? tx(`${count(days, 'day')} left`, `يتبقى ${nAr(days, 'day')}`) : tx('Closed', 'مغلق')}</p>
                   </div>
                   <Badge tone={a.status === 'submitted' || a.status === 'accepted' ? 'success' : a.status === 'in-progress' ? 'brand' : 'neutral'}>{STATUS[a.status]}</Badge>
                 </div>

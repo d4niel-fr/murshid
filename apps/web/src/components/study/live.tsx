@@ -11,7 +11,9 @@ import { MyMascot } from '@/components/mascot/my-mascot';
 import { Page, PageHeader } from '@/components/shared/page';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
-import { request } from '@/lib/http';
+import { Segmented } from '@/components/ui/segmented';
+import { ApiError, request } from '@/lib/http';
+import { nAr } from '@/lib/plural';
 import { study, useStudy } from '@/lib/study';
 import { cn } from '@/lib/utils';
 
@@ -25,13 +27,20 @@ const COLORS = ['bg-[#2563c9]', 'bg-[#c2410c]', 'bg-[#15803d]', 'bg-[#7c3aed]'];
 const SHAPES = ['▲', '◆', '●', '■'];
 
 /** Poll a room every second while the screen is open. */
-function usePoll(code: string | null, query: string, onState: (s: LiveState) => void) {
+function usePoll(code: string | null, query: string, onState: (s: LiveState) => void, onGone?: (why: 'ended' | 'removed') => void) {
   const cb = useRef(onState); cb.current = onState;
+  const gone = useRef(onGone); gone.current = onGone;
   useEffect(() => {
     if (!code) return;
-    let live = true;
-    const tick = async () => { try { const s = await request<LiveState>(`/live/rooms/${code}?${query}`, { timeoutMs: 4000, retries: 0 }); if (live) cb.current(s); } catch { /* keep the last state; try again */ } };
-    void tick(); const t = setInterval(tick, 1000);
+    let live = true; let t: ReturnType<typeof setInterval> | undefined;
+    const tick = async () => {
+      try { const s = await request<LiveState>(`/live/rooms/${code}?${query}`, { timeoutMs: 4000, retries: 0 }); if (live) cb.current(s); if (s.status === 'done') clearInterval(t); }
+      catch (e) {
+        // a room that no longer exists (ended, or the server restarted) or a player the host removed: stop asking
+        if (e instanceof ApiError && (e.status === 404 || e.status === 410)) { clearInterval(t); if (live) gone.current?.(e.status === 410 ? 'removed' : 'ended'); }
+      }
+    };
+    void tick(); t = setInterval(tick, 1000);
     return () => { live = false; clearInterval(t); };
   }, [code, query]);
 }
@@ -55,8 +64,8 @@ function Board({ rows, me }: { rows: LiveState['leaderboard']; me?: string }) {
       {rows.map((r) => (
         <motion.li layout key={r.name} className={cn('flex items-center gap-3 rounded-2xl px-4 py-3', r.name === me ? 'bg-[var(--deep)] text-white' : 'bg-surface')}>
           <span className="w-6 text-center font-semibold tabular">{r.rank === 1 ? <Crown className="mx-auto size-4" /> : r.rank}</span>
-          <span className="flex-1 font-medium">{r.name}{r.name === me ? ` (${tx('you', 'أنت')})` : ''}</span>
-          <span className="tabular">{r.score.toLocaleString()}</span>
+          <span className="flex-1 font-medium"><bdi>{r.name}</bdi>{r.name === me ? ` (${tx('you', 'أنت')})` : ''}</span>
+          <span className="tabular">{r.score.toLocaleString('en-US')}</span>
         </motion.li>
       ))}
     </ol>
@@ -75,18 +84,28 @@ export function LiveHost() {
   const [state, setState] = useState<LiveState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  usePoll(room?.code ?? null, `host=${room?.hostKey ?? ''}`, setState);
+  const [howMany, setHowMany] = useState<'5' | '10' | '15' | 'all'>('10');
+  const [seconds, setSeconds] = useState<'10' | '20' | '30'>('20');
+  usePoll(room?.code ?? null, `host=${room?.hostKey ?? ''}`, setState, () => { setRoom(null); setState(null); setError(tx('That room has closed. Open a new one to play again.', 'أُغلقت تلك الغرفة. افتح غرفة جديدة للعب مرة أخرى.')); });
+  // a count the deck cannot fill falls back to all of it
+  const pick = howMany === 'all' || Number(howMany) < cards.length ? howMany : 'all';
+  const total = Math.min(40, cards.length, pick === 'all' ? 40 : Number(pick));
 
   const open = async () => {
     if (!deck) return; setBusy(true); setError(null);
-    const qs = buildQuiz(cards, { count: Math.min(15, cards.length), types: ['mc'], seed: Date.now() }).map((q) => ({ prompt: q.prompt.slice(0, 300), options: q.options!.map((o) => o.slice(0, 200)), answer: q.options!.indexOf(q.answer) }));
+    const qs = buildQuiz(cards, { count: total, types: ['mc'], seed: Date.now() }).map((q) => ({ prompt: q.prompt.slice(0, 300), options: q.options!.map((o) => o.slice(0, 200)), answer: q.options!.indexOf(q.answer) }));
     try {
-      const r = await request<{ code: string; hostKey: string; state: LiveState }>('/live/rooms', { method: 'POST', body: { title: deck.title.slice(0, 120), questions: qs }, timeoutMs: 8000 });
+      const r = await request<{ code: string; hostKey: string; state: LiveState }>('/live/rooms', { method: 'POST', body: { title: deck.title.slice(0, 120), questions: qs, seconds: Number(seconds) }, timeoutMs: 8000 });
       setRoom({ code: r.code, hostKey: r.hostKey }); setState(r.state);
     } catch { setError(tx('Live quizzes need the Murshid server, which is not reachable right now.', 'تحتاج الاختبارات المباشرة إلى خادم مرشد، وهو غير متاح الآن.')); }
     finally { setBusy(false); }
   };
-  const next = async () => { if (!room) return; try { setState(await request<LiveState>(`/live/rooms/${room.code}/next`, { method: 'POST', body: { hostKey: room.hostKey }, timeoutMs: 6000 })); } catch (e) { setError((e as Error).message); } };
+  const host = async (action: 'next' | 'end' | 'remove', extra: Record<string, string> = {}) => {
+    if (!room) return;
+    try { setError(null); setState(await request<LiveState>(`/live/rooms/${room.code}/${action}`, { method: 'POST', body: { hostKey: room.hostKey, ...extra }, timeoutMs: 6000 })); }
+    catch (e) { setError((e as Error).message); }
+  };
+  const next = () => host('next');
   const joinUrl = typeof window !== 'undefined' && room ? `${window.location.origin}/app/study/live?code=${room.code}` : '';
 
   if (!deck || cards.length < 4) {
@@ -97,9 +116,22 @@ export function LiveHost() {
       <Page>
         <Link href={`/app/study/flashcards/${deck.id}`} className="mb-4 inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{deck.title}</Link>
         <PageHeader eyebrow={tx('Live quiz', 'اختبار مباشر')} title={tx('Play this deck with your class', 'العب هذه المجموعة مع صفك')}
-          subtitle={tx(`Up to 15 questions from “${deck.title}”. Classmates join on their own device with a 6-digit code; faster right answers score more.`, `حتى 15 سؤالاً من «${deck.title}». ينضم زملاؤك من أجهزتهم برمز من 6 أرقام؛ الإجابة الصحيحة الأسرع تحصد نقاطاً أكثر.`)} />
-        {error && <p role="alert" className="mb-4 text-sm text-danger">{error}</p>}
-        <Button size="lg" onClick={() => void open()} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Radio />}{tx('Open the room', 'افتح الغرفة')}</Button>
+          subtitle={tx(`Questions from “${deck.title}”. Classmates join on their own device with a 6-digit code; faster right answers score more.`, `أسئلة من «${deck.title}». ينضم زملاؤك من أجهزتهم برمز من 6 أرقام؛ الإجابة الصحيحة الأسرع تحصد نقاطاً أكثر.`)} />
+        <div className="card flex max-w-xl flex-col gap-5 p-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{tx('Questions', 'الأسئلة')}</p>
+            <Segmented className="self-start" ariaLabel={tx('Questions', 'الأسئلة')} value={pick} onChange={setHowMany} options={[
+              ...(['5', '10', '15'] as const).filter((n) => Number(n) < cards.length).map((n) => ({ value: n, label: n })),
+              { value: 'all' as const, label: tx(`All ${Math.min(40, cards.length)}`, `الكل ${Math.min(40, cards.length)}`) }]} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{tx('Time per question', 'الوقت لكل سؤال')}</p>
+            <Segmented className="self-start" ariaLabel={tx('Time per question', 'الوقت لكل سؤال')} value={seconds} onChange={setSeconds} options={(['10', '20', '30'] as const).map((n) => ({ value: n, label: tx(`${n} s`, `${n} ث`) }))} />
+          </div>
+          <p className="text-sm text-muted-foreground">{tx(`${total} questions · about ${Math.max(1, Math.round((total * (Number(seconds) + 8)) / 60))} min with the answers`, `${nAr(total, 'question')} · نحو ${nAr(Math.max(1, Math.round((total * (Number(seconds) + 8)) / 60)), 'minute')} مع الإجابات`)}</p>
+          {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+          <Button size="lg" onClick={() => void open()} disabled={busy} className="self-start">{busy ? <Loader2 className="animate-spin" /> : <Radio />}{tx('Open the room', 'افتح الغرفة')}</Button>
+        </div>
       </Page>
     );
   }
@@ -111,17 +143,23 @@ export function LiveHost() {
         <span className="flex-1" />
         <span className="inline-flex items-center gap-1.5 text-sm"><Users className="size-4" />{state.players}</span>
         {state.status !== 'lobby' && state.status !== 'done' && <span className="text-sm tabular text-muted-foreground">{tx(`Question ${state.index + 1} of ${state.total}`, `السؤال ${state.index + 1} من ${state.total}`)}</span>}
+        {state.status !== 'done' && <Button size="sm" variant="ghost" onClick={() => { if (state.status === 'lobby' || window.confirm(tx('End the quiz now and show the final board?', 'إنهاء الاختبار الآن وعرض النتائج النهائية؟'))) void host('end'); }}>{tx('End quiz', 'إنهاء الاختبار')}</Button>}
       </div>
+      {error && <p role="alert" className="mb-4 text-sm text-danger">{error}</p>}
       {state.status === 'lobby' && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="on-deep flex flex-col items-center justify-center gap-3 rounded-[var(--radius-band)] bg-[var(--deep)] p-10 text-center text-white">
             <p className="eyebrow">{tx('Join at Study › Live quiz with the code', 'انضم من الدراسة › اختبار مباشر بالرمز')}</p>
-            <p className="font-mono text-[4.5rem] font-semibold leading-none tracking-[0.12em] tabular">{state.code.slice(0, 3)} {state.code.slice(3)}</p>
+            <p dir="ltr" className="font-mono text-[4.5rem] font-semibold leading-none tracking-[0.12em] tabular">{state.code.slice(0, 3)} {state.code.slice(3)}</p>
             <button type="button" onClick={() => { void navigator.clipboard?.writeText(joinUrl).then(() => toast({ title: tx('Join link copied', 'نُسخ رابط الانضمام') })); }} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm hover:bg-white/20"><Copy className="size-4" />{tx('Copy join link', 'انسخ رابط الانضمام')}</button>
           </div>
           <div className="card flex flex-col p-6">
             <h2 className="card-title mb-3">{tx(`Players (${state.players})`, `اللاعبون (${state.players})`)}</h2>
-            <ul className="flex flex-1 flex-wrap content-start gap-2">{(state.lobby ?? []).map((n) => <motion.li key={n} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="rounded-full bg-surface px-3 py-1.5 text-sm font-medium">{n}</motion.li>)}</ul>
+            <ul className="flex flex-1 flex-wrap content-start gap-2">{(state.lobby ?? []).map((n) => (
+              <motion.li key={n} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pe-1 ps-3 text-sm font-medium">
+                <bdi>{n}</bdi>
+                <button type="button" onClick={() => void host('remove', { name: n })} aria-label={tx(`Remove ${n}`, `أزل ${n}`)} title={tx('Remove from the game', 'أزل من اللعبة')} className="grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-surface-2 hover:text-foreground"><X className="size-3.5" /></button>
+              </motion.li>))}</ul>
             {!state.players && <p className="text-sm text-muted-foreground">{tx('Waiting for players…', 'بانتظار اللاعبين…')}</p>}
             <Button size="lg" className="mt-4" onClick={() => void next()} disabled={!state.players}><Play />{tx('Start', 'ابدأ')}</Button>
           </div>
@@ -170,8 +208,11 @@ export function LivePlay() {
   const [state, setState] = useState<LiveState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [gone, setGone] = useState<'ended' | 'removed' | null>(null);
+  // the option tapped for the open question, shown at once while the answer is sent
+  const [picked, setPicked] = useState<{ index: number; choice: number } | null>(null);
   const scored = useRef(false);
-  usePoll(joined?.code ?? null, `player=${joined?.player ?? ''}`, setState);
+  usePoll(joined?.code ?? null, `player=${joined?.player ?? ''}`, setState, setGone);
   useEffect(() => { if (state?.status === 'done' && !scored.current && state.me) { scored.current = true; study.addXp(Math.min(60, Math.round(state.me.score / 100))); } }, [state]);
 
   const join = async () => {
@@ -182,9 +223,24 @@ export function LivePlay() {
     finally { setBusy(false); }
   };
   const answer = async (choice: number) => {
-    if (!joined) return;
-    try { setState(await request<LiveState>(`/live/rooms/${joined.code}/answer`, { method: 'POST', body: { player: joined.player, choice }, timeoutMs: 6000 })); } catch { /* the next poll shows where things are */ }
+    if (!joined || !state || picked?.index === state.index) return;
+    setPicked({ index: state.index, choice });
+    try { setState(await request<LiveState>(`/live/rooms/${joined.code}/answer`, { method: 'POST', body: { player: joined.player, choice }, timeoutMs: 6000 })); }
+    catch (e) { if (e instanceof ApiError && e.status === 409) return; setPicked(null); /* not sent: let them tap again */ }
   };
+
+  if (gone) {
+    return (
+      <Page>
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <span className="text-[var(--deep)]"><MyMascot size={110} mood="idle" /></span>
+          <h1 className="display text-[1.75rem]">{gone === 'removed' ? tx('The host removed you from this quiz', 'أزالك المضيف من هذا الاختبار') : tx('This quiz has ended', 'انتهى هذا الاختبار')}</h1>
+          <p className="max-w-sm text-muted-foreground">{gone === 'removed' ? tx('You can join another game with a new code.', 'يمكنك الانضمام إلى لعبة أخرى برمز جديد.') : tx('The room closed before the last question. Ask the host for a new code.', 'أُغلقت الغرفة قبل السؤال الأخير. اطلب من المضيف رمزاً جديداً.')}</p>
+          <Button variant="secondary" onClick={() => { setGone(null); setJoined(null); setState(null); setCode(''); scored.current = false; }}>{tx('Join another quiz', 'انضم إلى اختبار آخر')}</Button>
+        </div>
+      </Page>
+    );
+  }
 
   if (!joined || !state) {
     return (
@@ -192,8 +248,8 @@ export function LivePlay() {
         <Link href="/app/study" className="mb-4 inline-flex min-h-10 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4 rtl:rotate-180" />{tx('Study', 'الدراسة')}</Link>
         <PageHeader eyebrow={tx('Live quiz', 'اختبار مباشر')} title={tx('Join a live quiz', 'انضم إلى اختبار مباشر')} subtitle={tx('Enter the code on your teacher’s or classmate’s screen.', 'أدخل الرمز الظاهر على شاشة معلمك أو زميلك.')} />
         <form onSubmit={(e) => { e.preventDefault(); void join(); }} className="card flex max-w-md flex-col gap-4 p-6">
-          <div><Label htmlFor="lv-code">{tx('Code', 'الرمز')}</Label><Input id="lv-code" inputMode="numeric" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, '').slice(0, 7))} placeholder="123 456" className="h-14 text-center font-mono text-2xl tracking-[0.2em]" autoFocus /></div>
-          <div><Label htmlFor="lv-name">{tx('Your name in the game', 'اسمك في اللعبة')}</Label><Input id="lv-name" value={name} onChange={(e) => setName(e.target.value.slice(0, 24))} maxLength={24} /></div>
+          <div><Label htmlFor="lv-code">{tx('Code', 'الرمز')}</Label><Input id="lv-code" dir="ltr" inputMode="numeric" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d ]/g, '').slice(0, 7))} placeholder="123 456" className="h-14 text-center font-mono text-2xl tracking-[0.2em]" autoFocus={!params.get('code')} /></div>
+          <div><Label htmlFor="lv-name">{tx('Your name in the game', 'اسمك في اللعبة')}</Label><Input id="lv-name" dir="auto" value={name} onChange={(e) => setName(e.target.value.slice(0, 24))} maxLength={24} autoComplete="nickname" autoFocus={!!params.get('code')} /></div>
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           <Button size="lg" type="submit" disabled={busy || code.replace(/\D/g, '').length !== 6 || !name.trim()}>{busy ? <Loader2 className="animate-spin" /> : <Play />}{tx('Join', 'انضم')}</Button>
         </form>
@@ -203,10 +259,10 @@ export function LivePlay() {
   const q = state.question; const mine = state.me?.answer;
   return (
     <Page>
-      <div className="mb-5 flex items-center gap-3"><span className="font-medium">{state.me?.name}</span><span className="flex-1" /><span className="tabular text-sm">{state.me?.score.toLocaleString()} {tx('points', 'نقطة')}</span></div>
-      {state.status === 'lobby' && <div className="flex flex-col items-center gap-4 py-12 text-center"><span className="text-[var(--deep)]"><MyMascot size={110} mood="listening" /></span><h2 className="display text-[1.75rem]">{tx('You’re in!', 'أنت في اللعبة!')}</h2><p className="text-muted-foreground">{tx(`${state.title}: waiting for the host to start. ${state.players} players here.`, `${state.title}: بانتظار بدء المضيف. ${state.players} لاعبين هنا.`)}</p></div>}
+      <div className="mb-5 flex items-center gap-3"><span className="font-medium"><bdi>{state.me?.name}</bdi></span><span className="flex-1" /><span className="tabular text-sm">{(state.me?.score ?? 0).toLocaleString('en-US')} {tx('points', 'نقطة')}</span></div>
+      {state.status === 'lobby' && <div className="flex flex-col items-center gap-4 py-12 text-center"><span className="text-[var(--deep)]"><MyMascot size={110} mood="listening" /></span><h2 className="display text-[1.75rem]">{tx('You’re in!', 'أنت في اللعبة!')}</h2><p className="text-muted-foreground">{tx(`${state.title}: waiting for the host to start. ${state.players === 1 ? 'You are the first one here.' : `${state.players} players here now.`}`, `${state.title}: بانتظار بدء المضيف. ${state.players === 1 ? 'أنت أول من انضم.' : `هنا الآن ${nAr(state.players, 'player')}.`}`)}</p></div>}
       {state.status === 'question' && q && (
-        mine ? <div className="flex flex-col items-center gap-3 py-16 text-center"><Loader2 className="size-8 animate-spin text-muted-foreground" /><p className="text-lg font-medium">{tx('Locked in. Waiting for the others…', 'تم القفل. بانتظار الآخرين…')}</p></div> : (
+        mine || picked?.index === state.index ? <div className="flex flex-col items-center gap-3 py-16 text-center"><Loader2 className="size-8 animate-spin text-muted-foreground" /><p className="text-lg font-medium">{tx('Locked in. Waiting for the others…', 'تم القفل. بانتظار الآخرين…')}</p></div> : (
           <div className="flex flex-col gap-4">
             <div className="card p-6 text-center"><p dir="auto" className="text-[1.375rem] font-medium leading-snug">{q.prompt}</p></div>
             <Countdown ms={state.remainingMs} total={state.seconds} />

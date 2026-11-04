@@ -50,26 +50,26 @@ export function Markdown({ source, onToggleTask }: { source: string; onToggleTas
     if (line.startsWith('```')) {
       const body: string[] = []; i++;
       while (i < lines.length && !lines[i]!.startsWith('```')) body.push(lines[i++]!);
-      i++; blocks.push(<pre key={`b${i}`} className="md-pre"><code>{body.join('\n')}</code></pre>); continue;
+      i++; blocks.push(<pre key={`b${i}`} dir="ltr" className="md-pre"><code>{body.join('\n')}</code></pre>); continue;
     }
     const h = /^(#{1,3})\s+(.+)$/.exec(line);
     if (h) {
       const level = Math.max(2, h[1]!.length); const base = slug(h[2]!); const n = seen.get(base) ?? 0; seen.set(base, n + 1);
       const Tag = (level === 2 ? 'h2' : 'h3') as 'h2' | 'h3';
-      blocks.push(<Tag key={`b${i}`} id={n ? `${base}-${n}` : base} className={level === 2 ? 'md-h2' : 'md-h3'}>{inline(h[2]!)}</Tag>); i++; continue;
+      blocks.push(<Tag key={`b${i}`} dir="auto" id={n ? `${base}-${n}` : base} className={level === 2 ? 'md-h2' : 'md-h3'}>{inline(h[2]!)}</Tag>); i++; continue;
     }
     if (/^(-{3,}|\*{3,})$/.test(line.trim())) { blocks.push(<hr key={`b${i}`} className="md-hr" />); i++; continue; }
     if (line.startsWith('>')) {
       const body: string[] = [];
       while (i < lines.length && lines[i]!.startsWith('>')) body.push(lines[i++]!.replace(/^>\s?/, ''));
-      blocks.push(<blockquote key={`b${i}`} className="md-quote">{inline(body.join(' '))}</blockquote>); continue;
+      blocks.push(<blockquote key={`b${i}`} dir="auto" className="md-quote">{inline(body.join(' '))}</blockquote>); continue;
     }
     if (line.trim().startsWith('|') && lines[i + 1]?.includes('---')) {
       const row = (l: string) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
       const head = row(line); i += 2; const rows: string[][] = [];
       while (i < lines.length && lines[i]!.trim().startsWith('|')) rows.push(row(lines[i++]!));
       blocks.push(
-        <div key={`b${i}`} className="md-table-wrap"><table className="md-table">
+        <div key={`b${i}`} dir="auto" className="md-table-wrap"><table className="md-table">
           <thead><tr>{head.map((c, j) => <th key={j} scope="col">{inline(c)}</th>)}</tr></thead>
           <tbody>{rows.map((r, ri) => <tr key={ri}>{r.map((c, j) => <td key={j}>{inline(c)}</td>)}</tr>)}</tbody>
         </table></div>,
@@ -84,14 +84,14 @@ export function Markdown({ source, onToggleTask }: { source: string; onToggleTas
           : <li key={i}>{inline(raw)}</li>);
         i++;
       }
-      blocks.push(ordered ? <ol key={`b${i}`} className="md-ol">{items}</ol> : <ul key={`b${i}`} className="md-ul">{items}</ul>); continue;
+      blocks.push(ordered ? <ol key={`b${i}`} dir="auto" className="md-ol">{items}</ol> : <ul key={`b${i}`} dir="auto" className="md-ul">{items}</ul>); continue;
     }
     const card = /^(.+?)\s::\s(.+)$/.exec(line);
-    if (card) { blocks.push(<p key={`b${i}`} className="md-card"><span>{inline(card[1]!)}</span><span aria-hidden>→</span><span>{inline(card[2]!)}</span></p>); i++; continue; }
+    if (card) { blocks.push(<p key={`b${i}`} dir="auto" className="md-card"><span>{inline(card[1]!)}</span><span aria-hidden>→</span><span>{inline(card[2]!)}</span></p>); i++; continue; }
     const para: string[] = [];
     while (i < lines.length && lines[i]!.trim() && !/^(#{1,3}\s|>|```|\s*([-*]|\d+\.)\s|\|)/.test(lines[i]!)) para.push(lines[i++]!);
     if (!para.length) { para.push(lines[i++]!); }
-    blocks.push(<p key={`b${i}`} className="md-p">{para.map((p, j) => <Fragment key={j}>{j > 0 && <br />}{inline(p, `p${i}-${j}`)}</Fragment>)}</p>);
+    blocks.push(<p key={`b${i}`} dir="auto" className="md-p">{para.map((p, j) => <Fragment key={j}>{j > 0 && <br />}{inline(p, `p${i}-${j}`)}</Fragment>)}</p>);
   }
   return <div className="md">{blocks}</div>;
 }

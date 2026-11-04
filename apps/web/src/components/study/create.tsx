@@ -11,10 +11,11 @@ import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { ExtractError, extractText, IMPORT_ACCEPT } from '@/lib/extract';
 import { Markdown } from '@/lib/markdown';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 import { study, SUBJECTS, useStudy } from '@/lib/study';
 import { generate, type Generated } from '@/lib/study-ai';
 import { cn } from '@/lib/utils';
+import { SubjectOptions } from '@/components/shared/subject';
 
 type Source = 'paste' | 'file' | 'note' | 'import' | 'video';
 type Make = 'both' | 'cards' | 'notes';
@@ -22,17 +23,19 @@ type Make = 'both' | 'cards' | 'notes';
 /** A first guess at the subject from the words in the material (the student can change it). */
 function guessSubject(text: string): string {
   const t = text.toLowerCase();
-  const score: [string, RegExp][] = [
-    ['Physics', /\b(force|momentum|velocity|acceleration|newton|energy|wave|circuit|voltage|current|resistance|gravity|joule)\b/g],
-    ['Mathematics', /\b(integral|derivative|equation|function|matrix|vector|probability|theorem|polynomial|trigonometr\w*|logarithm)\b/g],
-    ['Economics', /\b(market|demand|supply|elasticity|inflation|gdp|monopoly|externalit\w*|price|economy)\b/g],
-    ['Chemistry', /\b(mole|reaction|atom|molecule|bond|acid|base|electron|ion|compound|periodic)\b/g],
-    ['Biology', /\b(cell|enzyme|dna|protein|organism|photosynthesis|respiration|gene|tissue|evolution)\b/g],
-    ['English', /\b(poem|poet|metaphor|simile|novel|stanza|imagery|narrator|theme|character)\b/g],
-    ['Business Studies', /\b(marketing|cash flow|profit|revenue|stakeholder|business|entrepreneur|break-even)\b/g],
+  // English words use word boundaries; Arabic ones match as stems, since \b only knows Latin letters
+  const score: [string, RegExp, RegExp][] = [
+    ['Physics', /\b(force|momentum|velocity|acceleration|newton|energy|wave|circuit|voltage|current|resistance|gravity|joule)\b/g, /(قوة|القوى|زخم|الزخم|سرعة|تسارع|نيوتن|طاقة|موجة|دائرة كهربائية|جهد|مقاومة|جاذبية|جول)/g],
+    ['Mathematics', /\b(integral|derivative|equation|function|matrix|vector|probability|theorem|polynomial|trigonometr\w*|logarithm)\b/g, /(تكامل|مشتقة|معادلة|دالة|مصفوفة|متجه|احتمال|مبرهنة|نظرية|كثيرة حدود|لوغاريتم|مثلثات)/g],
+    ['Economics', /\b(market|demand|supply|elasticity|inflation|gdp|monopoly|externalit\w*|price|economy)\b/g, /(سوق|الطلب|العرض|مرونة|تضخم|الناتج المحلي|احتكار|سعر|الأسعار|اقتصاد)/g],
+    ['Chemistry', /\b(mole|reaction|atom|molecule|bond|acid|base|electron|ion|compound|periodic)\b/g, /(مول|تفاعل|ذرة|جزيء|رابطة|حمض|قاعدة|إلكترون|أيون|مركب|الجدول الدوري)/g],
+    ['Biology', /\b(cell|enzyme|dna|protein|organism|photosynthesis|respiration|gene|tissue|evolution)\b/g, /(خلية|الخلايا|إنزيم|بروتين|كائن حي|البناء الضوئي|التمثيل الضوئي|تنفس|جين|نسيج|تطور)/g],
+    ['English', /\b(poem|poet|metaphor|simile|novel|stanza|imagery|narrator|theme|character)\b/g, /$^/g],
+    ['Arabic', /$^/g, /(قصيدة|الشاعر|استعارة|تشبيه|كناية|بلاغة|النحو|إعراب|المبتدأ|الخبر|الفاعل|بحر شعري)/g],
+    ['Business Studies', /\b(marketing|cash flow|profit|revenue|stakeholder|business|entrepreneur|break-even)\b/g, /(تسويق|التدفق النقدي|ربح|أرباح|إيرادات|أصحاب المصلحة|ريادة|نقطة التعادل)/g],
   ];
   let best = 'Other'; let top = 2;
-  for (const [s, re] of score) { const n = (t.match(re) ?? []).length; if (n > top) { top = n; best = s; } }
+  for (const [s, en, ar] of score) { const n = (t.match(en) ?? []).length + (text.match(ar) ?? []).length; if (n > top) { top = n; best = s; } }
   return best;
 }
 
@@ -50,6 +53,9 @@ export function CreateView() {
   const [howMany, setHowMany] = useState(20);
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Other');
+  // once the student picks a subject (or it comes from a note), the guess from the text stops changing it
+  const subjectSet = useRef(false);
+  const pickSubject = (v: string) => { subjectSet.current = true; setSubject(v); };
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Generated | null>(null);
   const [cards, setCards] = useState<{ front: string; back: string; kind?: string }[]>([]);
@@ -61,10 +67,10 @@ export function CreateView() {
   useEffect(() => {
     const id = params.get('note');
     const n = id ? s.notes.find((x) => x.id === id) : null;
-    if (n) { setSource('note'); setText(n.body); setTitle(n.title); setSubject(n.subject); }
+    if (n) { setSource('note'); setText(n.body); setTitle(n.title); pickSubject(n.subject); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { if (text.length > 80 && subject === 'Other') setSubject(guessSubject(text)); }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (text.length > 80 && !subjectSet.current) setSubject(guessSubject(text)); }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const readFile = async (f: File) => {
     setError(null); setReading(true); setFileName(f.name);
@@ -101,7 +107,7 @@ export function CreateView() {
       study.saveNote(noteId, { title: noteTitle.trim() || deckTitle, body: result.notes.body, tags: ['made with Murshid'] });
     }
     study.addXp(10);
-    toast({ title: tx('Saved to Study', 'حُفظ في الدراسة'), description: [deckId && tx(count(keep.length, 'card'), `${keep.length} بطاقة`), noteId && tx('notes', 'ملاحظات')].filter(Boolean).join(' · '), tone: 'success' });
+    toast({ title: tx('Saved to Study', 'حُفظ في الدراسة'), description: [deckId && tx(count(keep.length, 'card'), nAr(keep.length, 'card')), noteId && tx('notes', 'ملاحظات')].filter(Boolean).join(' · '), tone: 'success' });
     if (deckId) router.push(`/app/study/flashcards/${deckId}${thenLearn ? '?mode=learn' : ''}`);
     else if (noteId) router.push(`/app/study/notes/${noteId}`);
   };
@@ -131,7 +137,7 @@ export function CreateView() {
                 <h2 className="card-title">{tx(`Flashcards (${cards.length})`, `البطاقات (${cards.length})`)}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   <Input aria-label={tx('Deck title', 'عنوان المجموعة')} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('Deck title', 'عنوان المجموعة')} className="h-9 w-48" />
-                  <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9 w-40">{SUBJECTS.map((x) => <option key={x}>{x}</option>)}</Select>
+                  <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => pickSubject(e.target.value)} className="h-9 w-40"><SubjectOptions list={SUBJECTS} /></Select>
                 </div>
               </div>
               <ol className="flex flex-col gap-2">
@@ -186,7 +192,7 @@ export function CreateView() {
           {source === 'note' && (
             <div className="mb-4">
               <Label htmlFor="cr-note">{tx('Pick a note', 'اختر ملاحظة')}</Label>
-              <Select id="cr-note" defaultValue="" onChange={(e) => { const n = s.notes.find((x) => x.id === e.target.value); if (n) { setText(n.body); setTitle(n.title); setSubject(n.subject); } }}>
+              <Select id="cr-note" defaultValue="" onChange={(e) => { const n = s.notes.find((x) => x.id === e.target.value); if (n) { setText(n.body); setTitle(n.title); pickSubject(n.subject); } }}>
                 <option value="" disabled>{tx('Choose…', 'اختر…')}</option>
                 {s.notes.map((n) => <option key={n.id} value={n.id}>{n.title || tx('Untitled note', 'ملاحظة بلا عنوان')}</option>)}
               </Select>
@@ -206,7 +212,7 @@ export function CreateView() {
           <h2 className="card-title">{tx('What to make', 'ماذا تصنع')}</h2>
           <Segmented stretch ariaLabel={tx('What to make', 'ماذا تصنع')} value={make} onChange={setMake} options={[{ value: 'both', label: tx('Both', 'الاثنان') }, { value: 'cards', label: tx('Cards', 'بطاقات') }, { value: 'notes', label: tx('Notes', 'ملاحظات') }]} />
           <div><Label htmlFor="cr-title">{tx('Title', 'العنوان')}</Label><Input id="cr-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Market failure', 'مثل: إخفاق السوق')} maxLength={80} /></div>
-          <div><Label htmlFor="cr-subj">{tx('Subject', 'المادة')}</Label><Select id="cr-subj" value={subject} onChange={(e) => setSubject(e.target.value)}>{SUBJECTS.map((x) => <option key={x}>{x}</option>)}</Select></div>
+          <div><Label htmlFor="cr-subj">{tx('Subject', 'المادة')}</Label><Select id="cr-subj" value={subject} onChange={(e) => pickSubject(e.target.value)}><SubjectOptions list={SUBJECTS} /></Select></div>
           {make !== 'notes' && (
             <div>
               <p className="mb-1.5 text-sm font-medium">{tx('How many cards (at most)', 'عدد البطاقات (حد أقصى)')}</p>

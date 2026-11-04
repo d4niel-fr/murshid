@@ -16,8 +16,9 @@ import { Input, Label, Select } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
 import { fadeUp, stagger } from '@/lib/motion';
 import { isDue, study, SUBJECTS, useStudy } from '@/lib/study';
-import { count } from '@/lib/plural';
+import { count, nAr } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
+import { Subject, SubjectOptions } from '@/components/shared/subject';
 
 export function NewDeckDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { tx, toast } = useApp();
@@ -35,7 +36,7 @@ export function NewDeckDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       <DialogContent title={tx('New deck', 'مجموعة جديدة')} description={tx('A deck is a set of cards on one topic.', 'المجموعة بطاقات عن موضوع واحد.')}>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div><Label htmlFor="deck-title">{tx('Title', 'العنوان')}</Label><Input id="deck-title" autoFocus required maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('e.g. Waves and sound', 'مثل: الموجات والصوت')} /></div>
-          <div><Label htmlFor="deck-subject">{tx('Subject', 'المادة')}</Label><Select id="deck-subject" value={subject} onChange={(e) => setSubject(e.target.value)}>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</Select></div>
+          <div><Label htmlFor="deck-subject">{tx('Subject', 'المادة')}</Label><Select id="deck-subject" value={subject} onChange={(e) => setSubject(e.target.value)}><SubjectOptions list={SUBJECTS} /></Select></div>
           <Button type="submit" disabled={busy || !title.trim()} className="self-end"><Plus />{tx('Create deck', 'إنشاء المجموعة')}</Button>
         </form>
       </DialogContent>
@@ -71,7 +72,7 @@ export function DecksView() {
           <Search className="size-4 text-muted-foreground" /><span className="sr-only">{tx('Search decks', 'ابحث في المجموعات')}</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tx('Search decks', 'ابحث في المجموعات')} className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
         </label>
-        <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-10 w-auto min-w-[160px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option>{subjects.map((x) => <option key={x}>{x}</option>)}</Select>
+        <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-10 w-auto min-w-[160px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option><SubjectOptions list={subjects} /></Select>
         <Segmented ariaLabel={tx('Sort decks', 'ترتيب المجموعات')} value={sort} onChange={setSort} options={[{ value: 'due', label: tx('Most due', 'الأكثر استحقاقاً') }, { value: 'recent', label: tx('Recent', 'الأحدث') }, { value: 'name', label: tx('A–Z', 'أ–ي') }]} />
       </div>
 
@@ -82,9 +83,9 @@ export function DecksView() {
               <div className="lift card flex h-full flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                   <Link href={`/app/study/flashcards/${d.id}`} className="min-w-0"><h2 className="card-title truncate hover:underline">{d.title}</h2></Link>
-                  <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[0.7188rem] font-medium">{d.subject}</span>
+                  <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-[0.7188rem] font-medium"><Subject name={d.subject} /></span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{tx(count(total, 'card'), `${total} بطاقة`)} · {tx('edited', 'عُدّلت')} <Ago ts={d.updatedAt} locale={locale} /></p>
+                <p className="mt-1 text-xs text-muted-foreground">{tx(count(total, 'card'), nAr(total, 'card'))} · {tx('edited', 'عُدّلت')} <Ago ts={d.updatedAt} locale={locale} /></p>
                 <div className="mt-4" aria-label={tx(`${known} of ${total} known`, `${known} من ${total} معروفة`)}>
                   <div className="flex justify-between text-xs text-muted-foreground"><span>{tx('Known', 'معروفة')}</span><span className="tabular">{total ? Math.round((known / total) * 100) : 0}%</span></div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--text)_8%,transparent)]"><div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${total ? (known / total) * 100 : 0}%` }} /></div>

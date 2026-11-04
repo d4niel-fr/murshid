@@ -20,6 +20,8 @@ import { fadeUp, stagger } from '@/lib/motion';
 import { cardsFromText, readingMinutes, study, studyStore, SUBJECTS, useStudy, type Note } from '@/lib/study';
 import { cn } from '@/lib/utils';
 import { Ago } from '@/components/shared/ago';
+import { nAr } from '@/lib/plural';
+import { Subject, SubjectOptions } from '@/components/shared/subject';
 
 const excerpt = (md: string) => md.replace(/[#*>`|_-]/g, ' ').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim().slice(0, 140);
 
@@ -50,7 +52,7 @@ export function NotesView() {
           <Search className="size-4 text-muted-foreground" /><span className="sr-only">{tx('Search notes', 'ابحث في الملاحظات')}</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tx('Search titles, tags and text', 'ابحث في العناوين والوسوم والنص')} className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
         </label>
-        <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-10 w-auto min-w-[160px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option>{subjects.map((x) => <option key={x}>{x}</option>)}</Select>
+        <Select aria-label={tx('Subject', 'المادة')} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-10 w-auto min-w-[160px] rounded-full"><option value="all">{tx('All subjects', 'كل المواد')}</option><SubjectOptions list={subjects} /></Select>
         {!q.trim() && <Segmented ariaLabel={tx('Sort notes', 'ترتيب الملاحظات')} value={sort} onChange={setSort} options={[{ value: 'updated', label: tx('Last edited', 'آخر تعديل') }, { value: 'created', label: tx('Newest', 'الأحدث') }, { value: 'title', label: tx('A–Z', 'أ–ي') }]} />}
       </div>
       {list.length ? (
@@ -65,7 +67,7 @@ export function NotesView() {
                 </div>
                 <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">{excerpt(n.body) || tx('Empty note', 'ملاحظة فارغة')}</p>
                 <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium text-foreground">{n.subject}</span>
+                  <span className="rounded-full bg-surface-2 px-2.5 py-1 font-medium text-foreground"><Subject name={n.subject} /></span>
                   {n.tags.slice(0, 2).map((t) => <span key={t}>#{t}</span>)}
                   <span className="ms-auto"><Ago ts={n.updatedAt} locale={locale} /></span>
                   <button type="button" onClick={() => study.saveNote(n.id, { pinned: !n.pinned })} aria-label={n.pinned ? tx('Unpin', 'إلغاء التثبيت') : tx('Pin', 'تثبيت')} className="relative z-10 grid size-8 place-items-center rounded-full opacity-70 hover:bg-[var(--bg)] hover:opacity-100">{n.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}</button>
@@ -185,7 +187,7 @@ export function NoteEditor() {
   const makeCards = () => {
     const deckId = study.addDeck(title || tx('Cards from my note', 'بطاقات من ملاحظتي'), note.subject);
     const n = study.addCards(deckId, pairs);
-    toast({ title: tx(`${n} flashcards made`, `أُنشئت ${n} بطاقة`), action: { label: tx('Open deck', 'افتح المجموعة'), onClick: () => router.push(`/app/study/flashcards/${deckId}`) } });
+    toast({ title: tx(`${n} flashcards made`, `أُنشئت ${nAr(n, 'card')}`), action: { label: tx('Open deck', 'افتح المجموعة'), onClick: () => router.push(`/app/study/flashcards/${deckId}`) } });
   };
   const exportMd = () => {
     const blob = new Blob([`# ${title}\n\n${body}\n`], { type: 'text/markdown' }); const a = document.createElement('a');
@@ -212,7 +214,7 @@ export function NoteEditor() {
           <input id="note-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tx('Untitled note', 'ملاحظة بلا عنوان')} className="display w-full bg-transparent text-[2rem] outline-none placeholder:text-muted-foreground sm:text-[2.5rem]" />
           <h1 className="print-only display text-[2rem]">{title}</h1>
           <div className="no-print mt-3 flex flex-wrap items-center gap-3">
-            <Select aria-label={tx('Subject', 'المادة')} value={note.subject} onChange={(e) => study.saveNote(note.id, { subject: e.target.value })} className="h-9 w-auto rounded-full text-[0.8125rem]">{SUBJECTS.map((x) => <option key={x}>{x}</option>)}</Select>
+            <Select aria-label={tx('Subject', 'المادة')} value={note.subject} onChange={(e) => study.saveNote(note.id, { subject: e.target.value })} className="h-9 w-auto rounded-full text-[0.8125rem]"><SubjectOptions list={SUBJECTS} /></Select>
             <Input aria-label={tx('Tags, separated by commas', 'الوسوم مفصولة بفواصل')} value={tags} onChange={(e) => setTags(e.target.value)} placeholder={tx('tags, comma separated', 'وسوم مفصولة بفواصل')} className="h-9 w-56 rounded-full text-[0.8125rem]" />
             <ReadingTime minutes={readingMinutes(body)} />
             <Segmented size="sm" className="ms-auto" ariaLabel={tx('View', 'العرض')} value={view} onChange={setView} options={[{ value: 'write', label: tx('Write', 'كتابة') }, { value: 'split', label: tx('Split', 'مقسوم') }, { value: 'preview', label: tx('Preview', 'معاينة') }]} />

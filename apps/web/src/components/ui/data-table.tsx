@@ -70,7 +70,7 @@ export function DataTable<T>({ rows, columns, rowKey, initialSort, filterPlaceho
           </thead>
           <tbody>
             {slice.map((r) => (
-              <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined} onDoubleClick={onRowOpen ? (e) => { if (!(e.target as HTMLElement).closest('button,a,input,textarea,select')) onRowOpen(r); } : undefined} title={onRowOpen ? 'Double-click to edit' : undefined} className={cn('border-b border-border last:border-0 transition-colors hover:bg-[var(--bg)]', (onRowClick || onRowOpen) && 'cursor-pointer')}>
+              <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined} onDoubleClick={onRowOpen ? (e) => { if (!(e.target as HTMLElement).closest('button,a,input,textarea,select')) onRowOpen(r); } : undefined} title={onRowOpen ? tx('Double-click to edit', 'انقر مرتين للتعديل') : undefined} className={cn('border-b border-border last:border-0 transition-colors hover:bg-[var(--bg)]', (onRowClick || onRowOpen) && 'cursor-pointer')}>
                 {columns.map((c) => <td key={c.key} className={cn('px-4 py-3 align-top', c.align === 'end' && 'text-end tabular', c.className)}>{c.cell(r)}</td>)}
               </tr>
             ))}
