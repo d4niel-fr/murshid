@@ -1,23 +1,28 @@
 /**
  * Notification routes: my inbox, push on this device, email on or off, and the daily reminder job (cron).
  */
-import { timingSafeEqual } from 'node:crypto';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
+import { safeEqual } from '../lib/security';
 import { addDays, dubaiDate } from '../lib/time';
 import { streamItems, streamsOf, weeklyReport } from '../schools/engine';
 import type { SchoolStore } from '../schools/store';
 import type { DemoStore } from '../v1/store';
 import type { NotificationHub } from './hub';
 
-const Sub = z.object({ endpoint: z.string().url().max(1000).refine((u) => u.startsWith('https://'), 'push endpoints are https'), keys: z.object({ p256dh: z.string().min(20).max(200), auth: z.string().min(8).max(100) }) });
+/**
+ * Push endpoints belong to the browser makers' push services. The server POSTs to whatever is saved here, so any other
+ * host is refused (otherwise a subscription could point the server at internal or third-party addresses: SSRF).
+ */
+export const PUSH_HOSTS = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com|wns2?-[a-z0-9-]+\.notify\.windows\.com)$/;
+export const pushEndpointOk = (u: string) => { try { const x = new URL(u); return x.protocol === 'https:' && !x.port && !x.username && !x.password && PUSH_HOSTS.test(x.hostname); } catch { return false; } };
+const Sub = z.object({ endpoint: z.string().url().max(1000).refine(pushEndpointOk, 'push endpoints must be a browser push service (https)'), keys: z.object({ p256dh: z.string().min(20).max(200), auth: z.string().min(8).max(100) }) });
 const Read = z.object({ ids: z.array(z.string().max(40)).max(200).optional() });
 const Email = z.object({ on: z.boolean() });
 const Unsub = z.object({ endpoint: z.string().url().max(1000) });
 
-const same = (a: string, b: string) => { const x = Buffer.from(a); const y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 
 export function registerNotifications(api: Api, hub: NotificationHub, schools: SchoolStore, store: DemoStore, env: Record<string, string | undefined>) {
   /** whose inbox: students by app id, teachers by teacher id, everyone else by account */
@@ -64,7 +69,7 @@ export function registerNotifications(api: Api, hub: NotificationHub, schools: S
   const run = async (c: Ctx) => {
     const secret = env.CRON_SECRET?.trim();
     const got = (c.req.header('authorization') ?? '').replace(/^Bearer\s+/i, '');
-    if (!secret || !same(got, secret)) throw new HTTPException(401, { message: 'cron secret required' });
+    if (!safeEqual(got, secret)) throw new HTTPException(401, { message: 'cron secret required' });
     const now = c.get('deps').now(); const today = dubaiDate(now); const tomorrow = addDays(today, 1);
     const sent = hub.sentKeys;
     let reminders = 0; let summaries = 0;

@@ -24,9 +24,10 @@ export const requestIdOf = (c: { get: (k: 'requestId') => string }) => c.get('re
 
 /**
  * Buckets: reads, writes, chat, sign-in, AI generation, code entry (school / class / parent / live quiz codes),
- * file uploads, billing, and live quiz traffic (players poll every second).
+ * uploads and bulk imports, billing, live quiz traffic (players poll every second), device sync, and signed
+ * machine-to-machine calls (Stripe webhooks, the cron job: generous, so a burst from Stripe is never refused).
  */
-export const BUCKETS = ['read', 'write', 'chat', 'auth', 'ai', 'code', 'upload', 'billing', 'live'] as const;
+export const BUCKETS = ['read', 'write', 'chat', 'auth', 'ai', 'code', 'upload', 'billing', 'live', 'sync', 'webhook'] as const;
 export type Bucket = (typeof BUCKETS)[number];
 /** Endpoints where a wrong guess is a failure that counts towards a lockout. */
 export type Family = 'code' | 'live' | 'passcode' | 'secret' | 'billing';
@@ -44,8 +45,8 @@ export interface Limits extends Record<Bucket, number> {
 /** Per IP per minute (one school's students often share one IP), then per person. */
 export const DEFAULT_LIMITS: Limits = {
   windowMs: 60_000,
-  read: 3000, write: 600, chat: 120, auth: 30, ai: 120, code: 100, upload: 120, billing: 10, live: 6000,
-  user: { read: 300, write: 120, chat: 20, auth: 20, ai: 20, code: 10, upload: 30, billing: 5, live: 600 },
+  read: 3000, write: 600, chat: 120, auth: 30, ai: 120, code: 100, upload: 120, billing: 10, live: 6000, sync: 600, webhook: 1200,
+  user: { read: 300, write: 120, chat: 20, auth: 20, ai: 20, code: 10, upload: 30, billing: 5, live: 600, sync: 120 },
   failures: {
     windowMs: 10 * 60_000, lockMs: 15 * 60_000, maxLockMs: 6 * 3_600_000,
     ip: { code: 30, live: 60, passcode: 15, secret: 10, billing: 10 },
@@ -64,26 +65,33 @@ export function limitsWith(over: Partial<Limits> = {}): Limits {
 }
 
 const CODE_ROUTES = /^\/(student\/classes\/join|account\/link-child|account\/setup|onboarding)$/;
+/** signed calls from other services: the signature or secret is the gate, and Stripe must never be throttled */
+const MACHINE_ROUTES = /^\/(billing\/stripe-webhook|cron\/[\w-]+)$/;
+/** heavier writes: uploads, roster imports, new schools, Microsoft sync (calls Microsoft for every class) */
+const HEAVY_ROUTES = /^\/(files|school\/roster|platform\/schools|orgs\/[^/]+\/microsoft\/connect)$/;
 const AI_ROUTES = /^\/(study\/(generate|explain)|student\/cv\/linkedin|admin\/students\/[^/]+\/linkedin)$/;
 
 export function bucketOf(method: string, path: string): Bucket {
   const write = method !== 'GET' && method !== 'HEAD';
+  if (MACHINE_ROUTES.test(path)) return 'webhook';
   if (/\/chat(\/|$)/.test(path)) return 'chat';
   if (/^\/live\/rooms/.test(path)) return write && (path === '/live/rooms' || path.endsWith('/join')) ? 'code' : 'live';
+  if (/^\/me\/sync(\/|$)/.test(path)) return 'sync';
   if (!write) return 'read';
   if (/^\/billing\//.test(path)) return 'billing';
   if (CODE_ROUTES.test(path)) return 'code';
   if (AI_ROUTES.test(path)) return 'ai';
-  if (path === '/files') return 'upload';
-  if (/^\/auth\//.test(path)) return 'auth';
+  if (HEAVY_ROUTES.test(path)) return 'upload';
+  if (/^\/auth\//.test(path) || path === '/me/push') return 'auth';
   return 'write';
 }
 
 /** The lockout family of an endpoint where a caller could guess (codes, secrets, order ids). */
 export function familyOf(method: string, path: string): Family | null {
-  if (path === '/inbox/email') return 'secret';
+  // the Stripe webhook is left out: a bad signature is answered 400, but Stripe's own addresses are never locked out
+  if (path === '/inbox/email' || /^\/cron\//.test(path)) return 'secret';
   if (/^\/live\/rooms\/[^/]+/.test(path)) return 'live';
-  if (method === 'POST' && path === '/billing/cancel') return 'billing';
+  if (method === 'POST' && (path === '/billing/cancel' || path === '/billing/portal')) return 'billing';
   if (method === 'POST' && CODE_ROUTES.test(path)) return 'code';
   return null;
 }

@@ -124,6 +124,38 @@ describe('rate limits', () => {
     for (const b of ['code', 'ai', 'upload', 'billing', 'chat'] as const) expect(DEFAULT_LIMITS.user[b]).toBeLessThan(DEFAULT_LIMITS[b]);
   });
 
+  it('new endpoints: Stripe and cron are never squeezed into a small bucket, imports and sync have their own', () => {
+    expect(bucketOf('POST', '/billing/stripe-webhook')).toBe('webhook');
+    expect(bucketOf('GET', '/cron/reminders')).toBe('webhook');
+    expect(bucketOf('POST', '/cron/reminders')).toBe('webhook');
+    expect(DEFAULT_LIMITS.webhook).toBeGreaterThanOrEqual(1000);
+    expect(DEFAULT_LIMITS.user.webhook).toBeUndefined();
+    // a bad Stripe signature is answered 400 but never locks Stripe's addresses out; a bad cron secret does count
+    expect(failureOf('POST', '/billing/stripe-webhook', 400, undefined)).toBeNull();
+    expect(failureOf('GET', '/cron/reminders', 401, 'unauthorized')).toBe('secret');
+    expect(failureOf('POST', '/billing/portal', 404, undefined)).toBe('billing');
+    expect(bucketOf('PUT', '/me/sync/study')).toBe('sync');
+    expect(bucketOf('GET', '/me/sync')).toBe('sync');
+    expect(bucketOf('POST', '/me/push')).toBe('auth');
+    expect(bucketOf('DELETE', '/me/push')).toBe('auth');
+    expect(bucketOf('POST', '/platform/schools')).toBe('upload');
+    expect(bucketOf('POST', '/school/roster')).toBe('upload');
+    expect(bucketOf('POST', '/orgs/sch-1/microsoft/connect')).toBe('upload');
+    expect(bucketOf('POST', '/billing/portal')).toBe('billing');
+  });
+
+  it('a wrong cron secret is refused and counts towards a lockout', async () => {
+    process.env.CRON_SECRET = 'the-cron-secret-value';
+    try {
+      const { req } = await app({ rateLimit: { failures: { ...DEFAULT_LIMITS.failures, ip: { ...DEFAULT_LIMITS.failures.ip, secret: 2 } } } });
+      const ip = { 'x-forwarded-for': '10.4.0.1' };
+      expect((await req('GET', '/cron/reminders', { ...ip, authorization: 'Bearer nope' })).status).toBe(401);
+      expect((await req('GET', '/cron/reminders', { ...ip, authorization: 'Bearer the-cron-secret-valu' })).status).toBe(401);
+      expect((await req('GET', '/cron/reminders', { ...ip, authorization: 'Bearer the-cron-secret-value' })).status).toBe(429);
+      expect((await req('GET', '/cron/reminders', { 'x-forwarded-for': '10.4.0.2', authorization: 'Bearer the-cron-secret-value' })).status).toBe(200);
+    } finally { delete process.env.CRON_SECRET; }
+  });
+
   it('a fake cf-connecting-ip per request does not dodge the limit', async () => {
     const { req } = await app({ rateLimit: { read: 2 } });
     expect((await req('GET', '/plans', { 'cf-connecting-ip': '1.1.1.1' })).status).toBe(200);

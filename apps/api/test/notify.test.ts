@@ -31,7 +31,11 @@ describe('notifications', () => {
     let inbox = await sami('GET', '/me/notifications');
     expect(inbox.body.items[0]).toMatchObject({ kind: 'assignment', title: 'New from Ms Noor: Essay plan', read: false });
     expect(inbox.body.channels).toEqual({ push: false, email: false });
-    expect((await sami('POST', '/me/push', { endpoint: 'https://push.example/x', keys: { p256dh: 'a'.repeat(40), auth: 'b'.repeat(16) } })).body.code).toBe('push_off');
+    // a real browser push service (other hosts are refused: the server would POST to them)
+    expect((await sami('POST', '/me/push', { endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'a'.repeat(40), auth: 'b'.repeat(16) } })).body.code).toBe('push_off');
+    for (const endpoint of ['https://push.example/x', 'https://169.254.169.254/latest', 'https://localhost/x', 'http://fcm.googleapis.com/x', 'https://fcm.googleapis.com.evil.example/x', 'https://fcm.googleapis.com:8443/x']) {
+      expect((await sami('POST', '/me/push', { endpoint, keys: { p256dh: 'a'.repeat(40), auth: 'b'.repeat(16) } })).status, endpoint).toBe(400);
+    }
 
     // the daily job: needs the secret, reminds about tomorrow's work once
     const cron = async (secret: string) => (await built.app.request('/cron/reminders', { headers: { authorization: `Bearer ${secret}` } }));
