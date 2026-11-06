@@ -49,9 +49,10 @@ describe("RLS: student", () => {
       expect(await count(q, `select count(*)::int n from materials`)).toBe(3);
       expect(await count(q, `select count(*)::int n from material_chunks`)).toBe(2);
       expect(await count(q, `select count(*)::int n from opportunities`)).toBe(25);
-      expect(await count(q, `select count(*)::int n from opportunity_sources`)).toBe(0);
       expect(await count(q, `select count(*)::int n from guardian_student_summaries`)).toBe(0);
     });
+    // crawler sources are service-only: no rows and no grant at all (migration 7)
+    await expect(asRole(db, student(A.aisha), (q) => q(`select count(*) from opportunity_sources`))).rejects.toThrow(/permission denied/);
   });
 
   it("vector search only returns own chunks", async () => {
