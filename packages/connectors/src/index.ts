@@ -6,6 +6,7 @@ export * from './core/vault';
 export * from './core/guard';
 export * from './core/oauth2';
 export * from './core/http';
+export * from './core/net-guard';
 export { OAuthConnector } from './core/oauth-connector';
 export { classifyKind, htmlToText, taskFromMaterial, paginate } from './core/normalize';
 
