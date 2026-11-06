@@ -48,7 +48,7 @@ const fileId = z.string().min(8).max(64);
 export const ClassroomSchemas = {
   Upload: z.object({
     name: z.string().trim().min(1).max(200),
-    mime: z.string().refine((m) => m in MIME_KIND, 'this file type is not supported: use a photo (JPG, PNG, WebP), PDF, PowerPoint, Word, Excel or text file'),
+    mime: z.string().max(120).refine((m) => m in MIME_KIND, 'this file type is not supported: use a photo (JPG, PNG, WebP), PDF, PowerPoint, Word, Excel or text file'),
     // base64 (a data: URL prefix is fine); 3 MB of file is ~4.2 MB of base64
     data: z.string().min(8).max(Math.ceil(MAX_FILE_BYTES / 3) * 4 + 120),
   }),

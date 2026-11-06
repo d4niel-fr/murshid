@@ -36,10 +36,10 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
   .refine((d) => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; }, 'not a real date');
 export const SchoolSchemas = {
   Onboarding: z.union([
-    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
-    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
+    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email().max(160), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
+    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email().max(160), grade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
     z.object({ path: z.literal('school'), via: z.literal('microsoft'), code: z.string().min(4).max(120) }),
-    z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12) }),
+    z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email().max(160), grade: z.number().int().min(5).max(12) }),
   ]),
   MsAuthorize: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).default('teacher'), adminConsent: z.enum(['true', 'false']).optional() }),
   MsAccounts: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).optional() }),

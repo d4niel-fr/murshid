@@ -70,7 +70,7 @@ export function registerCourses(api: Api) {
 
   api.route({
     method: 'get', path: '/materials', tag: 'materials', summary: 'List my materials',
-    query: z.object({ course_id: z.string().optional(), kind: MaterialKind.optional(), due_before: z.string().optional(), due_after: z.string().optional() }),
+    query: z.object({ course_id: z.string().max(200).optional(), kind: MaterialKind.optional(), due_before: z.string().max(200).optional(), due_after: z.string().max(200).optional() }),
   }, async (c, { query }) => {
     const s = await currentStudent(c);
     const { repo } = c.get('deps');

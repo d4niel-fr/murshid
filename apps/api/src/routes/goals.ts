@@ -22,7 +22,7 @@ async function recomputeProgress(c: Ctx, goalId: string): Promise<void> {
 export function registerGoals(api: Api) {
   api.route({
     method: 'get', path: '/goals', tag: 'goals', summary: 'List my goals',
-    query: z.object({ status: GoalStatus.optional(), category: GoalCategory.optional(), parent_goal_id: z.string().optional() }),
+    query: z.object({ status: GoalStatus.optional(), category: GoalCategory.optional(), parent_goal_id: z.string().max(200).optional() }),
   }, async (c, { query }) => {
     const s = await currentStudent(c);
     const goals = await c.get('deps').repo.goals.list({ student_id: s.id, status: query.status, category: query.category, parent_goal_id: query.parent_goal_id });

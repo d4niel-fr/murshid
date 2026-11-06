@@ -32,6 +32,8 @@ const GOAL_CATS = ['academic', 'university', 'career', 'sport', 'skill', 'person
 const ACH_CATS = ['academic', 'award', 'sport', 'project', 'volunteering', 'work', 'certificate', 'leadership'] as const;
 const APP_STATUS = ['saved', 'preparing', 'submitted', 'accepted', 'rejected'] as const;
 const name = z.string().trim().min(1).max(120);
+/** links shown to students and teachers: http(s) only (never javascript:, data: or file: URLs) */
+export const httpUrl = z.string().trim().max(500).url().refine((u) => /^https?:\/\//i.test(u), 'links must start with http:// or https://');
 const list = z.array(z.string().trim().min(1).max(60)).max(20);
 
 export const AdminSchemas = {
@@ -57,7 +59,7 @@ export const AdminSchemas = {
     metrics: z.array(z.object({ key: z.string().regex(/^[a-zA-Z][a-zA-Z0-9]{0,30}$/), label: z.string().min(1).max(60), unit: z.string().min(1).max(20), better: z.enum(['higher', 'lower']) })).max(8).default([]),
   }),
   SessionIn: z.object({
-    date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string(), z.number().finite()).default({}),
+    date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string().max(40), z.number().finite()).refine((m) => Object.keys(m).length <= 20, 'at most 20 metrics').default({}),
     note: z.string().max(280).nullable().default(null), type: z.enum(['training', 'match', 'race']).default('training'),
   }),
   TaskIn: z.object({
@@ -72,8 +74,8 @@ export const AdminSchemas = {
   OpportunityIn: z.object({
     title: name, organizer: name, type: z.enum(OPP_TYPES), emirate: z.enum(EMIRATES).nullable().default(null), deadline: isoDate,
     minGrade: z.number().int().min(5).max(13), maxGrade: z.number().int().min(5).max(13), costAed: z.number().min(0).max(100000).default(0),
-    tags: list.default([]), why: z.string().trim().min(1).max(280), url: z.string().url().max(300).optional(),
-    audience: z.object({ studentIds: z.union([z.literal('all'), z.array(z.string().min(1)).min(1)]) }).default({ studentIds: 'all' }),
+    tags: list.default([]), why: z.string().trim().min(1).max(280), url: httpUrl.optional(),
+    audience: z.object({ studentIds: z.union([z.literal('all'), z.array(z.string().min(1).max(80)).min(1).max(2000)]) }).default({ studentIds: 'all' }),
     status: z.enum(['draft', 'published', 'closed']).default('published'),
   }).refine((o) => o.minGrade <= o.maxGrade, { message: 'minGrade must be <= maxGrade', path: ['maxGrade'] }),
   ApplicationIn: z.object({
@@ -82,15 +84,15 @@ export const AdminSchemas = {
   }),
   ProjectIn: z.object({
     name, tagline: z.string().trim().min(1).max(160), kind: z.enum(['business', 'app', 'club', 'creative', 'research']), role: z.string().trim().min(1).max(60),
-    startDate: isoDate, url: z.string().url().max(300).nullable().default(null), status: z.enum(['active', 'paused', 'done']).default('active'), skills: list.default([]),
+    startDate: isoDate, url: httpUrl.nullable().default(null), status: z.enum(['active', 'paused', 'done']).default('active'), skills: list.default([]),
   }),
   MilestoneIn: z.object({ title: name, date: isoDate, done: z.boolean().default(false) }),
   AchievementIn: z.object({ title: name, category: z.enum(ACH_CATS), date: isoDate, description: z.string().max(400).default('') }),
   CvIn: z.object({
-    headline: z.string().trim().min(1).max(220), summary: z.string().max(2600), email: z.string().email().nullable(), phone: z.string().max(30).nullable(),
+    headline: z.string().trim().min(1).max(220), summary: z.string().max(2600), email: z.string().email().max(254).nullable(), phone: z.string().max(30).nullable(),
     location: z.string().min(1).max(80), skills: z.array(z.string().trim().min(1).max(60)).max(40),
     certifications: z.array(z.object({ name, issuer: z.string().min(1).max(120), date: z.string().regex(/^\d{4}(-\d{2})?(-\d{2})?$/) })).max(20),
-    featured: z.array(z.object({ title: name, url: z.string().url().nullable(), description: z.string().max(280) })).max(10),
+    featured: z.array(z.object({ title: name, url: httpUrl.nullable(), description: z.string().max(280) })).max(10),
     predicted: z.string().max(120).nullable(), universityGoal: z.string().max(160).nullable(),
   }).partial().strict(),
   LinksIn: z.object(Object.fromEntries(PROFILE_LINK_KEYS.map((k) => [k, z.string().max(300).nullable().optional()])) as Record<ProfileLinkKey, z.ZodOptional<z.ZodNullable<z.ZodString>>>).strict(),
@@ -100,7 +102,7 @@ export const AdminSchemas = {
 const partialOf = <T extends z.ZodObject>(s: T) => s.partial().strict();
 const AssessmentPatch = z.object({ title: name, kind: z.enum(ASSESSMENT_KINDS), date: isoDate, maxScore: z.number().positive().max(1000), score: z.number().min(0).max(1000).nullable(), subjectId: z.string().min(1).max(60) }).partial().strict();
 const GoalPatch = z.object({ title: name, titleAr: z.string().max(120), category: z.enum(GOAL_CATS), unit: z.string().min(1).max(20), target: z.number(), dueDate: isoDate, current: z.number() }).partial().strict();
-const OppPatch = z.object({ title: name, organizer: name, type: z.enum(OPP_TYPES), deadline: isoDate, costAed: z.number().min(0), tags: list, why: z.string().min(1).max(280), status: z.enum(['draft', 'published', 'closed']), minGrade: z.number().int(), maxGrade: z.number().int(), audience: z.object({ studentIds: z.union([z.literal('all'), z.array(z.string().min(1)).min(1)]) }) }).partial().strict();
+const OppPatch = z.object({ title: name, organizer: name, type: z.enum(OPP_TYPES), deadline: isoDate, costAed: z.number().min(0), tags: list, why: z.string().min(1).max(280), status: z.enum(['draft', 'published', 'closed']), minGrade: z.number().int(), maxGrade: z.number().int(), audience: z.object({ studentIds: z.union([z.literal('all'), z.array(z.string().min(1).max(80)).min(1).max(2000)]) }) }).partial().strict();
 
 // ---------- helpers ----------
 const notFound = (what: string): never => { throw new HTTPException(404, { message: `${what} not found` }); };
@@ -380,7 +382,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'session', s.id, `Logged ${b.type} session for ${aid} on ${b.date} (${b.minutes} min)`);
     return c.json(s, 201);
   });
-  route(R({ method: 'patch', path: '/admin/students/:id/sessions/:sid', body: z.object({ date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string(), z.number().finite()), note: z.string().max(280).nullable() }).partial().strict(), summary: 'Edit a logged or generated session' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/sessions/:sid', body: z.object({ date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string().max(40), z.number().finite()).refine((m) => Object.keys(m).length <= 20, 'at most 20 metrics'), note: z.string().max(280).nullable() }).partial().strict(), summary: 'Edit a logged or generated session' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const sid = c.req.param('sid')!;
