@@ -49,7 +49,7 @@ export interface Reports {
 }
 export const getReports = (u: string) => get<Reports>(u, '/student/reports');
 
-export interface TodayAtSchool { date: string; checkedIn: boolean; mood: Mood | null; prompt: { question: string } | null; current: Lesson | null; next: Lesson | null; lessonsLeft: number; polls: number; pointsWeek: number; event: SchoolEvent | null }
+export interface TodayAtSchool { date: string; parent?: boolean; checkedIn: boolean | null; mood: Mood | null; prompt: { question: string } | null; current: Lesson | null; next: Lesson | null; lessonsLeft: number; polls: number; pointsWeek: number; event: SchoolEvent | null }
 export const getTodayAtSchool = (u: string) => get<TodayAtSchool>(u, '/student/today-at-school');
 
 /** The five faces of the check-in, worst to best. */

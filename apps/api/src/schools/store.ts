@@ -25,7 +25,7 @@ export class SchoolStore {
   readonly accounts: Account[] = seedAccounts();
   readonly tenant: Record<string, string> = { ...STUDENT_TENANT };
   readonly roster: RosterStudent[] = seedRoster();
-  readonly teachers: Teacher[] = TEACHERS;
+  readonly teachers: Teacher[] = TEACHERS.map((t) => ({ ...t }));
   readonly streams: Stream[];
   readonly members: Record<string, string[]>;
   readonly posted: WorkItem[] = [];

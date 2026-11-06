@@ -19,7 +19,7 @@ export function SchoolToday({ className }: { className?: string }) {
     <div className={className}>
       <Card>
         <CardHeader title={tx('Today at school', 'اليوم في المدرسة')} action={<Link href="/app/timetable" className="text-xs font-medium text-primary">{tx('Timetable', 'الجدول')}</Link>} />
-        {!d.checkedIn ? (
+        {d.parent ? null : !d.checkedIn ? (
           <div className="mb-4 rounded-[18px] bg-surface p-3">
             <p className="mb-2 text-sm font-medium">{d.prompt?.question ?? tx('How are you feeling today?', 'كيف تشعر اليوم؟')}</p>
             <div className="grid grid-cols-5 gap-1">

@@ -101,11 +101,13 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
   async function pupil(c: Ctx, opts: { parentMayWrite?: boolean } = {}): Promise<{ r: RosterStudent; now: Date; by: 'student' | 'parent'; byName: string }> {
     const whoami = c.get('deps').whoami;
     const dev = c.get('deps').config.authMode === 'dev' && !c.req.header('authorization');
-    if (opts.parentMayWrite && whoami && !dev) {
+    if (whoami && !dev) {
       const me = await whoami(c);
       if (me.role === 'parent') {
+        if (c.req.method !== 'GET' && !opts.parentMayWrite) throw new HTTPException(403, { message: 'parents can see their child’s school life but not change it', cause: { code: 'parent_read_only' } });
         const child = me.children.find((x) => x.id === c.req.header('x-child')) ?? me.children[0];
-        const r = child ? schools.rosterByApp(child.id) : undefined;
+        if (!child) throw new HTTPException(403, { message: 'link your child first: ask them for the code in their settings', cause: { code: 'no_child' } });
+        const r = schools.rosterByApp(child.id);
         if (!r) throw new HTTPException(404, { message: 'your child is not linked to a school yet', cause: { code: 'no_school' } });
         return { r, now: c.get('deps').now(), by: 'parent', byName: me.name ?? me.email ?? 'Parent' };
       }
@@ -135,7 +137,9 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
 
   api.route({ method: 'get', path: '/student/feelings', tag: 'life', auth: 'custom', summary: 'My check-ins (only I see my notes), the feelings words, and today\'s question from a teacher' },
     async (c) => {
-      const { r, now } = await pupil(c); const today = dubaiDate(now);
+      const { r, now, by } = await pupil(c); const today = dubaiDate(now);
+      // a child's check-ins are theirs: parents do not see them (teachers see only what is shared)
+      if (by === 'parent') throw new HTTPException(403, { message: 'check-ins are private to your child', cause: { code: 'feelings_private' } });
       const list = checkInsOf(r, today);
       const counts: Record<string, number> = {};
       for (const x of list.filter((x) => x.date >= addDays(today, -30))) for (const w of x.words) counts[w] = (counts[w] ?? 0) + 1;
@@ -611,7 +615,7 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
   /* ---------- one call for Home ---------- */
   api.route({ method: 'get', path: '/student/today-at-school', tag: 'life', auth: 'custom', summary: 'For Home: today\'s check-in, the lesson now and next, open questions from teachers, points this week, the next school date' },
     async (c) => {
-      const { r, now } = await pupil(c); const today = dubaiDate(now); const mins = h.nowMinutes(now); const wd = weekday(today);
+      const { r, now, by } = await pupil(c); const today = dubaiDate(now); const mins = h.nowMinutes(now); const wd = weekday(today);
       const lessons = lessonsFor(r).filter((l) => l.day === wd);
       const current = lessons.find((l) => toMin(l.start) <= mins && mins < toMin(l.end)) ?? null;
       const next = lessons.find((l) => toMin(l.start) > mins) ?? null;
@@ -620,6 +624,7 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
       const week = pointsOf(r, today).filter((p) => p.at.slice(0, 10) >= addDays(today, -6)).reduce((t, p) => t + p.points, 0);
       const ev = eventsOf(r.orgId, today).find((e) => e.end >= today && (!e.grades.length || (r.grade !== undefined && e.grades.includes(r.grade)))) ?? null;
       const checkIn = (life.feelings[r.id] ?? []).find((x) => x.date === today) ?? null;
-      return c.json({ date: today, checkedIn: Boolean(checkIn), mood: checkIn?.mood ?? null, prompt: promptFor(r, today), current, next, lessonsLeft: lessons.filter((l) => toMin(l.end) > mins).length, polls, pointsWeek: week, event: ev });
+      const parent = by === 'parent';
+      return c.json({ date: today, checkedIn: parent ? null : Boolean(checkIn), mood: parent ? null : checkIn?.mood ?? null, prompt: parent ? null : promptFor(r, today), current, next, lessonsLeft: lessons.filter((l) => toMin(l.end) > mins).length, polls: parent ? 0 : polls, pointsWeek: week, event: ev, parent });
     });
 }

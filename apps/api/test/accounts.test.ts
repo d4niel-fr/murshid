@@ -106,6 +106,7 @@ describe('real accounts (production sign-in)', () => {
     const admin = as(await token('u-a', 'admin@bfs.ae'));
     const t = await admin('POST', '/school/teachers', { name: 'Ms Rao', email: 'rao@bfs.ae', subject: 'science' });
     const cls = await admin('POST', '/school/classes', { name: 'Grade 7 Science', subject: 'science', teacherId: t.body.id });
+    expect(cls.status, JSON.stringify(cls.body)).toBe(201);
     const kid = as(await token('u-kid', 'kid@gmail.com'));
     await kid('POST', '/account/setup', { role: 'student', name: 'Adam Noor', grade: 7 });
     const joined = await kid('POST', '/student/classes/join', { code: cls.body.joinCode.toLowerCase() });
@@ -129,6 +130,44 @@ describe('real accounts (production sign-in)', () => {
     const dad = as(await token('u-dad', 'dad@example.com'));
     await dad('POST', '/account/setup', { role: 'parent', name: 'Karim Ali' });
     expect((await dad('POST', '/account/link-child', { code })).body.code).toBe('bad_child_code');
+  });
+
+  it('school life for a real school: a parent asks for leave, but never sees their child’s check-ins', async () => {
+    const { as } = await setup();
+    const boss = as(await token('u-boss', 'boss@murshid.ae'));
+    await boss('POST', '/platform/schools', { name: 'Bright Future School', shortName: 'BFS', adminName: 'A', adminEmail: 'admin@bfs.ae' });
+    const admin = as(await token('u-a', 'admin@bfs.ae'));
+    const t = await admin('POST', '/school/teachers', { name: 'Ms Rao', email: 'rao@bfs.ae', subject: 'science' });
+    expect(t.status, JSON.stringify(t.body)).toBe(201);
+    const cls = await admin('POST', '/school/classes', { name: 'Grade 7 Science', subject: 'science', teacherId: t.body.id });
+    expect(cls.status, JSON.stringify(cls.body)).toBe(201);
+    const kid = as(await token('u-kid', 'kid@gmail.com'));
+    await kid('POST', '/account/setup', { role: 'student', name: 'Adam Noor', grade: 7 });
+    const joined = await kid('POST', '/student/classes/join', { code: cls.body.joinCode });
+    expect(joined.status, JSON.stringify(joined.body)).toBe(201);
+    // a real school starts empty: no invented check-ins, points, registers or dates
+    const feel = await kid('GET', '/student/feelings');
+    expect(feel.status, JSON.stringify(feel.body)).toBe(200);
+    expect(feel.body.history).toEqual([]);
+    expect((await kid('GET', '/student/points')).body.total).toBe(0);
+    expect((await kid('GET', '/student/events')).body.upcoming).toEqual([]);
+    expect((await kid('GET', '/student/timetable')).body.lessons).toEqual([]);
+    expect((await kid('POST', '/student/feelings', { mood: 2, words: ['worried'], note: 'private thing', share: 'private' })).status).toBe(201);
+
+    const code = (await kid('POST', '/account/parent-code')).body.code;
+    const mum = as(await token('u-mum', 'mum@example.com'));
+    await mum('POST', '/account/setup', { role: 'parent', name: 'Rania Noor', childCode: code });
+    const mine = await mum('GET', '/student/feelings');
+    expect(mine.status).toBe(403);
+    expect(mine.body.code).toBe('feelings_private');
+    const home = await mum('GET', '/student/today-at-school');
+    expect(home.body).toMatchObject({ parent: true, mood: null, checkedIn: null });
+    expect((await mum('POST', '/student/feelings', { mood: 5 })).body.code).toBe('parent_read_only');
+    const leave = await mum('POST', '/student/leave', { from: addDays(today, 2), to: addDays(today, 2), reason: 'appointment', note: 'Dentist' });
+    expect(leave.status).toBe(201);
+    expect(leave.body).toMatchObject({ by: 'parent', byName: 'Rania Noor' });
+    expect((await admin('GET', '/school/leave')).body.pending[0].name).toBe('Adam Noor');
+    expect((await mum('GET', '/student/attendance')).body.leave).toHaveLength(1);
   });
 
   it('syncs app data across devices with versions, and deletes the account on request', async () => {

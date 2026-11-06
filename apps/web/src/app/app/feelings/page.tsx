@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 
 /** The daily check-in: how I feel, a few words for it, a private note, and whether my teachers see it. */
 export default function FeelingsPage() {
-  const { tx, locale, band, client, toast } = useApp();
+  const { tx, locale, band, client, toast, account } = useApp();
   const load = useLoad(getFeelings);
   const [mood, setMood] = useState<Mood | null>(null);
   const [words, setWords] = useState<string[]>([]);
@@ -60,6 +60,11 @@ export default function FeelingsPage() {
     setMood(t.mood); setWords(t.words); setNote(t.note); setShare(t.share); setTalk(Boolean(t.talkTo)); setTalkTo(t.talkTo ?? ''); setEditing(true);
   };
 
+  if (account?.me.role === 'parent') return (
+    <Page><PageHeader eyebrow={tx('Wellbeing', 'العافية')} title={tx('Check-in', 'كيف حالك؟')} />
+      <Empty>{tx('Daily check-ins belong to your child: they choose what to share with their teachers, and parents do not see them. Talking together about the week is the best way to know how they feel.', 'تسجيلات الشعور اليومية ملك لطفلك: يختار ما يشاركه مع معلميه، ولا يراها أولياء الأمور. الحديث معاً عن الأسبوع أفضل طريقة لمعرفة شعوره.')}</Empty>
+    </Page>
+  );
   if (load.error && !d) return <Page><PageHeader title={tx('Check-in', 'كيف حالك؟')} /><ErrorState detail={load.error} onRetry={load.reload} /></Page>;
   if (load.noSchool) return (
     <Page><PageHeader eyebrow={tx('Wellbeing', 'العافية')} title={tx('Check-in', 'كيف حالك؟')} />

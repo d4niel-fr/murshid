@@ -28,9 +28,15 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /** Headers that say who is asking: the sign-in token, or the demo student when sign-in is off. */
+/** Parents with more than one child: which child the app is showing (sent as x-child). */
+export const CHILD_KEY = 'murshid:child';
+export function chosenChild(): string | null {
+  try { return typeof window === 'undefined' ? null : window.localStorage.getItem(CHILD_KEY); } catch { return null; }
+}
+
 export async function authHeaders(devUser?: string | null): Promise<Record<string, string>> {
   const session = authEnabled ? await getSession() : null;
-  if (session) return { authorization: `Bearer ${session.access_token}` };
+  if (session) { const child = chosenChild(); return { authorization: `Bearer ${session.access_token}`, ...(child ? { 'x-child': child } : {}) }; }
   return devUser ? { 'x-dev-user': devUser, 'x-dev-user-id': devUser } : {};
 }
 
