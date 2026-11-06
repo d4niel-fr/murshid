@@ -53,7 +53,8 @@ describe('rate limiting', () => {
     expect((await req('GET', '/plans', { 'x-forwarded-for': '10.0.0.2' })).status).toBe(200);
     expect((await req('GET', '/plans', { 'x-forwarded-for': '10.0.0.1' })).status).toBe(429);
     expect(bucketOf('POST', '/v1/chat')).toBe('chat');
-    expect(bucketOf('POST', '/billing/checkout')).toBe('auth');
+    // billing has its own, tighter bucket (was shared with sign-in)
+    expect(bucketOf('POST', '/billing/checkout')).toBe('billing');
     expect(bucketOf('POST', '/teacher/classes/x/assignments')).toBe('write');
     expect(bucketOf('GET', '/teacher/me')).toBe('read');
   });
@@ -86,7 +87,10 @@ describe('billing: only the Single plan, never twice', () => {
     const first = await req('POST', '/billing/checkout', {}, buyer);
     const dup = await req('POST', '/billing/checkout', {}, { ...buyer, email: 'NADIA@example.com' });
     expect(dup.status).toBe(409);
-    expect(dup.body).toMatchObject({ code: 'already_subscribed', subscription: { orderId: first.body.orderId } });
+    expect(dup.body).toMatchObject({ code: 'already_subscribed' });
+    // the order id (which cancels the plan with the email) is never handed to whoever types the email
+    expect(JSON.stringify(dup.body)).not.toContain(first.body.orderId);
+    expect(first.body.orderId).toMatch(/^MS-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
     expect((await req('POST', '/billing/cancel', {}, { orderId: first.body.orderId, email: 'nadia@example.com' })).body.status).toBe('canceled');
     expect((await req('POST', '/billing/checkout', {}, buyer)).status).toBe(201);
   });

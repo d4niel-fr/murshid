@@ -16,6 +16,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { AuthInfo, Config, Ctx } from '../lib/context';
 import { authMiddleware } from '../lib/auth';
+import { findBySecret } from '../lib/security';
 import { dubaiDate } from '../lib/time';
 import type { Api } from '../lib/router';
 import type { DemoStore } from '../v1/store';
@@ -128,7 +129,7 @@ export function registerAccounts(api: Api, schools: SchoolStore, store: DemoStor
       const now = c.get('deps').now(); const day = dubaiDate(now);
       const email = me.email ?? `${me.authUserId}@users.murshid`;
       if (b.role === 'student') {
-        const school = b.joinCode ? schools.orgs.find((o) => o.joinCode && lower(o.joinCode) === lower(b.joinCode)) : undefined;
+        const school = b.joinCode ? findBySecret(schools.orgs, (o) => (o.joinCode ? lower(o.joinCode) : null), lower(b.joinCode)) : undefined;
         if (b.joinCode && !school) throw new HTTPException(400, { message: 'that school code is not recognised: check it with your school', cause: { code: 'bad_join_code' } });
         const org = school ?? schools.createFamily(`${b.name} (self)`, 'student', 'single', day);
         if (!school) { org.real = true; if (org.licence) { org.licence.status = 'trial'; org.licence.note = 'Free trial (no plan bought yet)'; } }
@@ -148,7 +149,7 @@ export function registerAccounts(api: Api, schools: SchoolStore, store: DemoStor
 
   /** A parent links to a child with the code from the child's settings. */
   const linkChild = (parent: Account, code: string) => {
-    const child = schools.accounts.find((a) => a.role === 'student' && a.parentCode && a.parentCode === code.trim().toUpperCase());
+    const child = findBySecret(schools.accounts, (a) => (a.role === 'student' ? a.parentCode : null), code.trim().toUpperCase());
     if (!child) throw new HTTPException(400, { message: 'that code does not match a student: ask your child for the code in their settings', cause: { code: 'bad_child_code' } });
     for (const id of child.studentIds) if (!parent.studentIds.includes(id)) parent.studentIds.push(id);
     child.parentCode = undefined; // one use

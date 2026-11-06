@@ -13,6 +13,8 @@ export interface Config {
   publicApiUrl: string;
   /** Supabase's public signing keys (projects with asymmetric JWT keys); used when there is no shared secret */
   jwksUrl: string;
+  /** expected token issuer (SUPABASE_JWT_ISSUER, e.g. https://<project>.supabase.co/auth/v1); empty: not checked */
+  jwtIssuer?: string;
   /** emails that are Murshid platform admins in production (PLATFORM_ADMIN_EMAILS, comma-separated) */
   platformAdmins: string[];
 }
@@ -41,7 +43,13 @@ export interface Deps {
   notify?: import('../notify/hub').NotificationHub;
 }
 
-export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps; requestId: string; /** set by /student/me/* routes: the signed-in student */ self?: { id: string } } };
+export type AppEnv = { Variables: {
+  auth: AuthInfo; deps: Deps; requestId: string;
+  /** set by /student/me/* routes: the signed-in student */
+  self?: { id: string };
+  /** set by the rate limiter: charge the per-person limits once the caller is known (see lib/middleware.ts) */
+  chargeUser?: import('./middleware').ChargeUser;
+} };
 export type Ctx = Context<AppEnv>;
 
 export function readConfig(env: Record<string, string | undefined>): Config {
@@ -59,6 +67,7 @@ export function readConfig(env: Record<string, string | undefined>): Config {
     // on Vercel the API is the "api" service at /api on the project's production domain
     publicApiUrl: env.PUBLIC_API_URL ?? (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}/api` : 'http://localhost:8787'),
     jwksUrl: env.SUPABASE_JWKS_URL?.trim() || (env.SUPABASE_URL?.trim() ? `${env.SUPABASE_URL.trim().replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json` : ''),
+    jwtIssuer: env.SUPABASE_JWT_ISSUER?.trim() ?? '',
     platformAdmins: (env.PLATFORM_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
   };
 }

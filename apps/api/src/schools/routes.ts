@@ -19,6 +19,7 @@ import { authMiddleware } from '../lib/auth';
 import type { Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
 import { dubaiDate } from '../lib/time';
+import { findBySecret } from '../lib/security';
 import type { DemoStore, DemoView } from '../v1/store';
 import { DEMO_SCHOOL, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './catalog';
 import { assignedTo, classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
@@ -163,7 +164,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         if (who.role !== 'student' || !who.appId) throw new HTTPException(400, { message: 'this Microsoft account is not a student account at a Murshid school' });
         return c.json({ path: 'school', via: 'microsoft', account: { id: who.id, name: who.name, email: who.email, role: 'student', orgId: who.orgId }, org: orgCard(who.orgId), student: { id: who.appId, name: who.name }, licence: schools.licenceOf(who.appId), demo: true }, 201);
       }
-      const org = schools.orgs.find((o) => o.joinCode && o.joinCode.toLowerCase() === b.joinCode.toLowerCase());
+      const org = findBySecret(schools.orgs, (o) => o.joinCode?.toLowerCase(), b.joinCode.toLowerCase());
       if (!org) throw new HTTPException(400, { message: 'school code not recognised' });
       const st = mkStudent(b.name, b.grade, org.name);
       schools.tenant[st.id] = org.id;

@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
 import { dubaiDate } from '../lib/time';
+import { findBySecret } from '../lib/security';
 import type { DemoStore, DemoView } from '../v1/store';
 import { realRosterStudent, signedIn, type Me } from './accounts';
 import { SUBJECT_IDS, SUBJECT_NAMES, type Org, type Stream, type SubjectId } from './catalog';
@@ -210,7 +211,7 @@ export function registerSetup(api: Api, schools: SchoolStore, store: DemoStore, 
       const v = await h.view(c);
       const me = c.get('deps').whoami ? await signedIn(c, schools, store) : null;
       const codeIn = (body as z.output<typeof S.JoinClass>).code.trim().toUpperCase();
-      const st = schools.streams.find((x) => x.joinCode === codeIn);
+      const st = findBySecret(schools.streams, (x) => x.joinCode, codeIn);
       if (!st) throw new HTTPException(404, { message: 'no class with that code: check it with your teacher', cause: { code: 'bad_class_code' } });
       const appId = v.profile.id;
       let r = schools.rosterByApp(appId);

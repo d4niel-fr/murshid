@@ -10,6 +10,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { Api } from '../lib/router';
 import { decode, encode, type StateBackend } from '../lib/durable';
+import { safeEqual } from '../lib/security';
 
 const MAX_ROOMS = 300; const MAX_PLAYERS = 80; const TTL = 2 * 3_600_000; const SECONDS = 20;
 
@@ -138,11 +139,11 @@ export function registerLive(api: Api, backend: StateBackend | null = null) {
   });
   api.route({ method: 'get', path: '/live/rooms/:code', tag: 'live', auth: 'none', summary: 'Live quiz state (pass ?player= or ?host= for your own view)' }, async (c) => {
     const r = await find(c.req.param('code') ?? '');
-    const host = c.req.query('host') === r.hostKey; const id = c.req.query('player') ?? '';
+    const host = safeEqual(c.req.header('x-live-host') ?? c.req.query('host'), r.hostKey); const id = c.req.query('player') ?? '';
     if (r.removed.has(id)) throw new HTTPException(410, { message: 'the host removed you from this quiz' });
     return c.json(view(r, Date.now(), { host, player: r.players.get(id) }));
   });
-  const asHost = (r: Room, hostKey: string, what: string) => { if (hostKey !== r.hostKey) throw new HTTPException(403, { message: `only the host can ${what}` }); };
+  const asHost = (r: Room, hostKey: string, what: string) => { if (!safeEqual(hostKey, r.hostKey)) throw new HTTPException(403, { message: `only the host can ${what}` }); };
   api.route({ method: 'post', path: '/live/rooms/:code/next', tag: 'live', auth: 'none', durable: 'none', body: Host, summary: 'Host: start the quiz, show the answer, or go to the next question' }, async (c, { body }) => {
     const b = body as z.output<typeof Host>;
     return c.json(await rooms.update(c.req.param('code') ?? '', (r) => {

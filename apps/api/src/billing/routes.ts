@@ -1,7 +1,9 @@
+import { randomInt } from 'node:crypto';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { Api } from '../lib/router';
 import type { Ctx } from '../lib/context';
+import { safeEqual } from '../lib/security';
 import { verifyStripeSignature, type Stripe } from './stripe';
 
 /**
@@ -22,7 +24,6 @@ export class BillingStore {
   private byOrder = new Map<string, Subscription>();
   /** index: lower-cased email -> active order id (O(1) duplicate check, like the DB's partial unique index) */
   private activeByEmail = new Map<string, string>();
-  private seq = 1000;
   /** Stripe checkout session id -> order id (the success page asks by session) */
   private bySession = new Map<string, string>();
   /** Stripe event ids already handled (Stripe can send an event more than once) */
@@ -34,7 +35,11 @@ export class BillingStore {
   active(email: string) { const id = this.activeByEmail.get(email.toLowerCase()); return id ? this.byOrder.get(id) : undefined; }
   get(orderId: string) { return this.byOrder.get(orderId); }
   create(s: Omit<Subscription, 'orderId' | 'status'>): Subscription {
-    const sub: Subscription = { ...s, orderId: `MS-${++this.seq}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`, status: 'active' };
+    // unguessable: with the email it is what cancels a plan
+    const part = () => Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[randomInt(32)]).join('');
+    let orderId = `MS-${part()}-${part()}`;
+    while (this.byOrder.has(orderId)) orderId = `MS-${part()}-${part()}`;
+    const sub: Subscription = { ...s, orderId, status: 'active' };
     this.byOrder.set(sub.orderId, sub); this.activeByEmail.set(s.email.toLowerCase(), sub.orderId);
     return sub;
   }
@@ -55,7 +60,7 @@ const Checkout = z.object({
   grade: z.number().int().min(5).max(12),
 }).refine((b) => b.who !== 'parent' || Boolean(b.studentName), { message: "studentName is required when a parent buys for their child", path: ['studentName'] });
 
-const Cancel = z.object({ orderId: z.string().min(4).max(40), email: z.string().trim().toLowerCase().email() });
+const Cancel = z.object({ orderId: z.string().trim().min(4).max(40), email: z.string().trim().toLowerCase().email().max(160) });
 
 export interface BillingHooks {
   /** real payments: called when a plan starts or ends (turns the buyer's family licence on or off) */
@@ -70,7 +75,8 @@ export function registerBilling(api: Api, store: BillingStore, now: () => Date, 
       const b = body as z.output<typeof Checkout>;
       if (b.plan === 'school') throw new HTTPException(403, { message: 'School plans are set up with the school and can’t be bought online.', cause: { code: 'school_plan_offline' } });
       const existing = store.active(b.email);
-      if (existing) return c.json({ error: 'An active Single plan already exists for this email.', code: 'already_subscribed', subscription: { orderId: existing.orderId, billing: existing.billing, renewsAt: existing.renewsAt } }, 409);
+      // never the order id here: with the email it cancels the plan, and anyone can type an email
+      if (existing) return c.json({ error: 'An active Single plan already exists for this email.', code: 'already_subscribed' }, 409);
       if (stripe) {
         // real payment: Stripe hosts the card form; the plan starts when its webhook says the payment went through
         const me = hooks.who ? await hooks.who(c).catch(() => null) : null;
@@ -87,7 +93,7 @@ export function registerBilling(api: Api, store: BillingStore, now: () => Date, 
     async (c, { body }) => {
       const b = body as z.output<typeof Cancel>;
       const s = store.get(b.orderId);
-      if (!s || s.email !== b.email) throw new HTTPException(404, { message: 'No plan found for that order and email.' });
+      if (!s || !safeEqual(b.email, s.email)) throw new HTTPException(404, { message: 'No plan found for that order and email.' });
       if (stripe && s.stripe?.subscription) {
         // real plan: Stripe stops renewal at the end of the paid period (access continues until then)
         await stripe.cancelAtPeriodEnd(s.stripe.subscription);
@@ -110,7 +116,7 @@ export function registerBilling(api: Api, store: BillingStore, now: () => Date, 
     async (c, { body }) => {
       const b = body as z.output<typeof Cancel>;
       const s = store.get(b.orderId);
-      if (!stripe || !s || s.email !== b.email || !s.stripe?.customer) throw new HTTPException(404, { message: 'No card payments found for that order and email.' });
+      if (!stripe || !s || !safeEqual(b.email, s.email) || !s.stripe?.customer) throw new HTTPException(404, { message: 'No card payments found for that order and email.' });
       return c.json({ url: (await stripe.portal(s.stripe.customer)).url });
     });
 

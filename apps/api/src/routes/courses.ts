@@ -8,6 +8,7 @@ import { authMiddleware } from '../lib/auth';
 import { currentStudent, notFound, type Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
 import { parseLmsEmail } from '../services/email-parser';
+import { safeEqual } from '../lib/security';
 
 async function ownCourse(c: Ctx, id: string): Promise<Course> {
   const s = await currentStudent(c);
@@ -136,7 +137,7 @@ export function registerCourses(api: Api) {
     let student: Student;
     const secret = c.req.header('x-inbox-secret');
     if (secret !== undefined) {
-      if (!config.inboxSecret || secret !== config.inboxSecret) throw new HTTPException(401, { message: 'invalid inbox secret' });
+      if (!safeEqual(secret, config.inboxSecret)) throw new HTTPException(401, { message: 'invalid inbox secret' });
       const id = studentIdFromAddress(body.to);
       const s = id ? await repo.students.get(id) : null;
       if (!s) return notFound('inbox recipient');
