@@ -331,3 +331,24 @@ describe('JWT checks', () => {
     expect((await req('GET', '/account', { authorization: `Bearer ${confused}` })).status).toBe(401);
   });
 });
+
+describe('optional bot check (Turnstile)', () => {
+  afterEach(() => { delete process.env.TURNSTILE_SECRET_KEY; vi.unstubAllGlobals(); });
+  it('is off by default, and when on refuses sign-up style forms without a valid token', async () => {
+    const off = await app();
+    expect((await off.req('POST', '/billing/checkout', {}, { plan: 'single', name: 'Nadia Karim', email: 'n1@example.com', who: 'student', grade: 8 })).status).toBe(201);
+    process.env.TURNSTILE_SECRET_KEY = 'test-turnstile-secret';
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', async (_u: string, init: RequestInit) => { const p = new URLSearchParams(String(init.body)); seen.push(p.get('response') ?? ''); return new Response(JSON.stringify({ success: p.get('response') === 'good-token' })); });
+    const on = await app();
+    const body = { plan: 'single', name: 'Nadia Karim', email: 'n2@example.com', who: 'student', grade: 8 };
+    const none = await on.req('POST', '/billing/checkout', {}, body);
+    expect(none.status).toBe(403);
+    expect(none.body.code).toBe('captcha_required');
+    expect((await on.req('POST', '/billing/checkout', { 'cf-turnstile-response': 'bad-token' }, body)).status).toBe(403);
+    expect((await on.req('POST', '/billing/checkout', { 'cf-turnstile-response': 'good-token' }, body)).status).toBe(201);
+    expect(seen).toEqual(['bad-token', 'good-token']);
+    // other routes are not affected
+    expect((await on.req('GET', '/plans')).status).toBe(200);
+  });
+});

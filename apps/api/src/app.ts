@@ -27,6 +27,7 @@ import { registerSync } from './v1/sync';
 import type { ChatProvider } from '@murshid/agent-gateway';
 import { concurrency, idempotency, limitsWith, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
 import { safeEqual, securityHeaders, trustFromEnv } from './lib/security';
+import { turnstile } from './lib/turnstile';
 import { BillingStore, registerBilling } from './billing/routes';
 import { Stripe, stripeFromEnv } from './billing/stripe';
 import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
@@ -78,7 +79,7 @@ export function buildApi(opts: CreateAppOptions = {}) {
   app.use('*', cors({
     // only listed origins (the apps themselves are same-origin); anything else gets no CORS header at all
     origin: (origin) => (origin && allowed.has(origin) ? origin : null),
-    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id', 'x-live-host', 'x-child'],
+    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id', 'x-live-host', 'x-child', 'cf-turnstile-response'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['x-request-id', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset', 'idempotent-replayed'],
     maxAge: 600,
@@ -96,6 +97,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
   }
   // request bodies: 5 MB at most (a 3 MB file upload is ~4.2 MB of base64); bigger is a clear 413
   app.use('*', bodyLimit({ maxSize: 5 * 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too big. Files can be up to 3 MB.', code: 'too_large', requestId: c.get('requestId') }, 413) }));
+  // optional bot check on sign-up style forms (TURNSTILE_SECRET_KEY); after the rate limits, before any work
+  if (env.TURNSTILE_SECRET_KEY?.trim()) app.use('*', turnstile(env.TURNSTILE_SECRET_KEY.trim(), trust));
   app.use('*', idempotency(undefined, undefined, undefined, trust));
   app.use('*', timeout(opts.timeoutMs ?? Number(env.REQUEST_TIMEOUT_MS ?? 15_000)));
   app.use('*', async (c, next) => { c.set('deps', deps); await next(); });
