@@ -1,4 +1,5 @@
-/** Admin API client: /admin/* on the Murshid API with dev auth (x-dev-role: admin). */
+/** Admin API client: /admin/* on the Murshid API (sign-in token in production, dev headers in the demo). */
+import { bearer } from './auth';
 /** The API, on the same domain: the "api" service at /api on Vercel, proxied to localhost:8787 by next.config in local dev. */
 export const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_API) || '/api';
 const ADMIN_USER = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MURSHID_ADMIN_USER) || 'dev-admin';
@@ -49,7 +50,9 @@ export async function checkAdminPasscode(code: string): Promise<boolean> {
 
 export async function api<T = any>(path: string, init: { method?: string; body?: unknown; as?: 'admin' | 'staff' | 'public'; headers?: Record<string, string>; timeoutMs?: number } = {}): Promise<T> {
   let res: Response;
-  const auth: Record<string, string> = init.as === 'public' ? {}
+  // live product: the sign-in token says who is asking; the demo uses the staff session's dev headers
+  const token = init.as === 'public' ? null : await bearer();
+  const auth: Record<string, string> = init.as === 'public' ? {} : token ? token
     : init.as === 'staff' ? (getSession()?.headers ?? { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER })
     : { 'x-dev-role': 'admin', 'x-dev-user-id': ADMIN_USER };
   const ctrl = new AbortController();

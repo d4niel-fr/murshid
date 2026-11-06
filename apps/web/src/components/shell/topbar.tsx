@@ -9,6 +9,8 @@ import { copyText } from '@/components/shared/actions';
 import { library, useLibrary } from '@/lib/library';
 import type { TextSize } from '@/lib/prefs';
 import { useApp } from '@/components/providers/app-provider';
+import { AccountMenu } from '@/components/account/account-card';
+import { NotificationBell } from './notifications';
 import { Tip } from '@/components/ui/tooltip';
 import { BANDS, BAND_IDS, demoStudents, type BandId } from '@/lib/bands';
 import { iconSwap } from '@/lib/motion';
@@ -125,7 +127,7 @@ function PageMenu({ onShortcuts }: { onShortcuts: () => void }) {
 }
 
 export function TopBar({ onMenu, onSearch, onShortcuts }: { onMenu: () => void; onSearch: () => void; onShortcuts: () => void }) {
-  const { prefs, setPrefs, t, tx, apiStatus } = useApp();
+  const { prefs, setPrefs, t, tx, apiStatus, live } = useApp();
   const router = useRouter();
   const dark = prefs.theme === 'dark';
   return (
@@ -157,9 +159,10 @@ export function TopBar({ onMenu, onSearch, onShortcuts }: { onMenu: () => void; 
             </motion.span>
           </AnimatePresence>
         </IconButton>
+        <NotificationBell />
         <PageMenu onShortcuts={onShortcuts} />
         <span className="mx-1 hidden h-6 w-px bg-border sm:block" />
-        <BandSwitcher />
+        {live ? <AccountMenu /> : <BandSwitcher />}
       </div>
     </header>
   );

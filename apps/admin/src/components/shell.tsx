@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, BarChart3, Building2, ClipboardList, GraduationCap, Inbox, KeyRound, LogIn, LogOut, Megaphone, Menu, ScrollText, Sheet, Users, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Building2, ClipboardList, GraduationCap, Inbox, KeyRound, LogIn, LogOut, Megaphone, Menu, Plug, ScrollText, Settings2, Sheet, Users, WifiOff, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { adminAccess, api, API_BASE, checkAdminPasscode, getAdminPasscode, getSession, setAdminPasscode, setSession, type StaffSession } from '@/lib/api';
 import { cn, PasswordInput } from './ui';
@@ -18,10 +18,12 @@ const ADMIN_NAV: NavGroup[] = [
   { section: 'School', items: [
     { href: '/', label: 'Students', icon: Users },
     { href: '/school', label: 'School & licence', icon: Building2 },
+    { href: '/school/setup', label: 'School setup', icon: Settings2 },
     { href: '/opportunities', label: 'Opportunities', icon: Megaphone },
     { href: '/audit', label: 'Audit log', icon: ScrollText },
   ] },
   { section: 'Validation', items: [{ href: '/survey', label: 'Survey results', icon: BarChart3 }] },
+  { section: 'Murshid', items: [{ href: '/schools', label: 'Schools', icon: Building2 }, { href: '/integrations', label: 'Integrations', icon: Plug }] },
 ];
 const isActive = (href: string, path: string) =>
   href === '/' ? path === '/' || path.startsWith('/students') : href === '/teacher' ? path === '/teacher' || path.startsWith('/teacher/assignments') : path.startsWith(href);

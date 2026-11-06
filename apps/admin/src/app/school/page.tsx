@@ -4,17 +4,19 @@ import { Building2, CheckCircle2, Home, Link2, RefreshCw, Users } from 'lucide-r
 import { useState } from 'react';
 import { MicrosoftMark, PageHeader } from '@/components/shell';
 import { Badge, Button, Card, Empty, ErrorBox } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, getSession } from '@/lib/api';
 import { useData } from '@/lib/use-data';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const ORG = 'demo-school';
+// the signed-in school admin's school (the demo school in the demo)
+const orgOf = () => (typeof window !== 'undefined' && getSession()?.orgId) || 'demo-school';
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Dubai' }) : '\u2014');
 
 /** 2026-09-01 → 1 Sep 2026 */
 const day = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : iso);
 
 export default function SchoolPage() {
+  const ORG = orgOf();
   const org = useData<any>(`/orgs/${ORG}`);
   const lic = useData<any>('/licensing/overview');
   const [busy, setBusy] = useState(false);

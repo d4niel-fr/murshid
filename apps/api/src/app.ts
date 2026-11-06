@@ -32,6 +32,7 @@ import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBacken
 import { billingUnit, classroomUnit, demoUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
 import { NotificationHub, notifyFromEnv } from './notify/hub';
 import { registerNotifications } from './notify/routes';
+import { registerIntegrations } from './admin/integrations';
 
 export interface CreateAppOptions {
   repo?: Repository;
@@ -185,6 +186,7 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerLive(api, persistent ? backend : null);
   registerSync(api, persistent ? backend : null);
   registerNotifications(api, hub, schools, store, env);
+  registerIntegrations(api, env, () => ({ state: persistent ? backend.name : 'memory', files: schools.classroom.blobs.name, chat: engine.provider?.name ?? null, authMode: deps.config.authMode }));
   registerAdmin(api, store, (id) => schools.licenceOf(id), (c) => demoView(c, store));
   registerSchools(api, schools, store, (c) => demoView(c, store));
   registerAccounts(api, schools, store);

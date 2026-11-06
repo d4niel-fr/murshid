@@ -1,6 +1,7 @@
 'use client';
 
 import { createLocalStore, uid } from './local-store';
+import { authEnabled } from './auth';
 
 /**
  * Handwritten notebooks (GoodNotes-style): pages of pen and highlighter strokes on lined, grid, dotted or blank paper.
@@ -32,7 +33,7 @@ function seed(): NotebookState {
   return { notebooks: [{ id: 'nb_physics', title: 'Physics: forces', subject: 'Physics', paper: 'grid', cover: COVERS[0], pages: [{ id: 'pg_physics_1', strokes: [] }], createdAt: now, updatedAt: now }] };
 }
 
-export const notebookStore = createLocalStore<NotebookState>('notebooks', seed, {
+export const notebookStore = createLocalStore<NotebookState>('notebooks', () => (authEnabled ? { notebooks: [] } : seed()), {
   migrate: (raw) => (raw && typeof raw === 'object' && Array.isArray((raw as NotebookState).notebooks) ? (raw as NotebookState) : null),
 });
 export const useNotebooks = () => notebookStore.use();

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, Check, Loader2, Lock, ShieldCheck } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
 import { MyMascot } from '@/components/mascot/my-mascot';
 import { Brand, Eyebrow } from '@/components/marketing/chrome';
@@ -15,6 +15,8 @@ import { ApiError, newIdempotencyKey } from '@/lib/http';
 import { checkout } from '@/lib/school-api';
 import { useAutosave } from '@/lib/use-autosave';
 import { cn } from '@/lib/utils';
+import { authEnabled } from '@/lib/auth';
+import { request } from '@/lib/http';
 
 interface Draft { who: 'parent' | 'student'; name: string; email: string; studentName: string; grade: string; billing: Billing; agree: boolean }
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -45,8 +47,9 @@ export function CheckoutView() {
     if (d.name.trim().length < 2) e.name = tx('Enter your full name.', 'أدخل اسمك الكامل.');
     if (!EMAIL.test(d.email.trim())) e.email = tx('Enter an email like name@example.com.', 'أدخل بريداً مثل name@example.com.');
     if (d.who === 'parent' && d.studentName.trim().length < 2) e.studentName = tx('Enter your child’s name.', 'أدخل اسم طفلك.');
-    if (password.length < 8) e.password = tx('Use at least 8 characters.', 'استخدم 8 أحرف على الأقل.');
-    if (confirm !== password) e.confirm = tx('The passwords don’t match.', 'كلمتا المرور غير متطابقتين.');
+    // the live product signs people in separately (Supabase), so no password here
+    if (!authEnabled && password.length < 8) e.password = tx('Use at least 8 characters.', 'استخدم 8 أحرف على الأقل.');
+    if (!authEnabled && confirm !== password) e.confirm = tx('The passwords don’t match.', 'كلمتا المرور غير متطابقتين.');
     if (!d.agree) e.agree = tx('Please accept the terms to continue.', 'يرجى قبول الشروط للمتابعة.');
     return e;
   }, [d, password, confirm, tx]);
@@ -61,7 +64,10 @@ export function CheckoutView() {
     const body = { plan: 'single' as const, billing: d.billing, name: d.name.trim(), email: d.email.trim().toLowerCase(), who: d.who, studentName: d.who === 'parent' ? d.studentName.trim() : undefined, grade: Number(d.grade) };
     let orderId: string;
     try {
-      orderId = (await checkout(body, key.current)).orderId;
+      const r = await checkout(body, key.current);
+      // real payments: Stripe's page takes the card, then sends the buyer back to /checkout/success
+      if (r.checkoutUrl) { draft.clear(); window.location.assign(r.checkoutUrl); return; }
+      orderId = r.orderId;
     } catch (e) {
       const err = e as ApiError;
       if (err.code === 'already_subscribed') {
@@ -137,7 +143,7 @@ export function CheckoutView() {
               <Label htmlFor="co-grade">{tx('Grade', 'الصف')}</Label>
               <Select id="co-grade" value={d.grade} onChange={(e) => set('grade', e.target.value)}>{Array.from({ length: 8 }, (_, i) => i + 5).map((g) => <option key={g} value={g}>{tx(`Grade ${g}`, `الصف ${g}`)}</option>)}</Select>
             </div>
-            <div>
+            {!authEnabled && <><div>
               <Label htmlFor="co-password">{tx('Password', 'كلمة المرور')}</Label>
               <PasswordInput id="co-password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} onBlur={() => setTouched({ ...touched, password: true })} aria-invalid={Boolean(show('password'))} aria-describedby="co-pw-meter" />
               <div id="co-pw-meter" className="mt-2" aria-live="polite">
@@ -149,7 +155,7 @@ export function CheckoutView() {
               <Label htmlFor="co-confirm">{tx('Confirm password', 'تأكيد كلمة المرور')}</Label>
               <PasswordInput id="co-confirm" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} onBlur={() => setTouched({ ...touched, confirm: true })} aria-invalid={Boolean(show('confirm'))} />
               {show('confirm') && <p className="mt-1.5 flex items-center gap-1 text-xs text-[var(--danger)]"><AlertCircle className="size-3.5" />{errors.confirm}</p>}
-            </div>
+            </div></>}
           </div>
 
           <div className="mt-6 rounded-[20px] bg-[var(--bg)] p-5">
@@ -208,14 +214,35 @@ function Shell({ children }: { children: React.ReactNode }) {
 export function CheckoutSuccess() {
   const { tx, locale } = useApp();
   const params = useSearchParams();
-  const { sub } = useBilling();
-  const order = params.get('order') ?? sub?.orderId;
+  const local = useBilling().sub;
+  // back from Stripe: wait for its webhook to confirm the payment (usually a second or two)
+  const session = params.get('session_id');
+  const [paid, setPaid] = useState<{ orderId: string; billing: 'monthly' | 'yearly'; renewsAt: string } | null>(null);
+  const [waiting, setWaiting] = useState(Boolean(session));
+  useEffect(() => {
+    if (!session) return;
+    let n = 0; let alive = true;
+    const tick = async () => {
+      try {
+        const r = await request<{ status: string; orderId?: string; billing?: 'monthly' | 'yearly'; renewsAt?: string }>(`/billing/session/${encodeURIComponent(session)}`, { anonymous: true });
+        if (!alive) return;
+        if (r.status === 'paid' && r.orderId) { setPaid({ orderId: r.orderId, billing: r.billing!, renewsAt: r.renewsAt! }); setWaiting(false); return; }
+      } catch { /* keep asking */ }
+      if (++n < 20 && alive) setTimeout(() => void tick(), 1500); else setWaiting(false);
+    };
+    void tick();
+    return () => { alive = false; };
+  }, [session]);
+  const sub = paid ? { billing: paid.billing, renewsAt: new Date(paid.renewsAt).getTime() } : local;
+  const order = paid?.orderId ?? params.get('order') ?? local?.orderId;
   return (
     <Shell>
       <div className="mx-auto max-w-lg py-14 text-center" role="status">
         <span className="text-[var(--deep)]"><MyMascot size={120} mood="happy" /></span>
         <h1 className="mk-h2 mt-6 text-[2.75rem]">{tx('Welcome to Murshid', 'مرحباً بك في مرشد')}</h1>
-        <p className="mt-4 text-[1rem] leading-relaxed text-[var(--text-muted)]">{tx('Your Single plan is active. We sent a receipt to your email (in the demo, nothing is sent).', 'خطتك الفردية نشطة. أرسلنا إيصالاً إلى بريدك (في العرض التجريبي لا يُرسل شيء).')}</p>
+        <p className="mt-4 text-[1rem] leading-relaxed text-[var(--text-muted)]">{waiting ? tx('Confirming your payment with the bank…', 'نؤكد الدفع مع البنك…')
+          : session ? (paid ? tx('Your Single plan is active. Stripe emailed you the receipt.', 'خطتك الفردية نشطة. أرسل لك Stripe الإيصال بالبريد.') : tx('Your payment is being confirmed. It can take a minute: your plan turns on by itself.', 'يجري تأكيد الدفع. قد يستغرق دقيقة: ستُفعَّل خطتك تلقائياً.'))
+          : tx('Your Single plan is active. We sent a receipt to your email (in the demo, nothing is sent).', 'خطتك الفردية نشطة. أرسلنا إيصالاً إلى بريدك (في العرض التجريبي لا يُرسل شيء).')}</p>
         {sub && (
           <dl className="mx-auto mt-8 grid max-w-sm grid-cols-2 gap-3 rounded-[20px] bg-[var(--surface)] p-5 text-start text-sm">
             <dt className="text-[var(--text-muted)]">{tx('Order', 'الطلب')}</dt><dd className="text-end tabular">{order}</dd>
