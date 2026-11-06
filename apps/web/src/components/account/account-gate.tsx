@@ -17,6 +17,7 @@ import { libraryStore } from '@/lib/library';
 import { notebookStore } from '@/lib/notebook';
 import { studyStore } from '@/lib/study';
 import { registerDoc, startSync } from '@/lib/sync';
+import { practiceStore } from '@/lib/practice';
 import { boardStore } from '@/lib/whiteboard';
 
 /**
@@ -58,6 +59,7 @@ export function AccountGate({ children }: { children: ReactNode }) {
       registerDoc({ name: 'study', get: studyStore.get, set: (v) => studyStore.set(v as ReturnType<typeof studyStore.get>), subscribe: studyStore.subscribe }),
       registerDoc({ name: 'notebooks', get: notebookStore.get, set: (v) => notebookStore.set(v as ReturnType<typeof notebookStore.get>), subscribe: notebookStore.subscribe }),
       registerDoc({ name: 'boards', get: boardStore.get, set: (v) => boardStore.set(v as ReturnType<typeof boardStore.get>), subscribe: boardStore.subscribe }),
+      registerDoc({ name: 'practice', get: practiceStore.get, set: (v) => practiceStore.set(v as ReturnType<typeof practiceStore.get>), subscribe: practiceStore.subscribe }),
       registerDoc({ name: 'library', get: libraryStore.get, set: (v) => libraryStore.set(v as ReturnType<typeof libraryStore.get>), subscribe: libraryStore.subscribe }),
     ];
     return () => { for (const off of offs) off(); };

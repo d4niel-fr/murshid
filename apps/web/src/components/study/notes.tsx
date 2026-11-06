@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowLeft, Bold, BookOpenCheck, CheckSquare, Download, Heading2, Italic, Layers, Link2, List, ListCollapse, Mic, MicOff, Pin, PinOff, Plus, Quote, Search, Table2, Trash2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Bold, BookOpenCheck, CheckSquare, Download, Heading2, Italic, Layers, Link2, List, ListCollapse, Mic, MicOff, Pin, PinOff, Plus, Quote, Search, Table2, Trash2, Wand2, BookOpenText } from 'lucide-react';
 import { generateCards, summarise } from '@murshid/study';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/components/providers/app-provider';
@@ -205,6 +205,7 @@ export function NoteEditor() {
         <CopyButton text={() => `# ${title}\n\n${body}`} label={tx('Copy note', 'نسخ الملاحظة')} iconOnly />
         <ShareButton title={title} iconOnly />
         <PrintButton iconOnly />
+        <Link href={`/app/study/reader?note=${note.id}`} aria-label={tx('Open in Immersive Reader', 'افتح في القارئ الشامل')} title={tx('Immersive Reader', 'القارئ الشامل')} className="grid size-9 place-items-center rounded-full bg-surface"><BookOpenText className="size-4" /></Link>
         <button type="button" onClick={exportMd} aria-label={tx('Download as Markdown', 'تنزيل بصيغة Markdown')} className="grid size-9 place-items-center rounded-full bg-surface"><Download className="size-4" /></button>
         <button type="button" onClick={del} aria-label={tx('Delete note', 'حذف الملاحظة')} className="grid size-9 place-items-center rounded-full bg-surface text-[var(--danger)]"><Trash2 className="size-4" /></button>
       </div>

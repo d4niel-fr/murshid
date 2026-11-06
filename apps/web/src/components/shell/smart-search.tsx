@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, Bookmark, ClipboardList, Clock, CornerDownLeft, FileText, HelpCircle, Languages, Layers, MessageCircle, Moon, PenLine, Plus, Presentation, Radio, Search, Sparkles, Timer, Type, WandSparkles } from 'lucide-react';
+import { BookAudio, BookOpen, BookOpenText, Bookmark, Calculator, CalendarClock, CalendarOff, ClipboardList, Clock, CornerDownLeft, FileText, HelpCircle, Languages, Layers, MessageCircle, Mic, Moon, PenLine, Plus, Presentation, Radio, Search, Sparkles, Timer, Type, Vote, WandSparkles } from 'lucide-react';
 import { Dialog as D } from 'radix-ui';
 import { useApp } from '@/components/providers/app-provider';
 import { DialogContent } from '@/components/ui/dialog';
@@ -92,7 +92,18 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       ['/app/study/notes', tx('Notes', 'الملاحظات'), 'notes write summary', <FileText key="i" className="size-4" />],
       ['/app/study/focus', tx('Focus timer', 'مؤقت التركيز'), 'pomodoro timer focus concentrate', <Timer key="i" className="size-4" />],
       ['/app/study/notebook', tx('Notebook (handwriting)', 'الدفتر (كتابة يدوية)'), 'handwriting pen stylus pencil draw write goodnotes notebook ink', <PenLine key="i" className="size-4" />],
+      ['/app/study/reader', tx('Immersive Reader', 'القارئ الشامل'), 'immersive reader read aloud text to speech dyslexia line focus spacing font listen قارئ قراءة صوت', <BookOpenText key="i" className="size-4" />],
+      ['/app/study/reading', tx('Reading coach', 'مدرّب القراءة'), 'reading progress fluency read aloud words per minute wcpm accuracy practise passage طلاقة قراءة', <BookAudio key="i" className="size-4" />],
+      ['/app/study/speaking', tx('Speaking coach', 'مدرّب التحدث'), 'speaker coach presentation pace filler um speech practise talk oral عرض تحدث', <Mic key="i" className="size-4" />],
+      ['/app/study/maths', tx('Maths practice', 'تدريب الرياضيات'), 'math maths practice times tables fractions percent equations arithmetic رياضيات ضرب كسور معادلات', <Calculator key="i" className="size-4" />],
       ['/app/study/topics', tx('Topic tracker', 'متتبع المواضيع'), 'topics confidence exam revision', <Sparkles key="i" className="size-4" />],
+      ['/app/feelings', tx('Check-in: how I feel', 'كيف حالك؟ تسجيل الشعور'), 'feelings mood emotion wellbeing reflect check in talk teacher breathing calm مشاعر شعور', I('Heart')],
+      ['/app/timetable', tx('Timetable', 'الجدول الدراسي'), 'timetable schedule lessons periods now next room join teams class جدول حصص', <CalendarClock key="i" className="size-4" />],
+      ['/app/attendance', tx('Attendance and leave', 'الحضور والإذن'), 'attendance absent late register leave sick excuse permission حضور غياب إذن', <CalendarOff key="i" className="size-4" />],
+      ['/app/points', tx('Points', 'النقاط'), 'points rewards behaviour merit house dojo نقاط', I('Award')],
+      ['/app/polls', tx('Questions from teachers', 'أسئلة المعلمين'), 'poll exit ticket question vote confidence استطلاع سؤال', <Vote key="i" className="size-4" />],
+      ['/app/events', tx('School dates', 'مواعيد المدرسة'), 'calendar events holidays exams trip national day break term مواعيد عطلة', I('CalendarRange')],
+      ['/app/reports', tx('Reports', 'التقارير'), 'term report card comments grades effort تقرير', I('FileText')],
       ['/app/saved', tx('Saved and recent', 'المحفوظات والأخيرة'), 'bookmarks saved for later history recent', <Bookmark key="i" className="size-4" />],
       ['/app/profile', tx('Profile & links', 'الملف والروابط'), 'cv linkedin portfolio', I('Link')],
       ['/app/settings#mascot', tx('Settings: mascot', 'الإعدادات: التميمة'), 'nour companion colour accessory name', I('Settings')],

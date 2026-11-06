@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Award, FileText, FileUp, Flame, Layers, ListChecks, ListPlus, Lock, PenLine, Play, Presentation, Radio, Sparkles, Timer, Trophy, Video, Wand2, Zap } from 'lucide-react';
+import { ArrowRight, Award, BookAudio, BookOpenText, Calculator, Mic, FileText, FileUp, Flame, Layers, ListChecks, ListPlus, Lock, PenLine, Play, Presentation, Radio, Sparkles, Timer, Trophy, Video, Wand2, Zap } from 'lucide-react';
 import { levelOf } from '@murshid/study';
 import { useApp } from '@/components/providers/app-provider';
 import { MyMascot, useMascotName } from '@/components/mascot/my-mascot';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { count, countAr, nAr } from '@/lib/plural';
 import { Ago } from '@/components/shared/ago';
 import { useNotebooks } from '@/lib/notebook';
+import { usePractice } from '@/lib/practice';
 import { Subject } from '@/components/shared/subject';
 
 export function StudyHub() {
@@ -31,6 +32,11 @@ export function StudyHub() {
   const confident = s.topics.length ? Math.round((s.topics.filter((t) => t.confidence >= 2).length / s.topics.length) * 100) : 0;
   const shaky = s.topics.filter((t) => t.confidence <= 1);
   const decksDue = s.decks.map((d) => ({ d, n: s.cards.filter((c) => c.deckId === d.id && isDue(c, now)).length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+  const practiceState = usePractice();
+  const lastRead = practiceState.reading.at(-1);
+  const readMeta = lastRead ? tx(`Last: ${lastRead.wcpm} words/min`, `آخر قراءة: ${lastRead.wcpm} كلمة/دقيقة`) : tx('Read aloud', 'اقرأ بصوت عالٍ');
+  const mathsDone = practiceState.maths.length;
+  const mathsMeta = mathsDone ? tx(`${mathsDone} rounds done`, `${mathsDone} جولات`) : tx('8 skills', '8 مهارات');
   const notes = [...s.notes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
   const first = world.dashboard.student.firstName;
   // Arabic copy uses the Arabic first name when the student has one
@@ -48,6 +54,10 @@ export function StudyHub() {
     { href: '/app/study/notebook', icon: PenLine, title: tx('Notebook', 'الدفتر'), body: tx('Write by hand with a stylus or finger: pen, highlighter, eraser, lined or grid paper.', 'اكتب بخط يدك بالقلم أو الإصبع: قلم وقلم تمييز وممحاة وورق مسطّر أو مربعات.'), meta: tx(count(nbs.notebooks.length, 'notebook'), `${nbs.notebooks.length} دفاتر`) },
     { href: '/app/study/whiteboard', icon: Presentation, title: tx('Whiteboard', 'السبورة'), body: tx('An endless board: draw, add shapes, arrows, sticky notes, text and pictures. Pinch or scroll to zoom.', 'سبورة بلا حدود: ارسم وأضف أشكالاً وأسهماً وملاحظات لاصقة ونصاً وصوراً. كبّر بالقرص أو التمرير.'), meta: tx(count(boards.boards.length, 'board'), `${boards.boards.length} سبورات`) },
     { href: '/app/study/focus', icon: Timer, title: tx('Focus timer', 'مؤقت التركيز'), body: tx('25 minutes on, 5 off. Every session is logged, so you can see your week.', '25 دقيقة عمل و5 راحة. تُسجّل كل جلسة لترى أسبوعك.'), meta: tx(`${week} min this week`, `${nAr(week, 'minute')} هذا الأسبوع`) },
+    { href: '/app/study/reader', icon: BookOpenText, title: tx('Immersive Reader', 'القارئ الشامل'), body: tx('Any text, bigger and calmer, read aloud word by word, with line focus and your own colours.', 'أي نص بخط أكبر وأهدأ يُقرأ كلمةً كلمة، مع تركيز السطر وألوانك.'), meta: tx('Read your way', 'اقرأ بطريقتك') },
+    { href: '/app/study/reading', icon: BookAudio, title: tx('Reading coach', 'مدرّب القراءة'), body: tx('Read a passage aloud; Murshid follows along and shows words correct per minute and words to practise.', 'اقرأ نصاً بصوت عالٍ؛ يتابعك مرشد ويعرض الكلمات الصحيحة في الدقيقة والكلمات للتدريب.'), meta: readMeta },
+    { href: '/app/study/speaking', icon: Mic, title: tx('Speaking coach', 'مدرّب التحدث'), body: tx('Practise a presentation: your pace, filler words, repeats and pauses, with tips.', 'تدرّب على عرض: سرعتك وكلمات الحشو والتكرار والتوقفات مع نصائح.'), meta: tx(`${practiceState.speaking.length} practice talks`, `${practiceState.speaking.length} تدريبات`) },
+    { href: '/app/study/maths', icon: Calculator, title: tx('Maths practice', 'تدريب الرياضيات'), body: tx('Ten questions at a time from times tables to equations; the level moves with you and mistakes show the working.', 'عشرة أسئلة من جدول الضرب إلى المعادلات؛ يتغير المستوى معك وتظهر طريقة الحل عند الخطأ.'), meta: mathsMeta },
     { href: '/app/study/topics', icon: ListChecks, title: tx('Topic tracker', 'متتبع المواضيع'), body: tx('Rate each topic from “not started” to “confident” and revise the shaky ones first.', 'قيّم كل موضوع من «لم أبدأ» إلى «متقن» وراجع الضعيفة أولاً.'), meta: tx(`${shaky.length} to revise`, `${shaky.length} للمراجعة`) },
   ];
 

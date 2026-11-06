@@ -484,7 +484,7 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
       const p: Poll = { id: life.id('poll'), streamId: st.id, kind: b.kind, question: b.question, options: b.kind === 'choice' ? b.options : [], anonymous: b.anonymous, open: true, at: c.get('deps').now().toISOString(), closedAt: null, by: s.actor, answers: {} };
       life.polls.push(p);
       if (life.polls.length > 3000) life.polls.splice(0, life.polls.length - 3000);
-      for (const m of membersOf(st)) notify(c, m.appId, { kind: 'announcement', title: `${st.name}: ${b.kind === 'exit' ? 'exit ticket' : 'quick question'}`, body: b.question, url: '/app/school?tab=polls' });
+      for (const m of membersOf(st)) notify(c, m.appId, { kind: 'announcement', title: `${st.name}: ${b.kind === 'exit' ? 'exit ticket' : 'quick question'}`, body: b.question, url: '/app/polls' });
       return c.json(pollCard(p, true), 201);
     });
 

@@ -5,6 +5,7 @@ import { CalendarDays } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useApp, useEndpoint } from '@/components/providers/app-provider';
 import { Bento, Page, RevealTitle } from '@/components/shared/page';
+import { SchoolToday } from '@/components/life/school-today';
 import { Arrow, Button } from '@/components/ui/button';
 import { visibleWidgets, greetingKey, type WidgetId } from '@/lib/bands';
 import { diffDays, dubaiHour, formatDate, relativeDay, weekdayIndex } from '@/lib/dates';
@@ -72,6 +73,7 @@ export function DashboardView() {
           {main.map((w) => <Slot key={w} w={w}>{render(w)}</Slot>)}
         </div>
         <div className="col-span-12 grid min-w-0 grid-cols-12 gap-4 lg:col-span-5 xl:col-span-4">
+          <SchoolToday className="col-span-12 grid min-w-0 md:col-span-6 lg:col-span-12" />
           {side.map((w) => <Slot key={w} w={w} side>{render(w)}</Slot>)}
         </div>
       </Bento>

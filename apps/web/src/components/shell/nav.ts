@@ -24,7 +24,8 @@ export function appNav(band: BandId, locale: Locale): AppNavItem[] {
   const insights = { key: 'insights', href: '/app/insights', icon: 'ChartLine', label: locale === 'ar' ? 'الرؤى والرسوم' : 'Insights', primary: true };
   // School (licence, classes, work from teachers) sits right after Home
   const homeIdx = out.findIndex((i) => i.key === 'home');
-  out.splice(homeIdx >= 0 ? homeIdx + 1 : 0, 0, { key: 'school', href: '/app/school', icon: 'Building2', label: locale === 'ar' ? 'المدرسة' : 'School', primary: true });
+  out.splice(homeIdx >= 0 ? homeIdx + 1 : 0, 0, { key: 'school', href: '/app/school', icon: 'Building2', label: locale === 'ar' ? 'المدرسة' : 'School', primary: true },
+    { key: 'feelings', href: '/app/feelings', icon: 'Heart', label: locale === 'ar' ? 'كيف حالك؟' : 'Check-in', primary: true });
   const chatIdx = out.findIndex((i) => i.key === 'chat');
   out.splice(chatIdx >= 0 ? chatIdx : out.length - 1, 0, insights);
   // Study tools (flashcards, notes, focus timer) sit with the learning pages
@@ -36,16 +37,20 @@ export function appNav(band: BandId, locale: Locale): AppNavItem[] {
   return out;
 }
 
+/** School sections that light up the School item in the nav. */
+const SCHOOL_SECTIONS = ['/app/timetable', '/app/attendance', '/app/points', '/app/polls', '/app/events', '/app/reports'];
+
 export function isActive(pathname: string, href: string): boolean {
   const path = href.split('?')[0]!;
   if (path === '/' || path === '/app') return pathname === path;
+  if (path === '/app/school' && SCHOOL_SECTIONS.some((s) => pathname === s || pathname.startsWith(`${s}/`))) return true;
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
 /** Sidebar groups: what you do today, what you are learning, where you are going. */
 export type NavSection = 'main' | 'learn' | 'grow';
 const SECTION: Record<string, NavSection> = {
-  home: 'main', school: 'main', today: 'main', planner: 'main', chat: 'main',
+  home: 'main', school: 'main', feelings: 'main', today: 'main', planner: 'main', chat: 'main',
   schoolwork: 'learn', subjects: 'learn', study: 'learn', insights: 'learn', goals: 'learn', badges: 'learn', saved: 'grow',
   activities: 'grow', clubs: 'grow', competitions: 'grow', opportunities: 'grow', careers: 'grow',
   applications: 'grow', university: 'grow', portfolio: 'grow', cv: 'grow', links: 'grow',
