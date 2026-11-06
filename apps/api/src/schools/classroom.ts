@@ -152,7 +152,9 @@ export function isLate(day: string, minutes: number, dueDate: string, dueTime: s
 export function toCsv(rows: (string | number | null)[][]): string {
   const cell = (v: string | number | null) => {
     const s = v === null ? '' : String(v);
-    return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? `"${s.replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"` : s;
+    // a cell that starts like a formula (= + - @, or a tab / carriage return before one) is quoted and prefixed with '
+    // so Excel shows it as text instead of running it
+    return /[",\n\r]/.test(s) || /^[=+\-@\t\r]/.test(s) ? `"${s.replace(/"/g, '""').replace(/^([=+\-@\t\r])/, "'$1")}"` : s;
   };
   return `﻿${rows.map((r) => r.map(cell).join(',')).join('\r\n')}\r\n`;
 }

@@ -24,7 +24,8 @@ export class SchoolStore {
   readonly accounts: Account[] = seedAccounts();
   readonly tenant: Record<string, string> = { ...STUDENT_TENANT };
   readonly roster: RosterStudent[] = seedRoster();
-  readonly teachers: Teacher[] = TEACHERS;
+  // a copy: teachers one store invites must never show up in another store (each app, each test)
+  readonly teachers: Teacher[] = TEACHERS.map((t) => ({ ...t }));
   readonly streams: Stream[];
   readonly members: Record<string, string[]>;
   readonly posted: WorkItem[] = [];

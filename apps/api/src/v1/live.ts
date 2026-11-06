@@ -32,6 +32,8 @@ class Rooms {
   private k(code: string) { return `live:${code}`; }
   count(now: number) { for (const [c, r] of this.mem) if (now - r.createdAt > TTL) this.mem.delete(c); return this.mem.size; }
   async get(code: string): Promise<{ room: Room; version: number } | null> {
+    // codes are 6 digits: anything else is not a room (and never reaches storage)
+    if (!/^\d{6}$/.test(code)) return null;
     if (!this.backend) { const r = this.mem.get(code); return r ? { room: r, version: 0 } : null; }
     const k = this.k(code);
     const v = (await this.backend.versions([k]))[k];

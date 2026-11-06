@@ -30,6 +30,7 @@ import { registerClassroom } from './classroom-routes';
 import { registerSetup } from './setup';
 import { GraphConnector, graphFromEnv } from './microsoft-graph';
 import { studentInsight, teacherStudents } from './insights';
+import { requireAdmin } from '../admin/routes';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
   .refine((d) => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; }, 'not a real date');
@@ -108,6 +109,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return { role: 'teacher', teacher: t, orgId: t.orgId, actor: t.id };
     }
     if (role === 'admin' || role === 'school_admin') {
+      // the demo school is the default only in dev mode; a signed-in school admin always has their own school
+      if (!orgId && config.authMode !== 'dev') throw new HTTPException(403, { message: 'no school on this account' });
       const id = orgId ?? DEMO_SCHOOL;
       if (schools.org(id)?.licence?.type !== 'institution') throw new HTTPException(403, { message: 'not a licensed school' });
       return { role: 'school_admin', orgId: id, actor: userId ?? 'dev-admin' };
@@ -144,6 +147,9 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'post', path: '/onboarding', tag: 'schools', auth: 'none', body: SchoolSchemas.Onboarding, summary: 'Get Murshid: "I\'m a parent" | "I\'m a student" | "My school provides Murshid"' },
     async (c, { body }) => {
+      // demo sign-up: it makes accounts for any email typed in, which a real sign-in with that email would then claim.
+      // With real sign-in (jwt mode) accounts are made by POST /account/setup, from a verified email only.
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(410, { message: 'sign in to get started (this demo sign-up is off)', cause: { code: 'use_sign_in' } });
       const now = c.get('deps').now();
       const day = dubaiDate(now);
       const b = body as z.output<typeof SchoolSchemas.Onboarding>;
@@ -181,6 +187,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'get', path: '/auth/microsoft/accounts', tag: 'schools', auth: 'none', query: SchoolSchemas.MsAccounts, summary: 'Accounts on the simulated Microsoft sign-in page (demo only)' },
     (c, { query }) => {
+      // the simulated sign-in page lists staff names and emails: demo only
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(404, { message: 'the simulated Microsoft sign-in is only in the demo' });
       const q = query as z.output<typeof SchoolSchemas.MsAccounts>;
       const org = schools.org(q.org);
       return c.json({ org: org ? { id: org.id, name: org.name, domain: org.microsoft?.domain ?? null } : null, simulated: true,
@@ -189,6 +197,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'post', path: '/auth/microsoft/callback', tag: 'schools', auth: 'none', body: SchoolSchemas.MsCallback, summary: 'Finish Microsoft sign-in: maps the Entra identity to a Murshid teacher / student / school admin' },
     (c, { body }) => {
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(404, { message: 'the simulated Microsoft sign-in is only in the demo' });
       const who = schools.microsoft.exchangeCode((body as { code: string }).code);
       if (!who) throw new HTTPException(400, { message: 'Microsoft sign-in failed (unknown code)' });
       const headers: Record<string, string> = who.role === 'teacher' ? { 'x-dev-role': 'teacher', 'x-dev-user-id': who.teacherId! }
@@ -434,10 +443,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   // ---------- platform: licensing overview ----------
   api.route({ method: 'get', path: '/licensing/overview', tag: 'schools', auth: 'custom', summary: 'Families vs institutions, kept apart (Murshid platform admin)' }, async (c) => {
-    const { config } = c.get('deps');
-    if (config.authMode === 'dev' && !c.req.header('authorization')) {
-      if (c.req.header('x-dev-role') !== 'admin') throw new HTTPException(c.req.header('x-dev-role') ? 403 : 401, { message: 'admin role required' });
-    } else { await authMiddleware(c, async () => {}); if (c.get('auth').role !== 'admin') throw new HTTPException(403, { message: 'admin role required' }); }
+    // the same check as the admin portal (production: PLATFORM_ADMIN_EMAILS)
+    await requireAdmin(c);
     const now = c.get('deps').now();
     const studentsOf = (orgId: string) => Object.entries(schools.tenant).filter(([sid, o]) => o === orgId && store.has(sid)).map(([sid]) => ({ id: sid, name: store.view(sid, now).profile.name }));
     const pick = (type: 'family' | 'institution') => schools.orgs.filter((o) => o.licence?.type === type).map((o) => ({
