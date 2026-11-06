@@ -532,4 +532,20 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       }
       return c.json({ class: h.classCard(st), columns: cols, rows });
     });
+
+  /** Each student's average and missing work in a class (the gradebook's numbers), for term reports. */
+  function averages(st: Stream, day: string) {
+    const items = streamItems(schools.school(st.orgId), st, day).filter((it) => it.setDate <= day);
+    const out = new Map<string, { average: number | null; missing: number }>();
+    const grades = new Map<string, number[]>();
+    for (const it of items) for (const r of rowsFor(st, it, day)) {
+      const o = out.get(r.studentId) ?? { average: null, missing: 0 };
+      if (r.state === 'not_started' && r.overdue) o.missing++;
+      if (r.grade !== null) { const g = grades.get(r.studentId) ?? []; g.push(r.grade); grades.set(r.studentId, g); }
+      out.set(r.studentId, o);
+    }
+    for (const [id, g] of grades) out.get(id)!.average = Math.round(g.reduce((t, x) => t + x, 0) / g.length);
+    return out;
+  }
+  return { averages };
 }

@@ -19,7 +19,7 @@ export function demoUnit(store: DemoStore): Unit {
 
 export function schoolsUnit(schools: SchoolStore): Unit {
   // the classroom is its own document; the Microsoft connector is code, not data; postedById is an index
-  const skip = ['classroom', 'microsoft', 'postedById'];
+  const skip = ['classroom', 'life', 'microsoft', 'postedById'];
   return {
     key: 'schools',
     dump: () => fieldsOf(schools, skip),
@@ -39,6 +39,11 @@ export function classroomUnit(schools: SchoolStore): Unit {
     dump: () => fieldsOf(room, skip),
     restore: (d) => assignFields(room, d, skip),
   };
+}
+
+export function lifeUnit(schools: SchoolStore): Unit {
+  const life = schools.life;
+  return { key: 'life', dump: () => fieldsOf(life), restore: (d) => assignFields(life, d) };
 }
 
 export function billingUnit(billing: BillingStore): Unit {

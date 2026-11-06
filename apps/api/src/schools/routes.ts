@@ -27,6 +27,7 @@ import { replanForPost } from './automation';
 import { refOf } from './classroom';
 import { registerClassroom } from './classroom-routes';
 import { registerSetup } from './setup';
+import { registerLife } from './life-routes';
 import { GraphConnector, graphFromEnv } from './microsoft-graph';
 import { studentInsight, teacherStudents } from './insights';
 
@@ -533,6 +534,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
     });
 
   // ---------- classroom: files, hand-ins, review, messages, reminders, announcements, inbox, gradebook ----------
-  registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
+  const room = registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
   registerSetup(api, schools, store, { staff, classOf, classCard, view });
+  // ---------- school life: feelings, timetable, attendance and leave, points, polls, events, term reports ----------
+  registerLife(api, schools, { view, staff, classOf, today, nowMinutes, averages: room.averages });
 }

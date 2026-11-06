@@ -29,7 +29,7 @@ import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits
 import { BillingStore, registerBilling } from './billing/routes';
 import { Stripe, stripeFromEnv } from './billing/stripe';
 import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
-import { billingUnit, classroomUnit, demoUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
+import { billingUnit, classroomUnit, demoUnit, lifeUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
 import { NotificationHub, notifyFromEnv } from './notify/hub';
 import { registerNotifications } from './notify/routes';
 import { registerIntegrations } from './admin/integrations';
@@ -149,7 +149,7 @@ export function buildApi(opts: CreateAppOptions = {}) {
   const hub = new NotificationHub(notifyFromEnv(env), deps.now);
   deps.notify = hub;
   if (persistent) {
-    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), billingUnit(billing), repoUnit(deps.repo), notifyUnit(hub)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
+    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), lifeUnit(schools), billingUnit(billing), repoUnit(deps.repo), notifyUnit(hub)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
     api.durable = durable;
     api.ready = durable.init();
     // push and email go out only once the change that caused them is saved

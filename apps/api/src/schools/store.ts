@@ -5,6 +5,7 @@
 import { familyOrg, DEMO_SCHOOL, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
 import type { School, WorkItem } from './engine';
 import { ClassroomStore } from './classroom';
+import { SchoolLife } from './life';
 import { SimulatedMicrosoft365, type SchoolDirectoryConnector } from './microsoft';
 
 export interface StudentLicence {
@@ -37,6 +38,8 @@ export class SchoolStore {
   readonly microsoft: SchoolDirectoryConnector;
   /** files, hand-ins, messages, announcements and reminders (see classroom.ts) */
   readonly classroom = new ClassroomStore();
+  /** feelings, timetable, attendance, points, polls, events, term reports (see life.ts) */
+  readonly life = new SchoolLife();
   private seq = 0;
 
   constructor() {
