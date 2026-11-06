@@ -112,6 +112,11 @@ export async function requireAdmin(c: Ctx): Promise<string> {
     if (c.req.header('x-dev-role') !== 'admin') throw new HTTPException(c.req.header('x-dev-role') ? 403 : 401, { message: 'admin role required (dev: x-dev-role: admin)' });
     return c.req.header('x-dev-user-id') ?? 'dev-admin';
   }
+  if (c.get('deps').whoami) {
+    const me = await c.get('deps').whoami!(c);
+    if (me.role !== 'platform_admin') throw new HTTPException(403, { message: 'Murshid admin role required (PLATFORM_ADMIN_EMAILS)' });
+    return me.email ?? me.authUserId;
+  }
   await authMiddleware(c, async () => {});
   const auth = c.get('auth');
   if (auth.role !== 'admin') throw new HTTPException(403, { message: 'admin role required' });
@@ -141,24 +146,40 @@ export function studentSummary(v: DemoView) {
 
 export type LicenceLookup = (studentId: string) => { type: 'family' | 'institution'; orgId: string; orgName: string; planName: string; boughtBy: string };
 
-export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLookup) {
+/** Admin per-student routes that a student may also use on themselves (under /student/me/...). */
+const SELF_SERVICE = new Set(['subjects', 'assessments', 'activities', 'sessions', 'tasks', 'goals', 'applications', 'projects', 'achievements', 'cv', 'links']);
+
+export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLookup, selfView?: (c: Ctx) => Promise<DemoView>) {
   const S = AdminSchemas;
   const ctx = async (c: Ctx) => {
-    const actor = await requireAdmin(c);
+    const self = c.get('self');
+    const actor = self ? self.id : await requireAdmin(c);
     const now = c.get('deps').now();
     return { actor, now, today: addDays(now.toISOString().slice(0, 10), 0) };
   };
   const studentView = (c: Ctx, now: Date): DemoView => {
-    const id = c.req.param('id')!;
+    const id = c.get('self')?.id ?? c.req.param('id')!;
     if (!store.has(id)) notFound(`student "${id}"`);
     return store.view(id, now);
   };
   const log = (actor: string, now: Date, studentId: string | null, action: AuditEntry['action'], resource: string, resourceId: string, summary: string, changes?: Record<string, unknown>) =>
-    store.audit({ actor, actorRole: 'admin', studentId, action, resource, resourceId, summary, changes, at: now.toISOString() });
+    store.audit({ actor, actorRole: actor === studentId ? 'student' : 'admin', studentId, action, resource, resourceId, summary, changes, at: now.toISOString() });
   const R = <B extends z.ZodType = z.ZodUndefined, Q extends z.ZodType = z.ZodUndefined>(spec: Omit<RouteSpec<B, Q>, 'tag' | 'auth'>): RouteSpec<B, Q> => ({ ...spec, tag: 'admin', auth: 'custom' });
+  /** Register an admin route, and its /student/me twin when a student may do it to their own record. */
+  const route: Api['route'] = (spec, handler) => {
+    api.route(spec, handler);
+    const m = /^\/admin\/students\/:id\/(.+)$/.exec(spec.path);
+    if (!selfView || !m || !SELF_SERVICE.has(m[1]!.split('/')[0]!)) return;
+    api.route({ ...spec, tag: 'student', path: `/student/me/${m[1]}`, summary: `Me: ${spec.summary.charAt(0).toLowerCase()}${spec.summary.slice(1)}` }, async (c, input) => {
+      const v = await selfView(c);
+      if (v.record.createdBy === 'seed' && c.get('deps').config.authMode !== 'dev') throw new HTTPException(403, { message: 'demo students are read only' });
+      c.set('self', { id: v.profile.id });
+      return handler(c, input);
+    });
+  };
 
   // ----- overview + students -----
-  api.route(R({ method: 'get', path: '/admin/overview', summary: 'Counts for the admin home: students, published opportunities, edits today' }), async (c) => {
+  route(R({ method: 'get', path: '/admin/overview', summary: 'Counts for the admin home: students, published opportunities, edits today' }), async (c) => {
     const { now } = await ctx(c);
     const ids = store.ids();
     const views = ids.map((id) => store.view(id, now));
@@ -173,7 +194,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     });
   });
 
-  api.route(R({ method: 'get', path: '/admin/students', query: S.StudentsQuery, summary: 'List / search students' }), async (c, { query }) => {
+  route(R({ method: 'get', path: '/admin/students', query: S.StudentsQuery, summary: 'List / search students' }), async (c, { query }) => {
     const { now } = await ctx(c);
     const q = (query as z.output<typeof S.StudentsQuery>).q?.toLowerCase().trim();
     const { grade, licence, orgId } = query as z.output<typeof S.StudentsQuery>;
@@ -183,7 +204,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     return c.json({ total: items.length, items });
   });
 
-  api.route(R({ method: 'post', path: '/admin/students', body: S.StudentCreate, summary: 'Create a student' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students', body: S.StudentCreate, summary: 'Create a student' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const b = body as z.output<typeof S.StudentCreate>;
     const rec = store.createStudent({ ...b, classLabel: b.classLabel ?? (b.curriculum === 'british' ? `Year ${b.grade + 1} (Grade ${b.grade})` : `Grade ${b.grade}`) }, now);
@@ -191,7 +212,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     return c.json(studentSummary(store.view(rec.profile.id, now)), 201);
   });
 
-  api.route(R({ method: 'get', path: '/admin/students/:id', summary: 'Everything about one student (tabs of the detail view)' }), async (c) => {
+  route(R({ method: 'get', path: '/admin/students/:id', summary: 'Everything about one student (tabs of the detail view)' }), async (c) => {
     const { now } = await ctx(c);
     const v = studentView(c, now);
     const p = v.profile;
@@ -219,7 +240,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     });
   });
 
-  api.route(R({ method: 'patch', path: '/admin/students/:id', body: S.ProfilePatch, summary: 'Edit profile fields (name, grade, school, curriculum…)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id', body: S.ProfilePatch, summary: 'Edit profile fields (name, grade, school, curriculum…)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const p = v.record.profile;
@@ -232,7 +253,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     return c.json(studentSummary(store.view(p.id, now)));
   });
 
-  api.route(R({ method: 'delete', path: '/admin/students/:id', summary: 'Delete a student created in the admin portal (seed students cannot be deleted)' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id', summary: 'Delete a student created in the admin portal (seed students cannot be deleted)' }), async (c) => {
     const { actor, now } = await ctx(c);
     const id = c.req.param('id')!;
     if (!store.has(id)) notFound(`student "${id}"`);
@@ -242,7 +263,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- subjects -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/subjects', body: S.SubjectIn, summary: 'Add a subject' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/subjects', body: S.SubjectIn, summary: 'Add a subject' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.SubjectIn>;
@@ -254,7 +275,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'subject', id, `Added subject ${b.name}`);
     return c.json(def, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/subjects/:sid', body: partialOf(S.SubjectIn), summary: 'Edit a subject (name, teacher, target)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/subjects/:sid', body: partialOf(S.SubjectIn), summary: 'Edit a subject (name, teacher, target)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const s = v.record.profile.subjects.find((x) => x.id === c.req.param('sid')) ?? notFound('subject');
@@ -264,7 +285,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'subject', s.id, `Edited subject ${s.name}`, diff(before, body as Record<string, unknown>));
     return c.json(s);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/subjects/:sid', summary: 'Remove a subject (and its assessments from the views)' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/subjects/:sid', summary: 'Remove a subject (and its assessments from the views)' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const sid = c.req.param('sid')!;
@@ -278,7 +299,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- assessments -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/assessments', body: S.AssessmentIn, summary: 'Add an assessment (score null = upcoming)' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/assessments', body: S.AssessmentIn, summary: 'Add an assessment (score null = upcoming)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.AssessmentIn>;
@@ -289,7 +310,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'assessment', a.id, `Added ${a.status} assessment "${a.title}" on ${a.date}`);
     return c.json(a, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/assessments/:aid', body: AssessmentPatch, summary: 'Edit an assessment (e.g. enter a grade)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/assessments/:aid', body: AssessmentPatch, summary: 'Edit an assessment (e.g. enter a grade)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const aid = c.req.param('aid')!;
@@ -302,7 +323,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'assessment', aid, `Edited assessment "${next.title}"`, diff(cur as unknown as Record<string, unknown>, body as Record<string, unknown>));
     return c.json(next);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/assessments/:aid', summary: 'Delete an assessment' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/assessments/:aid', summary: 'Delete an assessment' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const aid = c.req.param('aid')!;
@@ -313,7 +334,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- activities + sessions -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/activities', body: S.ActivityIn, summary: 'Add a sport / activity' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/activities', body: S.ActivityIn, summary: 'Add a sport / activity' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.ActivityIn>;
@@ -324,7 +345,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'activity', b.kind, `Added activity ${b.kind} (${b.detail})`);
     return c.json(def, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/activities/:aid', body: z.object({ detail: name, role: z.string().max(120), days: z.array(z.number().int().min(0).max(6)).max(7), minutes: z.number().int().min(5).max(600), weeklyTargetMinutes: z.number().int().min(0).max(3000) }).partial().strict(), summary: 'Edit an activity (detail, role, days, targets)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/activities/:aid', body: z.object({ detail: name, role: z.string().max(120), days: z.array(z.number().int().min(0).max(6)).max(7), minutes: z.number().int().min(5).max(600), weeklyTargetMinutes: z.number().int().min(0).max(3000) }).partial().strict(), summary: 'Edit an activity (detail, role, days, targets)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const a = v.record.profile.activities.find((x) => x.id === c.req.param('aid')) ?? notFound('activity');
@@ -334,7 +355,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'activity', a.id, `Edited activity ${a.id}`, diff(before, body as Record<string, unknown>));
     return c.json(a);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/activities/:aid', summary: 'Remove an activity' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/activities/:aid', summary: 'Remove an activity' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const aid = c.req.param('aid')!;
@@ -346,7 +367,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, p.id, 'delete', 'activity', aid, `Removed activity ${aid}`);
     return c.json({ ok: true });
   });
-  api.route(R({ method: 'post', path: '/admin/students/:id/activities/:aid/sessions', body: S.SessionIn, summary: 'Log a session (training, match or race)' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/activities/:aid/sessions', body: S.SessionIn, summary: 'Log a session (training, match or race)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const aid = c.req.param('aid')!;
@@ -359,7 +380,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'session', s.id, `Logged ${b.type} session for ${aid} on ${b.date} (${b.minutes} min)`);
     return c.json(s, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/sessions/:sid', body: z.object({ date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string(), z.number().finite()), note: z.string().max(280).nullable() }).partial().strict(), summary: 'Edit a logged or generated session' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/sessions/:sid', body: z.object({ date: isoDate, minutes: z.number().int().min(1).max(720), metrics: z.record(z.string(), z.number().finite()), note: z.string().max(280).nullable() }).partial().strict(), summary: 'Edit a logged or generated session' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const sid = c.req.param('sid')!;
@@ -369,7 +390,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'session', sid, `Edited ${cur.activityId} session on ${cur.date}`, diff(cur as unknown as Record<string, unknown>, body as Record<string, unknown>));
     return c.json(next);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/sessions/:sid', summary: 'Delete a session' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/sessions/:sid', summary: 'Delete a session' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const sid = c.req.param('sid')!;
@@ -380,7 +401,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- tasks -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/tasks', body: S.TaskIn, summary: 'Add a task / deadline' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/tasks', body: S.TaskIn, summary: 'Add a task / deadline' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.TaskIn>;
@@ -390,7 +411,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'task', t.id, `Added task "${t.title}" due ${t.date} ${t.time}`);
     return c.json(t, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/tasks/:tid', body: z.object({ title: name, date: isoDate, time: hhmm, durationMinutes: z.number().int().min(5).max(480), status: z.enum(['todo', 'done']), notes: z.string().max(500).nullable() }).partial().strict(), summary: 'Edit a task (generated tasks: status only)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/tasks/:tid', body: z.object({ title: name, date: isoDate, time: hhmm, durationMinutes: z.number().int().min(5).max(480), status: z.enum(['todo', 'done']), notes: z.string().max(500).nullable() }).partial().strict(), summary: 'Edit a task (generated tasks: status only)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const tid = c.req.param('tid')!;
@@ -408,7 +429,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'task', tid, `Marked task ${tid} ${String(b.status)}`);
     return c.json({ id: tid, status: b.status });
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/tasks/:tid', summary: 'Delete a task (generated tasks are hidden)' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/tasks/:tid', summary: 'Delete a task (generated tasks are hidden)' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const tid = c.req.param('tid')!;
@@ -420,7 +441,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- goals -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/goals', body: S.GoalIn, summary: 'Add a goal' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/goals', body: S.GoalIn, summary: 'Add a goal' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.GoalIn>;
@@ -430,7 +451,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'goal', g.id, `Added goal "${g.title}"`);
     return c.json(goalStates(store.view(v.profile.id, now).profile, store.view(v.profile.id, now).data, v.sessions).find((x) => x.id === g.id), 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/goals/:gid', body: GoalPatch, summary: 'Edit a goal (current value only for manual goals)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/goals/:gid', body: GoalPatch, summary: 'Edit a goal (current value only for manual goals)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const g = v.record.profile.goals.find((x) => x.id === c.req.param('gid')) ?? notFound('goal');
@@ -448,7 +469,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     const nv = store.view(v.profile.id, now);
     return c.json(goalStates(nv.profile, nv.data, nv.sessions).find((x) => x.id === g.id));
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/goals/:gid', summary: 'Delete a goal' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/goals/:gid', summary: 'Delete a goal' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const gid = c.req.param('gid')!;
@@ -461,12 +482,12 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- opportunities (catalog + per-student) -----
-  api.route(R({ method: 'get', path: '/admin/opportunities', summary: 'Opportunity catalog (published by staff) and how many students each reaches' }), async (c) => {
+  route(R({ method: 'get', path: '/admin/opportunities', summary: 'Opportunity catalog (published by staff) and how many students each reaches' }), async (c) => {
     const { now } = await ctx(c);
     const views = store.ids().map((id) => store.view(id, now));
     return c.json({ items: store.catalog.map((o) => ({ ...o, reach: views.filter((v) => store.catalogFor(v.record.profile).some((x) => x.id === o.id)).map((v) => v.profile.id) })) });
   });
-  api.route(R({ method: 'post', path: '/admin/opportunities', body: S.OpportunityIn, summary: 'Create an opportunity and publish it to students (all in a grade range, or listed students)' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/opportunities', body: S.OpportunityIn, summary: 'Create an opportunity and publish it to students (all in a grade range, or listed students)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const b = body as z.output<typeof S.OpportunityIn>;
     if (Array.isArray(b.audience.studentIds)) for (const id of b.audience.studentIds) if (!store.has(id)) bad(`unknown student "${id}"`);
@@ -479,7 +500,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, null, b.status === 'published' ? 'publish' : 'create', 'opportunity', o.id, `${b.status === 'published' ? 'Published' : 'Drafted'} opportunity "${o.title}" to ${b.audience.studentIds === 'all' ? `grades ${b.minGrade}-${b.maxGrade}` : b.audience.studentIds.join(', ')}`);
     return c.json(o, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/opportunities/:oid', body: OppPatch, summary: 'Edit / close an opportunity' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/opportunities/:oid', body: OppPatch, summary: 'Edit / close an opportunity' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const o = store.catalog.find((x) => x.id === c.req.param('oid')) ?? notFound('opportunity');
     const before = { ...o } as unknown as Record<string, unknown>;
@@ -491,7 +512,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, null, 'update', 'opportunity', o.id, `Edited opportunity "${o.title}"`, diff(before, b as Record<string, unknown>));
     return c.json(o);
   });
-  api.route(R({ method: 'delete', path: '/admin/opportunities/:oid', summary: 'Delete an opportunity from the catalog' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/opportunities/:oid', summary: 'Delete an opportunity from the catalog' }), async (c) => {
     const { actor, now } = await ctx(c);
     const i = store.catalog.findIndex((x) => x.id === c.req.param('oid'));
     if (i < 0) notFound('opportunity');
@@ -499,7 +520,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, null, 'delete', 'opportunity', o!.id, `Deleted opportunity "${o!.title}"`);
     return c.json({ ok: true });
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/opportunities/:oid', summary: "Remove a student-specific (seeded) opportunity from a student's feed" }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/opportunities/:oid', summary: "Remove a student-specific (seeded) opportunity from a student's feed" }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const oid = c.req.param('oid')!;
@@ -511,7 +532,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- applications -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/applications', body: S.ApplicationIn, summary: 'Record an application' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/applications', body: S.ApplicationIn, summary: 'Record an application' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.ApplicationIn>;
@@ -520,7 +541,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'application', app.id, `Recorded application "${b.title}" (${b.status})`);
     return c.json(app, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/applications/:appId', body: z.object({ status: z.enum(APP_STATUS), outcome: z.string().max(280).nullable(), appliedAt: isoDate.nullable() }).partial().strict(), summary: 'Update an application (status / outcome)' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/applications/:appId', body: z.object({ status: z.enum(APP_STATUS), outcome: z.string().max(280).nullable(), appliedAt: isoDate.nullable() }).partial().strict(), summary: 'Update an application (status / outcome)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const app = v.record.applications.find((a) => a.id === c.req.param('appId')) ?? notFound('application');
@@ -531,7 +552,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- side projects + milestones -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/projects', body: S.ProjectIn, summary: 'Add a side project' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/projects', body: S.ProjectIn, summary: 'Add a side project' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const b = body as z.output<typeof S.ProjectIn>;
@@ -540,7 +561,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'project', proj.id, `Added side project ${b.name}`);
     return c.json(proj, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/projects/:pid', body: partialOf(S.ProjectIn), summary: 'Edit a side project' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/projects/:pid', body: partialOf(S.ProjectIn), summary: 'Edit a side project' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const proj = v.record.projects.find((x) => x.id === c.req.param('pid')) ?? notFound('project');
@@ -549,7 +570,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'project', proj.id, `Edited side project ${proj.name}`, diff(before, body as Record<string, unknown>));
     return c.json(proj);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/projects/:pid', summary: 'Delete a side project' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/projects/:pid', summary: 'Delete a side project' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const pid = c.req.param('pid')!;
@@ -558,7 +579,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'delete', 'project', pid, `Deleted side project ${pid}`);
     return c.json({ ok: true });
   });
-  api.route(R({ method: 'post', path: '/admin/students/:id/projects/:pid/milestones', body: S.MilestoneIn, summary: 'Add a milestone' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/projects/:pid/milestones', body: S.MilestoneIn, summary: 'Add a milestone' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const proj = v.record.projects.find((x) => x.id === c.req.param('pid')) ?? notFound('project');
@@ -567,7 +588,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'milestone', ms.id, `Added milestone "${ms.title}" to ${proj.name}`);
     return c.json(ms, 201);
   });
-  api.route(R({ method: 'patch', path: '/admin/students/:id/projects/:pid/milestones/:mid', body: partialOf(z.object({ title: name, date: isoDate, done: z.boolean() })), summary: 'Edit / complete a milestone' }), async (c, { body }) => {
+  route(R({ method: 'patch', path: '/admin/students/:id/projects/:pid/milestones/:mid', body: partialOf(z.object({ title: name, date: isoDate, done: z.boolean() })), summary: 'Edit / complete a milestone' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const proj = v.record.projects.find((x) => x.id === c.req.param('pid')) ?? notFound('project');
@@ -577,7 +598,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'milestone', ms.id, `Edited milestone "${ms.title}"`, diff(before, body as Record<string, unknown>));
     return c.json(ms);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/projects/:pid/milestones/:mid', summary: 'Delete a milestone' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/projects/:pid/milestones/:mid', summary: 'Delete a milestone' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const proj = v.record.projects.find((x) => x.id === c.req.param('pid')) ?? notFound('project');
@@ -589,7 +610,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- achievements -----
-  api.route(R({ method: 'post', path: '/admin/students/:id/achievements', body: S.AchievementIn, summary: 'Add an achievement' }), async (c, { body }) => {
+  route(R({ method: 'post', path: '/admin/students/:id/achievements', body: S.AchievementIn, summary: 'Add an achievement' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const a = { id: store.nextId('ach'), ...(body as z.output<typeof S.AchievementIn>), source: 'admin' as const };
@@ -597,7 +618,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'create', 'achievement', a.id, `Added achievement "${a.title}"`);
     return c.json(a, 201);
   });
-  api.route(R({ method: 'delete', path: '/admin/students/:id/achievements/:achId', summary: 'Delete an achievement' }), async (c) => {
+  route(R({ method: 'delete', path: '/admin/students/:id/achievements/:achId', summary: 'Delete an achievement' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const id = c.req.param('achId')!;
@@ -608,7 +629,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- CV fields, links, LinkedIn pack -----
-  api.route(R({ method: 'put', path: '/admin/students/:id/cv', body: S.CvIn, summary: 'Edit CV fields (headline, summary, skills, certifications, featured…)' }), async (c, { body }) => {
+  route(R({ method: 'put', path: '/admin/students/:id/cv', body: S.CvIn, summary: 'Edit CV fields (headline, summary, skills, certifications, featured…)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const before = { ...v.record.cv } as unknown as Record<string, unknown>;
@@ -617,7 +638,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'cv', v.profile.id, 'Edited CV fields', diff(before, body as Record<string, unknown>));
     return c.json(v.record.cv);
   });
-  api.route(R({ method: 'put', path: '/admin/students/:id/links', body: S.LinksIn, summary: 'Edit social / portfolio links (same validation and age rules as the student)' }), async (c, { body }) => {
+  route(R({ method: 'put', path: '/admin/students/:id/links', body: S.LinksIn, summary: 'Edit social / portfolio links (same validation and age rules as the student)' }), async (c, { body }) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     const cur = store.getLinks(v.profile.id, now);
@@ -635,7 +656,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
     log(actor, now, v.profile.id, 'update', 'links', v.profile.id, `Edited links: ${Object.keys(b).join(', ')}`);
     return c.json({ ...cur, restrictions: linkRestrictions(v.profile.age) });
   });
-  api.route(R({ method: 'post', path: '/admin/students/:id/linkedin', successStatus: 200, summary: 'Regenerate the LinkedIn pack from current data' }), async (c) => {
+  route(R({ method: 'post', path: '/admin/students/:id/linkedin', durable: 'late', successStatus: 200, summary: 'Regenerate the LinkedIn pack from current data' }), async (c) => {
     const { actor, now } = await ctx(c);
     const v = studentView(c, now);
     v.record.linkedin = buildLinkedInPack(v);
@@ -644,7 +665,7 @@ export function registerAdmin(api: Api, store: DemoStore, licenceOf?: LicenceLoo
   });
 
   // ----- audit -----
-  api.route(R({ method: 'get', path: '/admin/audit', query: S.AuditQuery, summary: 'Audit log of admin edits and Murshid (agent) writes, newest first' }), async (c, { query }) => {
+  route(R({ method: 'get', path: '/admin/audit', query: S.AuditQuery, summary: 'Audit log of admin edits and Murshid (agent) writes, newest first' }), async (c, { query }) => {
     await ctx(c);
     const q = query as z.output<typeof S.AuditQuery>;
     const items = store.auditLog.filter((e) => !q.studentId || e.studentId === q.studentId).slice(-q.limit).reverse();

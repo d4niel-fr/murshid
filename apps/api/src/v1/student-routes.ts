@@ -63,7 +63,7 @@ export function registerStudentExtras(api: Api, store: DemoStore, view: (c: Ctx)
     return c.json({ ...(v.record.linkedin ?? buildLinkedInPack(v)), pdfUrl: '/student/cv/linkedin.pdf' });
   });
 
-  api.route({ method: 'post', path: '/student/cv/linkedin', tag: 'v1', auth: 'custom', body: LinkedInIn, successStatus: 200, summary: 'Regenerate the LinkedIn pack (optional own headline / About)' }, async (c, { body }) => {
+  api.route({ method: 'post', path: '/student/cv/linkedin', tag: 'v1', auth: 'custom', durable: 'late', body: LinkedInIn, successStatus: 200, summary: 'Regenerate the LinkedIn pack (optional own headline / About)' }, async (c, { body }) => {
     const v = await view(c);
     const pack = buildLinkedInPack(v, body);
     v.record.linkedin = pack;

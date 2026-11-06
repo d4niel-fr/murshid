@@ -62,6 +62,7 @@ export class SchoolStore {
       teachers: this.teachers.filter((t) => t.orgId === orgId),
       posted: this.posted,
       teamsConnected: Boolean(org?.microsoft?.connected),
+      real: Boolean(org?.real),
     };
   }
 

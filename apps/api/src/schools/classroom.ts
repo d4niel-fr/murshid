@@ -3,15 +3,17 @@
  * hand-ins with review (mark, return for revision, rubric scores), a private message thread per student per
  * assignment, reminders, class announcements with replies, and rule-based checks that need no AI key.
  *
- * Everything is in memory like the rest of the demo school (one process). Files are served by unguessable id
- * (a capability link) so <img> tags can load them without auth headers.
+ * State is saved with the rest of the school (see lib/durable.ts); file bytes live in a blob store (Supabase Storage in
+ * production). Files are served by unguessable id (a capability link) so <img> tags can load them without auth headers.
  */
 import { randomBytes } from 'node:crypto';
+import { MemoryBlobs, type BlobStore } from '../lib/durable';
 
 /* ------------------------------------------------------------------ files */
 
 export type FileKind = 'image' | 'pdf' | 'slides' | 'doc' | 'sheet' | 'text';
-export interface StoredFile { id: string; name: string; mime: string; kind: FileKind; size: number; data: Buffer; owner: string; ownerRole: 'student' | 'teacher' | 'school_admin'; at: string }
+/** A file's details (its bytes are in the blob store under the same id). */
+export interface StoredFile { id: string; name: string; mime: string; kind: FileKind; size: number; owner: string; ownerRole: 'student' | 'teacher' | 'school_admin'; at: string }
 export interface FileRef { id: string; name: string; mime: string; kind: FileKind; size: number; url: string }
 
 /** Accepted types: what a teacher attaches and what a student hands in. Anything else is refused. */
@@ -25,7 +27,6 @@ export const MIME_KIND: Record<string, FileKind> = {
 };
 /** 3 MB per file keeps a base64 upload under the 4.5 MB request limit of serverless hosts. */
 export const MAX_FILE_BYTES = 3 * 1024 * 1024;
-const MAX_TOTAL_BYTES = 200 * 1024 * 1024;
 
 const starts = (b: Buffer, sig: number[], at = 0) => sig.every((x, i) => b[at + i] === x);
 /** The bytes must look like the type they claim, so nothing can be served as something it is not. */
@@ -67,7 +68,8 @@ export interface Reminder { id: string; itemId: string; title: string; subject: 
 
 export class ClassroomStore {
   readonly files = new Map<string, StoredFile>();
-  private total = 0;
+  /** where file bytes go (memory by default; Supabase Storage when configured) */
+  blobs: BlobStore = new MemoryBlobs();
   /** assignment id -> roster student id -> hand-in */
   readonly handins: Record<string, Record<string, HandIn>> = {};
   /** assignment id -> roster student id -> private thread */
@@ -80,17 +82,15 @@ export class ClassroomStore {
 
   id(prefix: string) { return `${prefix}_${(++this.seq).toString(36)}${randomBytes(4).toString('hex')}`; }
 
-  putFile(f: Omit<StoredFile, 'id' | 'size'>): StoredFile {
-    const file: StoredFile = { ...f, id: randomBytes(18).toString('base64url'), size: f.data.length };
+  async putFile(f: Omit<StoredFile, 'id' | 'size'> & { data: Buffer }): Promise<StoredFile> {
+    const { data, ...meta } = f;
+    const file: StoredFile = { ...meta, id: randomBytes(18).toString('base64url'), size: data.length };
+    await this.blobs.put(file.id, data, file.mime);
     this.files.set(file.id, file);
-    this.total += file.size;
-    // keep memory bounded: drop the oldest uploads first
-    for (const [id, old] of this.files) {
-      if (this.total <= MAX_TOTAL_BYTES) break;
-      this.files.delete(id); this.total -= old.size;
-    }
     return file;
   }
+  async fileBytes(id: string): Promise<Buffer | null> { return this.files.has(id) ? this.blobs.get(id) : null; }
+
 
   thread(itemId: string, studentId: string): Thread {
     return ((this.threads[itemId] ??= {})[studentId] ??= { messages: [], seenByStudent: 0, seenByTeacher: 0 });

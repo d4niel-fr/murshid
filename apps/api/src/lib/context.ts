@@ -11,6 +11,10 @@ export interface Config {
   inboxSecret: string;
   inboxDomain: string;
   publicApiUrl: string;
+  /** Supabase's public signing keys (projects with asymmetric JWT keys); used when there is no shared secret */
+  jwksUrl: string;
+  /** emails that are Murshid platform admins in production (PLATFORM_ADMIN_EMAILS, comma-separated) */
+  platformAdmins: string[];
 }
 
 export type Role = 'student' | 'guardian' | 'counsellor' | 'admin';
@@ -19,6 +23,8 @@ export interface AuthInfo {
   userId: string;
   email: string | null;
   role: Role;
+  /** display name from the sign-in provider (user_metadata.full_name / name) */
+  name?: string | null;
   /** 'jwt' for verified Supabase tokens, 'dev' for header auth, 'webhook' for inbox secret */
   via: 'jwt' | 'dev' | 'webhook';
   /** counsellors: the school they belong to (app_metadata.school_id / x-dev-school-id) */
@@ -29,9 +35,11 @@ export interface Deps {
   repo: Repository;
   config: Config;
   now: () => Date;
+  /** production sign-in: who the signed-in person is in Murshid (set by buildApi; see schools/accounts.ts) */
+  whoami?: (c: Ctx) => Promise<import('../schools/accounts').Me>;
 }
 
-export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps; requestId: string } };
+export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps; requestId: string; /** set by /student/me/* routes: the signed-in student */ self?: { id: string } } };
 export type Ctx = Context<AppEnv>;
 
 export function readConfig(env: Record<string, string | undefined>): Config {
@@ -48,6 +56,8 @@ export function readConfig(env: Record<string, string | undefined>): Config {
     inboxDomain: env.INBOX_DOMAIN ?? 'inbox.murshid.local',
     // on Vercel the API is the "api" service at /api on the project's production domain
     publicApiUrl: env.PUBLIC_API_URL ?? (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}/api` : 'http://localhost:8787'),
+    jwksUrl: env.SUPABASE_JWKS_URL?.trim() || (env.SUPABASE_URL?.trim() ? `${env.SUPABASE_URL.trim().replace(/\/+$/, '')}/auth/v1/.well-known/jwks.json` : ''),
+    platformAdmins: (env.PLATFORM_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
   };
 }
 

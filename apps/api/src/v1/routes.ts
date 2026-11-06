@@ -31,6 +31,17 @@ export async function demoView(c: Ctx, store: DemoStore): Promise<DemoView> {
   if (config.authMode === 'dev') {
     const legacy = c.req.header('x-dev-user-id');
     id = c.req.header('x-dev-user') ?? (legacy?.startsWith('demo-') ? legacy : undefined) ?? DEFAULT_DEMO_STUDENT;
+  } else if (c.get('deps').whoami) {
+    const me = await c.get('deps').whoami!(c);
+    if (me.role === 'student' && me.studentId) id = me.studentId;
+    else if (me.role === 'parent') {
+      // parents see their child's app (read only); x-child picks one when there are several
+      const child = me.children.find((x) => x.id === c.req.header('x-child')) ?? me.children[0];
+      if (!child) throw new HTTPException(403, { message: 'link your child first: ask them for the code in their settings', cause: { code: 'no_child' } });
+      if (c.req.method !== 'GET') throw new HTTPException(403, { message: 'parents can see their child’s plan but not change it', cause: { code: 'parent_read_only' } });
+      id = child.id;
+    } else if (!me.role) throw new HTTPException(403, { message: 'finish setting up your account first', cause: { code: 'needs_setup' } });
+    else throw new HTTPException(403, { message: 'this is the student app: teachers use the school portal', cause: { code: 'not_a_student' } });
   } else {
     await authMiddleware(c, async () => {});
   }
@@ -132,7 +143,7 @@ export function registerV1(api: Api, store: DemoStore = new DemoStore(), engine:
   }, async (c) => c.json({ items: listAreas(await demoView(c, store)), ranges: PROGRESS_RANGES }));
 
   api.route({
-    method: 'post', path: '/chat', tag: 'v1', auth: 'custom', body: S.ChatInput, response: S.ChatResponse, successStatus: 200,
+    method: 'post', path: '/chat', tag: 'v1', auth: 'custom', durable: 'late', body: S.ChatInput, response: S.ChatResponse, successStatus: 200,
     summary: 'Chat with Murshid: an orchestrator routes to specialist sub-agents (academics, sports, opportunities, career/CV, planner, business, wellbeing)',
     description: 'JSON by default. With `Accept: text/event-stream` the reply streams as SSE events: ' +
       '`route` {agents, names, reason, router}, `agent-start` {agent, name, models}, `agent-tool` {agent, tool}, `agent-done` {agent, ms, fallback, model} ' +

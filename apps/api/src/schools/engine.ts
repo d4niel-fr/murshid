@@ -69,7 +69,7 @@ export interface FormResponse { answers: Record<string, string>; submittedAt: st
 export type SubStatus = 'on_time' | 'late' | 'missing' | 'submitted' | 'pending' | 'not_set';
 export interface Submission { status: SubStatus; grade: number | null; submittedOn: string | null }
 
-const TITLES: Record<SubjectId, string[]> = {
+const TITLES: Partial<Record<SubjectId, string[]>> = {
   english: ['Close reading: "The Portrait of a Lady" (Khushwant Singh)', 'Note-making practice: unseen passage', 'Formal letter: complaint to a civic authority', 'Poem analysis: "A Photograph"', 'Debate speech draft (300 words)', 'Notice and poster writing', 'Summary: "We\u2019re Not Afraid to Die"', 'Article writing: screen time and sleep'],
   maths: ['Sets and functions: exercise 2.3', 'Trigonometric identities worksheet', 'Sequences and series problem set', 'Straight lines: past paper questions', 'Permutations and combinations drill', 'Limits: first principles practice', 'Complex numbers worksheet', 'Statistics: variance and SD set'],
   physics: ['Kinematics numericals (ch. 3)', 'Newton\u2019s laws problem sheet', 'Work, energy and power worksheet', 'Lab write-up: simple pendulum'],
@@ -87,6 +87,8 @@ export interface School {
   teachers: Teacher[];
   posted: WorkItem[];
   teamsConnected: boolean;
+  /** a real school (not the demo): only what teachers post exists, nothing is generated */
+  real?: boolean;
 }
 
 export function streamsOf(school: School, studentId: string): Stream[] {
@@ -97,8 +99,8 @@ export function streamsOf(school: School, studentId: string): Stream[] {
 export function streamItems(school: School, stream: Stream, today: string): WorkItem[] {
   const out: WorkItem[] = [];
   const mon = mondayOfDate(today);
-  const titles = TITLES[stream.subject];
-  for (let d = addDays(mon, -21); d <= addDays(mon, 13); d = addDays(d, 1)) {
+  const titles = TITLES[stream.subject] ?? ['Class work'];
+  for (let d = addDays(mon, -21); !school.real && d <= addDays(mon, 13); d = addDays(d, 1)) {
     if (!stream.setDays.includes(weekday(d))) continue;
     const n = Math.round(dayDiff('2026-01-05', d) / 7) * stream.setDays.length + stream.setDays.indexOf(weekday(d));
     out.push({
@@ -139,6 +141,7 @@ export function submission(st: RosterStudent, item: WorkItem, today: string): Su
 export interface DatedItem { date: string; title: string; kind: 'test' | 'event'; subject?: SubjectId; minutes: number; allStudents?: boolean }
 
 export function calendarFor(st: RosterStudent, today: string): DatedItem[] {
+  if (st.real) return []; // real students: tests come from their teachers and the school calendar, not the demo list
   const mon = mondayOfDate(today);
   // Grade 11 takes English, maths and electives; Grade 10 English and maths; Grade 12 (in this demo) English only
   const core: SubjectId[] = (st.grade ?? 11) === 12 ? ['english'] : ['english', 'maths'];
@@ -276,7 +279,7 @@ export function classReport(school: School, stream: Stream, today: string) {
 }
 
 // ---------- delegation ----------
-const EXTENSION: Record<SubjectId, string> = {
+const EXTENSION: Partial<Record<SubjectId, string>> = {
   english: 'Extension: compare the text with a second author and write a 400-word critical response',
   maths: 'Extension: two olympiad-style problems on the same topic',
   physics: 'Extension: derive the result and design a quick experiment to test it',
@@ -300,7 +303,7 @@ export function delegation(school: School, stream: Stream, today: string) {
     { id: 'support', title: 'Needs support', action: 'Check in this week, give the scaffolded version (core questions only) and agree a catch-up date.', students: support.map((r) => ({ id: r.id, name: r.name, reason: why(r) })) },
     { id: 'lighten', title: 'Same task, more time', action: 'Keep the task, move their due date by 2 school days. Their work is up to date; this week is the problem.', students: lighten.map((r) => ({ id: r.id, name: r.name, reason: why(r) })) },
     { id: 'core', title: 'Core task', action: 'Standard task and due date.', students: core.map((r) => ({ id: r.id, name: r.name, reason: why(r, 1) })) },
-    { id: 'extension', title: 'Ready for extension', action: EXTENSION[stream.subject], students: extension.map((r) => ({ id: r.id, name: r.name, reason: `${r.subject.completion}% handed in, average ${r.subject.avgGrade}%, week ${r.all.loadPct}% full` })) },
+    { id: 'extension', title: 'Ready for extension', action: EXTENSION[stream.subject] ?? 'Extension: one harder task on the same topic, with a short reflection', students: extension.map((r) => ({ id: r.id, name: r.name, reason: `${r.subject.completion}% handed in, average ${r.subject.avgGrade}%, week ${r.all.loadPct}% full` })) },
   ];
   // peer pairs: each student needing support with a strong student who has a light week
   const helpers = [...extension, ...rows.filter((r) => r.status === 'on_track' && (r.subject.avgGrade ?? 0) >= 80 && r.all.loadPct < 80)];

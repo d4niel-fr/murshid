@@ -85,7 +85,12 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
     if (!r) throw new HTTPException(404, { message: 'assignments come with a school licence', cause: { code: 'no_school' } });
     return { v, r };
   }
-  const isStaffRequest = (c: Ctx) => Boolean(c.req.header('x-dev-role'));
+  const isStaffRequest = async (c: Ctx) => {
+    const whoami = c.get('deps').whoami;
+    if (!whoami || (c.get('deps').config.authMode === 'dev' && !c.req.header('authorization'))) return Boolean(c.req.header('x-dev-role'));
+    const me = await whoami(c);
+    return me.role === 'teacher' || me.role === 'school_admin';
+  };
   const teacherName = (s: Staff) => (s.role === 'teacher' ? s.teacher.name : 'School admin');
 
   /** An item this student has: a posted one (if it is for them) or one generated for their classes. */
@@ -143,23 +148,24 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
     async (c, { body }) => {
       const b = body as z.output<typeof ClassroomSchemas.Upload>;
       let owner: string; let ownerRole: 'student' | 'teacher' | 'school_admin';
-      if (isStaffRequest(c)) { const s = await h.staff(c); owner = s.actor; ownerRole = s.role; }
+      if (await isStaffRequest(c)) { const s = await h.staff(c); owner = s.actor; ownerRole = s.role; }
       else { const v = await h.view(c); owner = v.profile.id; ownerRole = 'student'; }
       const b64 = b.data.replace(/^data:[^;,]+;base64,/, '');
       if (!/^[A-Za-z0-9+/=\s]+$/.test(b64)) throw new HTTPException(400, { message: 'file data must be base64', cause: { code: 'bad_encoding' } });
       const data = Buffer.from(b64, 'base64');
       if (data.length > MAX_FILE_BYTES) throw new HTTPException(413, { message: `that file is ${(data.length / 1048576).toFixed(1)} MB; the limit is 3 MB`, cause: { code: 'too_large' } });
       if (!sniffOk(b.mime, data)) throw new HTTPException(400, { message: "the file doesn't match its type: try saving it again", cause: { code: 'type_mismatch' } });
-      const f = room.putFile({ name: cleanName(b.name), mime: b.mime, kind: MIME_KIND[b.mime]!, data, owner, ownerRole, at: c.get('deps').now().toISOString() });
+      const f = await room.putFile({ name: cleanName(b.name), mime: b.mime, kind: MIME_KIND[b.mime]!, data, owner, ownerRole, at: c.get('deps').now().toISOString() });
       return c.json(refOf(f), 201);
     });
 
   api.route({ method: 'get', path: '/files/:id', tag: 'classroom', auth: 'none', summary: 'Download a file by its link (images and PDFs open inline)' },
-    (c) => {
+    async (c) => {
       const f = room.files.get(c.req.param('id')!);
-      if (!f) throw new HTTPException(404, { message: 'file not found' });
+      const data = f ? await room.fileBytes(f.id) : null;
+      if (!f || !data) throw new HTTPException(404, { message: 'file not found' });
       const inline = f.kind === 'image' || f.kind === 'pdf';
-      return new Response(new Uint8Array(f.data), {
+      return new Response(new Uint8Array(data), {
         headers: {
           'content-type': f.kind === 'text' ? 'text/plain; charset=utf-8' : f.mime,
           'content-length': String(f.size),

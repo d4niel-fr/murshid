@@ -1,13 +1,15 @@
 /**
  * Live quiz rooms (like a class game show): a host starts a room from a deck, players join with a 6-digit code,
  * everyone answers the same question against the clock and sees the leaderboard after each one.
- * In memory: rooms are short-lived (they end after two hours) and capped, so nothing piles up.
+ * Rooms are short-lived (they end after two hours). With saved state (lib/durable.ts) each room is its own small
+ * document, so a host and players reaching different servers see the same room; otherwise they live in memory.
  * The host proves it is the host with a secret key; players with the id they got when joining.
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { Api } from '../lib/router';
+import { decode, encode, type StateBackend } from '../lib/durable';
 
 const MAX_ROOMS = 300; const MAX_PLAYERS = 80; const TTL = 2 * 3_600_000; const SECONDS = 20;
 
@@ -19,9 +21,50 @@ interface Room {
   /** players the host removed: they cannot rejoin with the same id */
   removed: Set<string>;
 }
-const rooms = new Map<string, Room>();
-const tidy = (now: number) => { for (const [k, r] of rooms) if (now - r.createdAt > TTL) rooms.delete(k); };
 const key = () => randomBytes(12).toString('base64url');
+
+/** Rooms in memory, or one saved document per room (compare-and-swap, retried on a clash). */
+class Rooms {
+  private mem = new Map<string, Room>();
+  private cache = new Map<string, { room: Room; version: number }>();
+  constructor(private backend: StateBackend | null) {}
+  private k(code: string) { return `live:${code}`; }
+  count(now: number) { for (const [c, r] of this.mem) if (now - r.createdAt > TTL) this.mem.delete(c); return this.mem.size; }
+  async get(code: string): Promise<{ room: Room; version: number } | null> {
+    if (!this.backend) { const r = this.mem.get(code); return r ? { room: r, version: 0 } : null; }
+    const k = this.k(code);
+    const v = (await this.backend.versions([k]))[k];
+    if (!v) return null;
+    const hit = this.cache.get(code);
+    if (hit && hit.version === v) return hit;
+    const s = (await this.backend.load([k]))[k];
+    if (!s) return null;
+    const fresh = { room: decode(s.data) as Room, version: s.version };
+    this.cache.set(code, fresh);
+    return fresh;
+  }
+  /** false when the code is taken */
+  async create(r: Room): Promise<boolean> {
+    if (!this.backend) { if (this.mem.has(r.code)) return false; this.mem.set(r.code, r); return true; }
+    const res = await this.backend.save(this.k(r.code), encode(r), 0);
+    if (res.ok) this.cache.set(r.code, { room: r, version: res.version });
+    return res.ok;
+  }
+  /** Change a room and save it; re-run on fresh data if another server saved it first. */
+  async update<T>(code: string, fn: (r: Room) => T): Promise<T> {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const got = await this.get(code);
+      if (!got || Date.now() - got.room.createdAt > TTL) throw new HTTPException(404, { message: 'no live quiz with that code (it may have ended)' });
+      if (!this.backend) return fn(got.room);
+      const room = structuredClone(got.room);
+      const out = fn(room);
+      const res = await this.backend.save(this.k(code), encode(room), got.version);
+      if (res.ok) { this.cache.set(code, { room, version: res.version }); return out; }
+      this.cache.delete(code);
+    }
+    throw new HTTPException(503, { message: 'the quiz is busy, try again' });
+  }
+}
 
 const Create = z.object({
   title: z.string().trim().min(1).max(120),
@@ -34,11 +77,7 @@ const Answer = z.object({ player: z.string().min(1).max(40), choice: z.number().
 const Host = z.object({ hostKey: z.string().min(1).max(40) });
 const Remove = Host.extend({ name: z.string().trim().min(1).max(24) });
 
-function find(code: string): Room {
-  const r = rooms.get(code);
-  if (!r) throw new HTTPException(404, { message: 'no live quiz with that code (it may have ended)' });
-  return r;
-}
+
 /** Past the clock, a question moves to the answer on its own (no host action needed). */
 function tick(r: Room, now: number) {
   if (r.status === 'question' && now - r.startedAt > r.seconds * 1000) r.status = 'reveal';
@@ -65,64 +104,88 @@ function view(r: Room, now: number, who: { host?: boolean; player?: Player }) {
   };
 }
 
-export function registerLive(api: Api) {
-  api.route({ method: 'post', path: '/live/rooms', tag: 'live', auth: 'none', body: Create, summary: 'Host a live quiz from questions (returns the join code and the host key)' }, async (c, { body }) => {
-    const now = Date.now(); tidy(now);
-    if (rooms.size >= MAX_ROOMS) throw new HTTPException(503, { message: 'too many live quizzes right now, try again in a few minutes' });
-    let code = ''; do code = String(randomInt(100000, 1000000)); while (rooms.has(code));
+export function registerLive(api: Api, backend: StateBackend | null = null) {
+  const rooms = new Rooms(backend);
+  const find = async (code: string): Promise<Room> => {
+    const got = await rooms.get(code);
+    if (!got || Date.now() - got.room.createdAt > TTL) throw new HTTPException(404, { message: 'no live quiz with that code (it may have ended)' });
+    return got.room;
+  };
+  api.route({ method: 'post', path: '/live/rooms', tag: 'live', auth: 'none', durable: 'none', body: Create, summary: 'Host a live quiz from questions (returns the join code and the host key)' }, async (c, { body }) => {
+    const now = Date.now();
+    if (!backend && rooms.count(now) >= MAX_ROOMS) throw new HTTPException(503, { message: 'too many live quizzes right now, try again in a few minutes' });
     const b = body as z.output<typeof Create>;
-    const r: Room = { code, hostKey: key(), title: b.title, questions: b.questions, seconds: b.seconds, createdAt: now, status: 'lobby', index: 0, startedAt: 0, players: new Map(), removed: new Set() };
-    rooms.set(code, r);
-    return c.json({ code, hostKey: r.hostKey, state: view(r, now, { host: true }) }, 201);
+    let r: Room | null = null;
+    for (let i = 0; i < 8 && !r; i++) {
+      const code = String(randomInt(100000, 1000000));
+      const room: Room = { code, hostKey: key(), title: b.title, questions: b.questions, seconds: b.seconds, createdAt: now, status: 'lobby', index: 0, startedAt: 0, players: new Map(), removed: new Set() };
+      if (await rooms.create(room)) r = room;
+    }
+    if (!r) throw new HTTPException(503, { message: 'could not open a room, try again' });
+    return c.json({ code: r.code, hostKey: r.hostKey, state: view(r, now, { host: true }) }, 201);
   });
-  api.route({ method: 'post', path: '/live/rooms/:code/join', tag: 'live', auth: 'none', body: Join, summary: 'Join a live quiz with its code' }, async (c, { body }) => {
-    const r = find(c.req.param('code') ?? ''); const name = (body as z.output<typeof Join>).name.replace(/\s+/g, ' ');
-    if (r.status === 'done') throw new HTTPException(409, { message: 'this quiz has finished' });
-    if (r.players.size >= MAX_PLAYERS) throw new HTTPException(409, { message: 'this quiz is full' });
-    if ([...r.players.values()].some((p) => p.name.toLowerCase() === name.toLowerCase())) throw new HTTPException(409, { message: 'someone already has that name here, add an initial' });
-    const p: Player = { id: key(), name, score: 0, streak: 0, answers: {} };
-    r.players.set(p.id, p);
-    return c.json({ player: p.id, state: view(r, Date.now(), { player: p }) }, 201);
+  api.route({ method: 'post', path: '/live/rooms/:code/join', tag: 'live', auth: 'none', durable: 'none', body: Join, summary: 'Join a live quiz with its code' }, async (c, { body }) => {
+    const name = (body as z.output<typeof Join>).name.replace(/\s+/g, ' ');
+    const out = await rooms.update(c.req.param('code') ?? '', (r) => {
+      if (r.status === 'done') throw new HTTPException(409, { message: 'this quiz has finished' });
+      if (r.players.size >= MAX_PLAYERS) throw new HTTPException(409, { message: 'this quiz is full' });
+      if ([...r.players.values()].some((p) => p.name.toLowerCase() === name.toLowerCase())) throw new HTTPException(409, { message: 'someone already has that name here, add an initial' });
+      const p: Player = { id: key(), name, score: 0, streak: 0, answers: {} };
+      r.players.set(p.id, p);
+      return { player: p.id, state: view(r, Date.now(), { player: p }) };
+    });
+    return c.json(out, 201);
   });
   api.route({ method: 'get', path: '/live/rooms/:code', tag: 'live', auth: 'none', summary: 'Live quiz state (pass ?player= or ?host= for your own view)' }, async (c) => {
-    const r = find(c.req.param('code') ?? '');
+    const r = await find(c.req.param('code') ?? '');
     const host = c.req.query('host') === r.hostKey; const id = c.req.query('player') ?? '';
     if (r.removed.has(id)) throw new HTTPException(410, { message: 'the host removed you from this quiz' });
     return c.json(view(r, Date.now(), { host, player: r.players.get(id) }));
   });
-  api.route({ method: 'post', path: '/live/rooms/:code/next', tag: 'live', auth: 'none', body: Host, summary: 'Host: start the quiz, show the answer, or go to the next question' }, async (c, { body }) => {
-    const r = find(c.req.param('code') ?? ''); const now = Date.now();
-    if ((body as z.output<typeof Host>).hostKey !== r.hostKey) throw new HTTPException(403, { message: 'only the host can move the quiz on' });
-    tick(r, now);
-    if (r.status === 'lobby') { r.status = 'question'; r.index = 0; r.startedAt = now; }
-    else if (r.status === 'question') r.status = 'reveal';
-    else if (r.status === 'reveal') { if (r.index + 1 >= r.questions.length) r.status = 'done'; else { r.index += 1; r.status = 'question'; r.startedAt = now; } }
-    return c.json(view(r, now, { host: true }));
+  const asHost = (r: Room, hostKey: string, what: string) => { if (hostKey !== r.hostKey) throw new HTTPException(403, { message: `only the host can ${what}` }); };
+  api.route({ method: 'post', path: '/live/rooms/:code/next', tag: 'live', auth: 'none', durable: 'none', body: Host, summary: 'Host: start the quiz, show the answer, or go to the next question' }, async (c, { body }) => {
+    const b = body as z.output<typeof Host>;
+    return c.json(await rooms.update(c.req.param('code') ?? '', (r) => {
+      const now = Date.now();
+      asHost(r, b.hostKey, 'move the quiz on');
+      tick(r, now);
+      if (r.status === 'lobby') { r.status = 'question'; r.index = 0; r.startedAt = now; }
+      else if (r.status === 'question') r.status = 'reveal';
+      else if (r.status === 'reveal') { if (r.index + 1 >= r.questions.length) r.status = 'done'; else { r.index += 1; r.status = 'question'; r.startedAt = now; } }
+      return view(r, now, { host: true });
+    }));
   });
-  api.route({ method: 'post', path: '/live/rooms/:code/remove', tag: 'live', auth: 'none', body: Remove, summary: 'Host: remove a player (for a name that should not be on the board)' }, async (c, { body }) => {
-    const r = find(c.req.param('code') ?? ''); const b = body as z.output<typeof Remove>;
-    if (b.hostKey !== r.hostKey) throw new HTTPException(403, { message: 'only the host can remove players' });
-    const p = [...r.players.values()].find((x) => x.name.toLowerCase() === b.name.toLowerCase());
-    if (p) { r.players.delete(p.id); r.removed.add(p.id); }
-    return c.json(view(r, Date.now(), { host: true }));
+  api.route({ method: 'post', path: '/live/rooms/:code/remove', tag: 'live', auth: 'none', durable: 'none', body: Remove, summary: 'Host: remove a player (for a name that should not be on the board)' }, async (c, { body }) => {
+    const b = body as z.output<typeof Remove>;
+    return c.json(await rooms.update(c.req.param('code') ?? '', (r) => {
+      asHost(r, b.hostKey, 'remove players');
+      const p = [...r.players.values()].find((x) => x.name.toLowerCase() === b.name.toLowerCase());
+      if (p) { r.players.delete(p.id); r.removed.add(p.id); }
+      return view(r, Date.now(), { host: true });
+    }));
   });
-  api.route({ method: 'post', path: '/live/rooms/:code/end', tag: 'live', auth: 'none', body: Host, summary: 'Host: end the quiz now and show the final board' }, async (c, { body }) => {
-    const r = find(c.req.param('code') ?? '');
-    if ((body as z.output<typeof Host>).hostKey !== r.hostKey) throw new HTTPException(403, { message: 'only the host can end the quiz' });
-    r.status = 'done';
-    return c.json(view(r, Date.now(), { host: true }));
+  api.route({ method: 'post', path: '/live/rooms/:code/end', tag: 'live', auth: 'none', durable: 'none', body: Host, summary: 'Host: end the quiz now and show the final board' }, async (c, { body }) => {
+    const b = body as z.output<typeof Host>;
+    return c.json(await rooms.update(c.req.param('code') ?? '', (r) => {
+      asHost(r, b.hostKey, 'end the quiz');
+      r.status = 'done';
+      return view(r, Date.now(), { host: true });
+    }));
   });
-  api.route({ method: 'post', path: '/live/rooms/:code/answer', tag: 'live', auth: 'none', body: Answer, summary: 'Player: answer the current question (faster right answers score more)' }, async (c, { body }) => {
-    const r = find(c.req.param('code') ?? ''); const now = Date.now(); const b = body as z.output<typeof Answer>;
-    if (r.removed.has(b.player)) throw new HTTPException(410, { message: 'the host removed you from this quiz' });
-    const p = r.players.get(b.player); if (!p) throw new HTTPException(403, { message: 'join the quiz first' });
-    tick(r, now);
-    if (r.status !== 'question') throw new HTTPException(409, { message: 'this question is closed' });
-    if (r.index in p.answers) return c.json(view(r, now, { player: p }));
-    const q = r.questions[r.index]!; const ms = now - r.startedAt; const right = b.choice === q.answer;
-    p.streak = right ? p.streak + 1 : 0;
-    const points = right ? Math.round(500 + 500 * Math.max(0, 1 - ms / (r.seconds * 1000))) + (p.streak >= 3 ? 100 : 0) : 0;
-    p.answers[r.index] = { choice: b.choice, ms, points }; p.score += points;
-    return c.json(view(r, now, { player: p }));
+  api.route({ method: 'post', path: '/live/rooms/:code/answer', tag: 'live', auth: 'none', durable: 'none', body: Answer, summary: 'Player: answer the current question (faster right answers score more)' }, async (c, { body }) => {
+    const b = body as z.output<typeof Answer>;
+    return c.json(await rooms.update(c.req.param('code') ?? '', (r) => {
+      const now = Date.now();
+      if (r.removed.has(b.player)) throw new HTTPException(410, { message: 'the host removed you from this quiz' });
+      const p = r.players.get(b.player); if (!p) throw new HTTPException(403, { message: 'join the quiz first' });
+      tick(r, now);
+      if (r.status !== 'question') throw new HTTPException(409, { message: 'this question is closed' });
+      if (r.index in p.answers) return view(r, now, { player: p });
+      const q = r.questions[r.index]!; const ms = now - r.startedAt; const right = b.choice === q.answer;
+      p.streak = right ? p.streak + 1 : 0;
+      const points = right ? Math.round(500 + 500 * Math.max(0, 1 - ms / (r.seconds * 1000))) + (p.streak >= 3 ? 100 : 0) : 0;
+      p.answers[r.index] = { choice: b.choice, ms, points }; p.score += points;
+      return view(r, now, { player: p });
+    }));
   });
 }

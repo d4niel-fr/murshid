@@ -17,14 +17,18 @@ import { demoView, registerV1 } from './v1/routes';
 import { registerAdmin, requireAdmin } from './admin/routes';
 import { registerSurvey, surveySinkFromEnv, type SurveySink } from './survey/routes';
 import { registerSchools } from './schools/routes';
+import { registerAccounts, signedIn } from './schools/accounts';
 import { SchoolStore } from './schools/store';
 import { DemoStore } from './v1/store';
 import { createChatEngine, type ChatEngine } from './v1/chat';
 import { registerStudy } from './v1/study';
 import { registerLive } from './v1/live';
+import { registerSync } from './v1/sync';
 import type { ChatProvider } from '@murshid/agent-gateway';
 import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
 import { BillingStore, registerBilling } from './billing/routes';
+import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
+import { billingUnit, classroomUnit, demoUnit, repoUnit, schoolsUnit } from './lib/units';
 
 export interface CreateAppOptions {
   repo?: Repository;
@@ -44,6 +48,11 @@ export interface CreateAppOptions {
   rateLimit?: Partial<Limits> | false;
   /** request timeout in ms for non-streaming routes (default 15 s) */
   timeoutMs?: number;
+  /** where saved state lives (default: Supabase when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, a folder with
+   * STATE_DIR, else memory only). Passing one turns saving on even for a memory backend (tests: two "servers"). */
+  stateBackend?: StateBackend;
+  /** where uploaded file bytes go (default: Supabase Storage when configured, else memory) */
+  blobs?: BlobStore;
 }
 
 export function buildApi(opts: CreateAppOptions = {}) {
@@ -124,9 +133,21 @@ export function buildApi(opts: CreateAppOptions = {}) {
   const api = new Api(app);
   const store = opts.store ?? new DemoStore();
   const schools = opts.schools ?? new SchoolStore();
+  const billing = opts.billing ?? new BillingStore();
+  // production sign-in: who is asking, resolved from their account (dev mode keeps the demo headers)
+  if (deps.config.authMode === 'jwt') deps.whoami = (c) => signedIn(c, schools, store);
+  // saved state shared by every server copy (see lib/durable.ts)
+  const backend = opts.stateBackend ?? backendFromEnv(env);
+  const persistent = Boolean(opts.stateBackend) || backend.name !== 'memory';
+  schools.classroom.blobs = opts.blobs ?? blobsFromEnv(env);
+  if (persistent) {
+    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), billingUnit(billing), repoUnit(deps.repo)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
+    api.durable = durable;
+    api.ready = durable.init();
+  }
   const engine: ChatEngine = opts.chatProvider ? createChatEngine({}, opts.chatProvider) : createChatEngine(env);
   api.route({ method: 'get', path: '/health', tag: 'meta', summary: 'Health check (auth mode, chat engine)', auth: 'none' }, (c) =>
-    c.json({ ok: true, auth_mode: deps.config.authMode, chat: { provider: engine.provider?.name ?? null, models: engine.provider ? engine.models : [], mode: engine.provider ? 'orchestrator+models' : 'orchestrator+rules', budget: engine.guard ? (({ used, dailyLimit, state }) => ({ used, dailyLimit, state }))(engine.guard.status()) : null } }));
+    c.json({ ok: true, auth_mode: deps.config.authMode, state: persistent ? backend.name : 'memory', files: schools.classroom.blobs.name, chat: { provider: engine.provider?.name ?? null, models: engine.provider ? engine.models : [], mode: engine.provider ? 'orchestrator+models' : 'orchestrator+rules', budget: engine.guard ? (({ used, dailyLimit, state }) => ({ used, dailyLimit, state }))(engine.guard.status()) : null } }));
   api.route({ method: 'get', path: '/admin/ai-status', tag: 'admin', auth: 'custom', summary: 'AI engine status: models vs rules, today\'s model requests vs the daily budget, demo replay cache' }, async (c) => {
     await requireAdmin(c);
     const g = engine.guard?.status() ?? null;
@@ -152,15 +173,16 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerAgent(api);
   registerV1(api, store, engine);
   registerStudy(api, store, engine);
-  registerLive(api);
-  registerAdmin(api, store, (id) => schools.licenceOf(id));
+  registerLive(api, persistent ? backend : null);
+  registerSync(api, persistent ? backend : null);
+  registerAdmin(api, store, (id) => schools.licenceOf(id), (c) => demoView(c, store));
   registerSchools(api, schools, store, (c) => demoView(c, store));
+  registerAccounts(api, schools, store);
   registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);
-  const billing = opts.billing ?? new BillingStore();
   registerBilling(api, billing, deps.now);
   api.route({ method: 'get', path: '/openapi.json', tag: 'meta', summary: 'This OpenAPI document', auth: 'none' }, (c) => c.json(api.openapi()));
 
-  return { app, api, deps, store, schools, billing };
+  return { app, api, deps, store, schools, billing, ready: api.ready };
 }
 
 export function createApp(opts: CreateAppOptions = {}) {
@@ -171,5 +193,7 @@ export function createApp(opts: CreateAppOptions = {}) {
 export async function createSeededApp(opts: Omit<CreateAppOptions, 'repo'> = {}) {
   const repo = createMemoryRepository();
   await seedRepository(repo, opts.now?.() ?? new Date());
-  return buildApi({ ...opts, repo });
+  const built = buildApi({ ...opts, repo });
+  await built.ready;
+  return built;
 }

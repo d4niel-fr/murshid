@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { AppEnv, Ctx } from './context';
 import { authMiddleware } from './auth';
+import type { Durable } from './durable';
 
 type Method = 'get' | 'post' | 'patch' | 'put' | 'delete';
 
@@ -19,6 +20,12 @@ export interface RouteSpec<B extends z.ZodType, Q extends z.ZodType> {
   successStatus?: number;
   /** Response body schema (documentation only; not enforced at runtime). */
   response?: z.ZodType;
+  /**
+   * How a change is saved (durable state, see durable.ts). 'tx' (default for writes): one at a time, re-run on fresh
+   * data if another server saved first. 'late': slow work (AI models, streams) runs outside the queue and is saved when
+   * it ends. 'none': the route changes nothing that is saved.
+   */
+  durable?: 'tx' | 'late' | 'none';
 }
 
 export interface Input<B extends z.ZodType, Q extends z.ZodType> {
@@ -49,6 +56,10 @@ function validationError(err: z.ZodError, where: string): HTTPException {
 /** Registers a Hono route with zod validation and records it for the OpenAPI document. */
 export class Api {
   readonly routes: Registered[] = [];
+  /** saved state shared by every server (null: memory only, one process) */
+  durable: Durable | null = null;
+  /** resolves once saved state has loaded */
+  ready: Promise<void> = Promise.resolve();
   constructor(readonly app: Hono<AppEnv>) {}
 
   route<B extends z.ZodType = z.ZodUndefined, Q extends z.ZodType = z.ZodUndefined>(
@@ -77,7 +88,19 @@ export class Api {
         if (!r.success) throw validationError(r.error, 'query');
         query = r.data;
       }
-      return handler(c as Ctx, { body, query } as Input<B, Q>);
+      const run = () => Promise.resolve(handler(c as Ctx, { body, query } as Input<B, Q>));
+      const d = this.durable;
+      if (!d) return run();
+      await this.ready;
+      const mode = spec.durable ?? (spec.method === 'get' ? 'none' : 'tx');
+      if (mode === 'tx') return d.transaction(run);
+      await d.sync();
+      const res = await run();
+      if (mode === 'none') return res;
+      // 'late': save once the work (and any streamed reply) has finished
+      if (!res.body || !(res.headers.get('content-type') ?? '').includes('text/event-stream')) { await d.commitNow(); return res; }
+      const done = new TransformStream({ flush: async () => { await d.commitNow(); } });
+      return new Response(res.body.pipeThrough(done), res);
     };
     (this.app.on as (m: string, p: string, ...h: MiddlewareHandler<AppEnv>[]) => unknown)(spec.method.toUpperCase(), spec.path, ...mws, h);
   }

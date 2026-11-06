@@ -26,6 +26,7 @@ import type { SchoolStore } from './store';
 import { replanForPost } from './automation';
 import { refOf } from './classroom';
 import { registerClassroom } from './classroom-routes';
+import { registerSetup } from './setup';
 import { studentInsight, teacherStudents } from './insights';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
@@ -89,6 +90,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
     if (config.authMode === 'dev' && !c.req.header('authorization')) {
       role = c.req.header('x-dev-role'); userId = c.req.header('x-dev-user-id'); orgId = c.req.header('x-dev-school-id');
       if (!role) throw new HTTPException(401, { message: 'teacher or school admin required (dev: x-dev-role: teacher + x-dev-user-id)' });
+    } else if (c.get('deps').whoami) {
+      const me = await c.get('deps').whoami!(c);
+      if (me.role === 'teacher') { role = 'teacher'; userId = me.teacherId ?? undefined; }
+      else if (me.role === 'school_admin') { role = 'school_admin'; userId = me.accountId ?? me.authUserId; orgId = me.orgId ?? undefined; }
+      else throw new HTTPException(403, { message: 'the school portal is for teachers and school staff', cause: { code: me.role ? 'not_staff' : 'needs_setup' } });
     } else {
       await authMiddleware(c, async () => {});
       const a = c.get('auth');
@@ -497,4 +503,5 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   // ---------- classroom: files, hand-ins, review, messages, reminders, announcements, inbox, gradebook ----------
   registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
+  registerSetup(api, schools, store, { staff, classOf, classCard, view });
 }
