@@ -224,6 +224,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const rec = store.has(v.profile.id) ? store.record(v.profile.id, v.now) : null;
       const task = rec?.customTasks.find((t) => t.id === `school-${item.id}-${v.profile.id}`);
       if (task) task.status = 'done';
+      c.get('deps').notify?.notify(item.teacherId, { kind: 'handin', title: `${r.name} handed in "${item.title}"${late ? ' (late)' : ''}`, body: text.slice(0, 120) || `${files.length} file${files.length === 1 ? '' : 's'}`, url: `/admin/teacher/assignments/${encodeURIComponent(item.id)}?class=${encodeURIComponent(item.streamId)}&student=${encodeURIComponent(r.id)}` });
       audit(v.profile.id, 'student', v.profile.id, prev ? 'update' : 'create', 'handin', item.id, `${prev ? (prev.state === 'returned' ? 'Resubmitted' : 'Updated the hand-in for') : 'Handed in'} "${item.title}"${files.length ? ` with ${files.length} file${files.length === 1 ? '' : 's'}` : ''}${late ? ' (late)' : ''}`, at);
       return c.json({ assignmentId: item.id, handIn: next, updated: Boolean(prev) }, prev ? 200 : 201);
     });
@@ -252,6 +253,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const msg: Message = { id: room.id('msg'), from: 'student', authorId: r.id, name: r.name, text: b.text, files: ownFiles(b.fileIds, v.profile.id), at };
       const th = room.thread(item.id, r.id);
       th.messages.push(msg); th.seenByStudent = th.messages.length;
+      c.get('deps').notify?.notify(item.teacherId, { kind: 'message', title: `${r.name} about "${item.title}"`, body: b.text.slice(0, 140), url: `/admin/teacher/assignments/${encodeURIComponent(item.id)}?class=${encodeURIComponent(item.streamId)}&student=${encodeURIComponent(r.id)}` });
       return c.json(msg, 201);
     });
 
@@ -365,6 +367,9 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
         th.messages.push({ id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: `${b.action === 'mark' ? `Marked${grade !== null ? ` ${grade}%` : ''}` : 'Returned for revision'}: ${b.feedback.trim()}`, files: [], at, review: { action: b.action, grade: b.action === 'mark' ? grade : null, feedback: b.feedback.trim() } });
         th.seenByTeacher = th.messages.length;
       }
+      if (m.appId) c.get('deps').notify?.notify(m.appId, b.action === 'mark'
+        ? { kind: 'marked', title: `Marked: ${item.title}${grade !== null ? ` · ${grade}%` : ''}`, body: b.feedback?.trim().slice(0, 140) || `${teacherName(s)} marked your work.`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` }
+        : { kind: 'returned', title: `Returned for revision: ${item.title}`, body: b.feedback?.trim().slice(0, 140) || `${teacherName(s)} asked for another go.`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
       audit(s.actor, 'admin', m.appId ?? null, 'update', 'handin', item.id, `${teacherName(s)} ${b.action === 'mark' ? `marked "${item.title}"${grade !== null ? ` (${grade}%)` : ''}` : `returned "${item.title}" for revision`} for ${m.name}`, at);
       return c.json({ studentId: m.id, handIn: hand });
     });
@@ -379,6 +384,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const msg: Message = { id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: b.text, files: ownFiles(b.fileIds, s.actor), at };
       const th = room.thread(item.id, m.id);
       th.messages.push(msg); th.seenByTeacher = th.messages.length;
+      if (m.appId) c.get('deps').notify?.notify(m.appId, { kind: 'message', title: `${teacherName(s)} about "${item.title}"`, body: b.text.slice(0, 140), url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
       return c.json(msg, 201);
     });
 
@@ -465,6 +471,10 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       };
       if (a.pinned) for (const x of room.announcements[st.id] ?? []) x.pinned = false;
       (room.announcements[st.id] ??= []).push(a);
+      for (const rid of schools.members[st.id] ?? []) {
+        const appId = schools.roster.find((x) => x.id === rid)?.appId;
+        if (appId) c.get('deps').notify?.notify(appId, { kind: 'announcement', title: `${st.name}: ${teacherName(s)}`, body: b.text.slice(0, 140), url: '/app/school' });
+      }
       audit(s.actor, 'admin', null, 'create', 'announcement', a.id, `${teacherName(s)} posted to ${st.name}: "${b.text.slice(0, 60)}"`, at);
       return c.json(a, 201);
     });

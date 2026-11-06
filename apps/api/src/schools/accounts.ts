@@ -114,7 +114,7 @@ export function registerAccounts(api: Api, schools: SchoolStore, store: DemoStor
     const student = me.studentId && store.has(me.studentId) ? store.view(me.studentId, new Date()).profile : null;
     // children under 13 need a parent linked (UAE data law: a parent agrees for younger children)
     const needsParent = Boolean(student && student.age < 13 && !schools.accounts.some((a) => a.role === 'parent' && a.studentIds.includes(student.id)));
-    return { me, needsSetup: me.role === null, licence, needsParent };
+    return { me, needsSetup: me.role === null, licence, needsParent, student: student ? { name: student.name, grade: student.grade } : null };
   };
 
   api.route({ method: 'get', path: '/account', tag: 'account', auth: 'custom', durable: 'tx', summary: 'Who I am in Murshid (links the sign-in to an account the first time, by email)' },

@@ -5,6 +5,7 @@ import type { BillingStore } from '../billing/routes';
 import type { Repository } from '../repo/types';
 import type { SchoolStore } from '../schools/store';
 import type { DemoStore } from '../v1/store';
+import type { NotificationHub } from '../notify/hub';
 import { assignFields, fieldsOf, type Unit } from './durable';
 
 export function demoUnit(store: DemoStore): Unit {
@@ -58,4 +59,9 @@ export function repoUnit(repo: Repository): Unit {
       }
     },
   };
+}
+
+export function notifyUnit(hub: NotificationHub): Unit {
+  const skip = ['cfg', 'now', 'later'];
+  return { key: 'notify', dump: () => fieldsOf(hub, skip), restore: (d) => assignFields(hub, d, skip) };
 }

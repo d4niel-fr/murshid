@@ -27,8 +27,11 @@ import { registerSync } from './v1/sync';
 import type { ChatProvider } from '@murshid/agent-gateway';
 import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
 import { BillingStore, registerBilling } from './billing/routes';
+import { Stripe, stripeFromEnv } from './billing/stripe';
 import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
-import { billingUnit, classroomUnit, demoUnit, repoUnit, schoolsUnit } from './lib/units';
+import { billingUnit, classroomUnit, demoUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
+import { NotificationHub, notifyFromEnv } from './notify/hub';
+import { registerNotifications } from './notify/routes';
 
 export interface CreateAppOptions {
   repo?: Repository;
@@ -53,6 +56,8 @@ export interface CreateAppOptions {
   stateBackend?: StateBackend;
   /** where uploaded file bytes go (default: Supabase Storage when configured, else memory) */
   blobs?: BlobStore;
+  /** real payments (default: Stripe when STRIPE_SECRET_KEY is set; null = the demo checkout) */
+  stripe?: Stripe | null;
 }
 
 export function buildApi(opts: CreateAppOptions = {}) {
@@ -140,10 +145,14 @@ export function buildApi(opts: CreateAppOptions = {}) {
   const backend = opts.stateBackend ?? backendFromEnv(env);
   const persistent = Boolean(opts.stateBackend) || backend.name !== 'memory';
   schools.classroom.blobs = opts.blobs ?? blobsFromEnv(env);
+  const hub = new NotificationHub(notifyFromEnv(env), deps.now);
+  deps.notify = hub;
   if (persistent) {
-    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), billingUnit(billing), repoUnit(deps.repo)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
+    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), billingUnit(billing), repoUnit(deps.repo), notifyUnit(hub)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
     api.durable = durable;
     api.ready = durable.init();
+    // push and email go out only once the change that caused them is saved
+    hub.later = (fn) => durable.afterCommit(fn);
   }
   const engine: ChatEngine = opts.chatProvider ? createChatEngine({}, opts.chatProvider) : createChatEngine(env);
   api.route({ method: 'get', path: '/health', tag: 'meta', summary: 'Health check (auth mode, chat engine)', auth: 'none' }, (c) =>
@@ -175,11 +184,23 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerStudy(api, store, engine);
   registerLive(api, persistent ? backend : null);
   registerSync(api, persistent ? backend : null);
+  registerNotifications(api, hub, schools, store, env);
   registerAdmin(api, store, (id) => schools.licenceOf(id), (c) => demoView(c, store));
   registerSchools(api, schools, store, (c) => demoView(c, store));
   registerAccounts(api, schools, store);
   registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);
-  registerBilling(api, billing, deps.now);
+  registerBilling(api, billing, deps.now, opts.stripe !== undefined ? opts.stripe : stripeFromEnv(env) ? new Stripe(stripeFromEnv(env)!) : null, {
+    who: deps.whoami ? async (c) => (c.req.header('authorization') ? deps.whoami!(c) : null) : undefined,
+    // a paid plan turns the buyer's family licence on; when it ends it goes back to the free trial
+    onChange: (sub) => {
+      const acc = schools.accounts.find((a) => (sub.reference && a.authUserId === sub.reference) || a.email.toLowerCase() === sub.email);
+      const org = acc ? schools.org(acc.orgId) : undefined;
+      if (!org?.licence || org.licence.type !== 'family') return;
+      org.licence.status = sub.status === 'canceled' ? 'trial' : 'active';
+      org.licence.note = sub.status === 'canceled' ? 'Plan ended' : sub.status === 'past_due' ? 'Payment failed: update the card' : `Single plan (${sub.billing})`;
+      org.licence.endDate = sub.renewsAt.slice(0, 10);
+    },
+  });
   api.route({ method: 'get', path: '/openapi.json', tag: 'meta', summary: 'This OpenAPI document', auth: 'none' }, (c) => c.json(api.openapi()));
 
   return { app, api, deps, store, schools, billing, ready: api.ready };

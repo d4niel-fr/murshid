@@ -37,6 +37,8 @@ export interface Deps {
   now: () => Date;
   /** production sign-in: who the signed-in person is in Murshid (set by buildApi; see schools/accounts.ts) */
   whoami?: (c: Ctx) => Promise<import('../schools/accounts').Me>;
+  /** notifications (inbox, push, email): see notify/hub.ts */
+  notify?: import('../notify/hub').NotificationHub;
 }
 
 export type AppEnv = { Variables: { auth: AuthInfo; deps: Deps; requestId: string; /** set by /student/me/* routes: the signed-in student */ self?: { id: string } } };

@@ -27,6 +27,7 @@ import { replanForPost } from './automation';
 import { refOf } from './classroom';
 import { registerClassroom } from './classroom-routes';
 import { registerSetup } from './setup';
+import { GraphConnector, graphFromEnv } from './microsoft-graph';
 import { studentInsight, teacherStudents } from './insights';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
@@ -265,9 +266,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const extras = [attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'}` : '', b.photosRequired ? 'hand in photos of your notes' : ''].filter(Boolean).join(' \u00b7 ');
       const how = (extras ? ` \u00b7 ${extras}` : '') + (b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '');
       const delivered: { studentId: string; appId: string; taskId: string }[] = [];
+      const hub = c.get('deps').notify;
       for (const rid of targets) {
         const r = schools.roster.find((x) => x.id === rid);
         if (!r?.appId || !store.has(r.appId)) continue;
+        hub?.notify(r.appId, { kind: 'assignment', title: `New from ${teacher.name}: ${b.title}`, body: `${SUBJECT_NAMES[st.subject]} · due ${shortDay(b.dueDate)}`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
         const rec = store.record(r.appId, now);
         const subj = rec.profile.subjects.find((x) => x.id === st.subject || x.name.toLowerCase().startsWith(SUBJECT_NAMES[st.subject].toLowerCase().slice(0, 5)));
         const taskId = `school-${item.id}-${r.appId}`;
@@ -374,10 +377,38 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return c.json({ orgId: id, roster: schools.roster.filter((r) => r.orgId === id).map((r) => ({ id: r.id, name: r.name, section: r.section, appId: r.appId })), appStudents: app });
     });
 
-  api.route({ method: 'post', path: '/orgs/:id/microsoft/connect', tag: 'schools', auth: 'custom', summary: 'Connect Microsoft 365 (simulated admin consent): Entra sign-in for staff and students, Teams classes + assignments sync' },
+  // real Microsoft 365 (MS_CLIENT_ID + MS_CLIENT_SECRET): the school's IT admin approves Murshid once, then classes sync
+  const graph = (() => { const cfg = graphFromEnv((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}); return cfg ? new GraphConnector(cfg) : null; })();
+  const webUrl = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PUBLIC_WEB_URL ?? '').replace(/\/+$/, '');
+  api.route({ method: 'get', path: '/orgs/:id/microsoft/consent', tag: 'schools', auth: 'custom', summary: 'School admin: the link where the school IT admin approves Murshid for the Microsoft tenant' },
+    async (c) => {
+      const { s, id } = await orgAccess(c);
+      if (s.role !== 'school_admin') throw new HTTPException(403, { message: 'school admin role required' });
+      if (!graph) throw new HTTPException(404, { message: 'Microsoft 365 is not set up on this server (MS_CLIENT_ID)', cause: { code: 'graph_off' } });
+      return c.json({ url: graph.consentUrl(id) });
+    });
+  api.route({ method: 'get', path: '/auth/microsoft/consent-callback', tag: 'schools', auth: 'none', durable: 'tx', summary: 'Microsoft sends the school IT admin back here after approving Murshid' },
+    async (c) => {
+      const back = (q: string) => c.redirect(`${webUrl}/admin/school?${q}`, 302);
+      if (!graph) return back('microsoft=off');
+      const orgId = graph.readState(c.req.query('state') ?? '');
+      const tenant = c.req.query('tenant') ?? '';
+      if (!orgId || !schools.org(orgId) || c.req.query('admin_consent') !== 'True' || !/^[0-9a-f-]{36}$/i.test(tenant)) return back('microsoft=declined');
+      const org = schools.org(orgId)!;
+      org.microsoft = { connected: true, tenantId: tenant, domain: org.microsoft?.domain ?? '', connectedAt: c.get('deps').now().toISOString(), connectedBy: 'Microsoft admin consent', lastSyncAt: null, synced: null };
+      return back('microsoft=connected');
+    });
+
+  api.route({ method: 'post', path: '/orgs/:id/microsoft/connect', tag: 'schools', auth: 'custom', durable: 'late', summary: 'Connect Microsoft 365 / sync now: Teams classes, teachers, students and assignments (simulated in the demo)' },
     async (c) => {
       const { s, id } = await orgAccess(c);
       const org = schools.org(id)!;
+      if (graph && org.real) {
+        if (!org.microsoft?.tenantId) throw new HTTPException(409, { message: 'approve Murshid in Microsoft first', cause: { code: 'needs_consent', url: graph.consentUrl(id) } });
+        const synced = await graph.sync(schools, org, today(c)).catch((e: Error) => { throw new HTTPException(502, { message: e.message, cause: { code: 'graph_failed' } }); });
+        org.microsoft.connected = true; org.microsoft.lastSyncAt = c.get('deps').now().toISOString(); org.microsoft.synced = synced; org.microsoft.connectedBy ??= s.actor;
+        return c.json({ ...orgCard(id), classes: schools.streams.filter((x) => x.orgId === id).map(classCard) });
+      }
       if (!org.microsoft) throw new HTTPException(400, { message: 'no Microsoft tenant on file for this school' });
       const now = c.get('deps').now().toISOString();
       const classes = schools.microsoft.listClasses(id);
