@@ -1,12 +1,12 @@
 import {
   Activity, Award, BookOpen, Building2, CalendarCheck, CalendarRange, ChartLine, Compass, FileText, FolderOpen, GraduationCap, House,
-  Bookmark, Heart, Info, Layers, Link as LinkIcon, ListChecks, MessageCircle, Send, Settings, Shield, Sparkles, Target, Trophy, Users, Wallet, type LucideIcon,
+  Bookmark, Heart, HeartPulse, Info, Layers, Link as LinkIcon, ListChecks, MessageCircle, Send, Settings, Shield, Sparkles, Target, Trophy, Users, Wallet, type LucideIcon,
 } from 'lucide-react';
 import type { SVGProps } from 'react';
 
 export const NAV_ICONS: Record<string, LucideIcon> = {
   House, CalendarCheck, BookOpen, Activity, Target, Award, Users, Trophy, CalendarRange, Sparkles, ListChecks, Compass,
-  FolderOpen, Send, GraduationCap, FileText, Link: LinkIcon, MessageCircle, Settings, ChartLine, Building2, Bookmark, Heart, Info, Layers, Shield, Wallet,
+  FolderOpen, Send, GraduationCap, FileText, Link: LinkIcon, MessageCircle, Settings, ChartLine, Building2, Bookmark, Heart, HeartPulse, Info, Layers, Shield, Wallet,
 };
 
 /* Brand marks (lucide v1 dropped brand icons). Simple monochrome glyphs, currentColor. */

@@ -80,7 +80,23 @@ Push on iPhone and iPad works once the student adds Murshid to the Home Screen (
 | `MS_CLIENT_ID`, `MS_CLIENT_SECRET` | API (server) | From the app registration |
 | `MS_STATE_SECRET` | API (server) | Optional: signs the approval link (defaults to the client secret) |
 
-## 6. Hosting checks
+## 6. Health and fitness apps (optional)
+
+Students can bring in steps, active minutes, sleep and workouts. Apple Health (iPhone Shortcut or the Health export
+file), Garmin, Huawei Health, Samsung Health, Polar, COROS and Google Fit (files) work with no keys. For one-tap
+connections, register an app with each service:
+
+| Service | Where | Redirect / callback | Settings |
+|---|---|---|---|
+| Fitbit | dev.fitbit.com → Register an app (type: Server, scopes activity and sleep) | `https://YOUR-DOMAIN/api/health/callback/fitbit` | `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET` |
+| Strava | strava.com/settings/api | Authorization Callback Domain: `YOUR-DOMAIN` | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` |
+| Oura | cloud.ouraring.com → OAuth applications | `https://YOUR-DOMAIN/api/health/callback/oura` | `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` |
+
+Also set `HEALTH_TOKEN_KEY` (any long random string, API only): the services' tokens are stored encrypted with it.
+Strava covers Garmin, Huawei, Samsung, Polar, COROS and Apple Watch for anyone who shares their workouts to Strava.
+Each service has its own age rules (Fitbit and Strava: 13 and over).
+
+## 7. Hosting checks
 
 - `CORS_ORIGINS`: only needed if the apps are on different domains from the API.
 - Leave `ADMIN_PASSCODE` empty in production (it guards the public demo only).

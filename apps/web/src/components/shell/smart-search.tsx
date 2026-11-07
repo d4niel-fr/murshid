@@ -97,6 +97,7 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       ['/app/study/speaking', tx('Speaking coach', 'مدرّب التحدث'), 'speaker coach presentation pace filler um speech practise talk oral عرض تحدث', <Mic key="i" className="size-4" />],
       ['/app/study/maths', tx('Maths practice', 'تدريب الرياضيات'), 'math maths practice times tables fractions percent equations arithmetic رياضيات ضرب كسور معادلات', <Calculator key="i" className="size-4" />],
       ['/app/study/topics', tx('Topic tracker', 'متتبع المواضيع'), 'topics confidence exam revision', <Sparkles key="i" className="size-4" />],
+      ['/app/health', tx('Health & fitness', 'الصحة واللياقة'), 'health fitness apple health watch garmin fitbit strava huawei samsung google fit oura polar coros steps sleep workout activity tracker صحة لياقة خطوات نوم ساعة', I('HeartPulse')],
       ['/app/feelings', tx('Check-in: how I feel', 'كيف حالك؟ تسجيل الشعور'), 'feelings mood emotion wellbeing reflect check in talk teacher breathing calm مشاعر شعور', I('Heart')],
       ['/app/timetable', tx('Timetable', 'الجدول الدراسي'), 'timetable schedule lessons periods now next room join teams class جدول حصص', <CalendarClock key="i" className="size-4" />],
       ['/app/attendance', tx('Attendance and leave', 'الحضور والإذن'), 'attendance absent late register leave sick excuse permission حضور غياب إذن', <CalendarOff key="i" className="size-4" />],

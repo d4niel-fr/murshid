@@ -6,6 +6,7 @@ import type { Repository } from '../repo/types';
 import type { SchoolStore } from '../schools/store';
 import type { DemoStore } from '../v1/store';
 import type { NotificationHub } from '../notify/hub';
+import type { HealthStore } from '../health/store';
 import { assignFields, fieldsOf, type Unit } from './durable';
 
 export function demoUnit(store: DemoStore): Unit {
@@ -44,6 +45,10 @@ export function classroomUnit(schools: SchoolStore): Unit {
 export function lifeUnit(schools: SchoolStore): Unit {
   const life = schools.life;
   return { key: 'life', dump: () => fieldsOf(life), restore: (d) => assignFields(life, d) };
+}
+
+export function healthUnit(health: HealthStore): Unit {
+  return { key: 'health', dump: () => fieldsOf(health), restore: (d) => assignFields(health, d) };
 }
 
 export function billingUnit(billing: BillingStore): Unit {

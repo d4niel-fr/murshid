@@ -66,9 +66,9 @@ export function limitsWith(over: Partial<Limits> = {}): Limits {
 
 const CODE_ROUTES = /^\/(student\/classes\/join|account\/link-child|account\/setup|onboarding)$/;
 /** signed calls from other services: the signature or secret is the gate, and Stripe must never be throttled */
-const MACHINE_ROUTES = /^\/(billing\/stripe-webhook|cron\/[\w-]+)$/;
+const MACHINE_ROUTES = /^\/(billing\/stripe-webhook|cron\/[\w-]+|health\/ingest\/[\w-]+)$/;
 /** heavier writes: uploads, roster imports, new schools, Microsoft sync (calls Microsoft for every class) */
-const HEAVY_ROUTES = /^\/(files|school\/roster|platform\/schools|orgs\/[^/]+\/microsoft\/connect)$/;
+const HEAVY_ROUTES = /^\/(files|school\/roster|platform\/schools|orgs\/[^/]+\/microsoft\/connect|me\/health\/import|me\/health\/[a-z]+\/(sync|connect))$/;
 const AI_ROUTES = /^\/(study\/(generate|explain)|student\/cv\/linkedin|admin\/students\/[^/]+\/linkedin)$/;
 
 export function bucketOf(method: string, path: string): Bucket {
@@ -89,7 +89,7 @@ export function bucketOf(method: string, path: string): Bucket {
 /** The lockout family of an endpoint where a caller could guess (codes, secrets, order ids). */
 export function familyOf(method: string, path: string): Family | null {
   // the Stripe webhook is left out: a bad signature is answered 400, but Stripe's own addresses are never locked out
-  if (path === '/inbox/email' || /^\/cron\//.test(path)) return 'secret';
+  if (path === '/inbox/email' || /^\/cron\//.test(path) || /^\/health\/ingest\//.test(path)) return 'secret';
   if (/^\/live\/rooms\/[^/]+/.test(path)) return 'live';
   if (method === 'POST' && (path === '/billing/cancel' || path === '/billing/portal')) return 'billing';
   if (method === 'POST' && CODE_ROUTES.test(path)) return 'code';

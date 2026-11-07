@@ -24,6 +24,9 @@ import { createChatEngine, type ChatEngine } from './v1/chat';
 import { registerStudy } from './v1/study';
 import { registerLive } from './v1/live';
 import { registerSync } from './v1/sync';
+import { HealthStore } from './health/store';
+import { registerHealth } from './health/routes';
+import { healthFromEnv } from './health/providers';
 import type { ChatProvider } from '@murshid/agent-gateway';
 import { concurrency, idempotency, limitsWith, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
 import { safeEqual, securityHeaders, trustFromEnv } from './lib/security';
@@ -31,7 +34,7 @@ import { turnstile } from './lib/turnstile';
 import { BillingStore, registerBilling } from './billing/routes';
 import { Stripe, stripeFromEnv } from './billing/stripe';
 import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
-import { billingUnit, classroomUnit, demoUnit, lifeUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
+import { billingUnit, classroomUnit, demoUnit, healthUnit, lifeUnit, notifyUnit, repoUnit, schoolsUnit } from './lib/units';
 import { NotificationHub, notifyFromEnv } from './notify/hub';
 import { registerNotifications } from './notify/routes';
 import { registerIntegrations } from './admin/integrations';
@@ -59,6 +62,9 @@ export interface CreateAppOptions {
   stateBackend?: StateBackend;
   /** where uploaded file bytes go (default: Supabase Storage when configured, else memory) */
   blobs?: BlobStore;
+  /** health and activity data (default: fresh) and the fetch used to call Fitbit, Strava and Oura (tests pass a fake) */
+  health?: HealthStore;
+  healthFetch?: (url: string, init?: RequestInit) => Promise<Response>;
   /** real payments (default: Stripe when STRIPE_SECRET_KEY is set; null = the demo checkout) */
   stripe?: Stripe | null;
 }
@@ -158,9 +164,15 @@ export function buildApi(opts: CreateAppOptions = {}) {
   const persistent = Boolean(opts.stateBackend) || backend.name !== 'memory';
   schools.classroom.blobs = opts.blobs ?? blobsFromEnv(env);
   const hub = new NotificationHub(notifyFromEnv(env), deps.now);
+  const health = opts.health ?? new HealthStore();
+  // what else we keep about a student: in "download my data", and erased with the account
+  deps.personalData = [
+    { name: 'health', export: (id) => { const p = health.people[id]; return p ? { connections: Object.values(p.conns).map((x) => ({ provider: x!.provider, connectedAt: x!.connectedAt, lastSync: x!.lastSync })), days: p.days, workouts: p.workouts } : null; }, forget: (id) => health.forget(id) },
+    { name: 'checkIns', export: (id) => schools.roster.filter((r) => r.appId === id).flatMap((r) => schools.life.feelings[r.id] ?? []), forget: (id) => { for (const r of schools.roster) if (r.appId === id) delete schools.life.feelings[r.id]; } },
+  ];
   deps.notify = hub;
   if (persistent) {
-    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), lifeUnit(schools), billingUnit(billing), repoUnit(deps.repo), notifyUnit(hub)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
+    const durable = new Durable(backend, [demoUnit(store), schoolsUnit(schools), classroomUnit(schools), lifeUnit(schools), healthUnit(health), billingUnit(billing), repoUnit(deps.repo), notifyUnit(hub)], { checkEveryMs: Number(env.STATE_CHECK_MS ?? 0) });
     api.durable = durable;
     api.ready = durable.init();
     // push and email go out only once the change that caused them is saved
@@ -196,6 +208,7 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerStudy(api, store, engine);
   registerLive(api, persistent ? backend : null);
   registerSync(api, persistent ? backend : null);
+  registerHealth(api, health, { view: (c) => demoView(c, store), cfg: healthFromEnv(env, deps.config.authMode === 'dev'), fetch: opts.healthFetch });
   registerNotifications(api, hub, schools, store, env);
   registerIntegrations(api, env, () => ({ state: persistent ? backend.name : 'memory', files: schools.classroom.blobs.name, chat: engine.provider?.name ?? null, authMode: deps.config.authMode }));
   registerAdmin(api, store, (id) => schools.licenceOf(id), (c) => demoView(c, store));

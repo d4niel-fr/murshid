@@ -180,7 +180,8 @@ export function registerAccounts(api: Api, schools: SchoolStore, store: DemoStor
       const students = (me.studentId ? [me.studentId] : me.children.map((x) => x.id)).filter((id) => store.has(id));
       const records = students.map((id) => { const v = store.view(id, c.get('deps').now()); return { profile: v.profile, record: { ...v.record, sessionEdits: [...v.record.sessionEdits], assessmentEdits: [...v.record.assessmentEdits] } }; });
       c.header('content-disposition', 'attachment; filename="murshid-my-data.json"');
-      return c.json({ exportedAt: new Date().toISOString(), account: acc ?? null, me, students: records, audit: store.auditLog.filter((e) => e.studentId && students.includes(e.studentId)) });
+      const more = Object.fromEntries((c.get('deps').personalData ?? []).map((d) => [d.name, students.map((id) => d.export(id))]));
+      return c.json({ exportedAt: new Date().toISOString(), account: acc ?? null, me, students: records, audit: store.auditLog.filter((e) => e.studentId && students.includes(e.studentId)), ...more });
     });
 
   api.route({ method: 'delete', path: '/account', tag: 'account', auth: 'custom', summary: 'Delete my account and the data in it (students: their record; parents: the link to children)' },
@@ -188,7 +189,10 @@ export function registerAccounts(api: Api, schools: SchoolStore, store: DemoStor
       const me = await need(c);
       const acc = accountOf(me);
       if (!acc) return c.json({ ok: true, deleted: false });
-      if (acc.role === 'student') for (const id of acc.studentIds) { store.deleteStudent(id); delete schools.tenant[id]; for (const r of schools.roster) if (r.appId === id) r.appId = null; }
+      if (acc.role === 'student') for (const id of acc.studentIds) {
+        for (const d of c.get('deps').personalData ?? []) d.forget(id);
+        store.deleteStudent(id); delete schools.tenant[id]; for (const r of schools.roster) if (r.appId === id) r.appId = null;
+      }
       schools.accounts.splice(schools.accounts.indexOf(acc), 1);
       return c.json({ ok: true, deleted: true });
     });

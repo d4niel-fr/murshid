@@ -32,6 +32,10 @@ export function appNav(band: BandId, locale: Locale): AppNavItem[] {
   const study = { key: 'study', href: '/app/study', icon: 'Layers', label: locale === 'ar' ? 'أدوات الدراسة' : 'Study', primary: true };
   const learnIdx = out.findIndex((i) => i.key === 'schoolwork' || i.key === 'subjects');
   out.splice(learnIdx >= 0 ? learnIdx + 1 : out.length, 0, study);
+  // Health & fitness (watch and phone apps) sits with the activities
+  const health = { key: 'health', href: '/app/health', icon: 'HeartPulse', label: locale === 'ar' ? 'الصحة واللياقة' : 'Health & fitness', primary: false };
+  const actIdx = out.findIndex((i) => i.key === 'activities' || i.key === 'clubs');
+  out.splice(actIdx >= 0 ? actIdx + 1 : out.length, 0, health);
   out.push({ key: 'saved', href: '/app/saved', icon: 'Bookmark', label: locale === 'ar' ? 'المحفوظات' : 'Saved', primary: false });
   // Profile & links is always reachable from Settings; surface it in nav when the band has no profile item.
   return out;
@@ -52,7 +56,7 @@ export type NavSection = 'main' | 'learn' | 'grow';
 const SECTION: Record<string, NavSection> = {
   home: 'main', school: 'main', feelings: 'main', today: 'main', planner: 'main', chat: 'main',
   schoolwork: 'learn', subjects: 'learn', study: 'learn', insights: 'learn', goals: 'learn', badges: 'learn', saved: 'grow',
-  activities: 'grow', clubs: 'grow', competitions: 'grow', opportunities: 'grow', careers: 'grow',
+  activities: 'grow', health: 'grow', clubs: 'grow', competitions: 'grow', opportunities: 'grow', careers: 'grow',
   applications: 'grow', university: 'grow', portfolio: 'grow', cv: 'grow', links: 'grow',
 };
 export const navSection = (key: string): NavSection => SECTION[key] ?? 'grow';

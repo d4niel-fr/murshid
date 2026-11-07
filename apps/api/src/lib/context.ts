@@ -41,6 +41,8 @@ export interface Deps {
   whoami?: (c: Ctx) => Promise<import('../schools/accounts').Me>;
   /** notifications (inbox, push, email): see notify/hub.ts */
   notify?: import('../notify/hub').NotificationHub;
+  /** other stores with data about a student: included in "download my data", erased with the account */
+  personalData?: { name: string; export: (studentId: string) => unknown; forget: (studentId: string) => void }[];
 }
 
 export type AppEnv = { Variables: {

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Activity as ActivityIcon, Clock, Flame, MessageCircle, Plus, Trash2, TrendingUp } from 'lucide-react';
+import { Activity as ActivityIcon, Clock, Flame, MessageCircle, Plus, Trash2, TrendingUp, HeartPulse } from 'lucide-react';
 import { Suspense, useMemo, useState } from 'react';
 import { useApp, useEndpoint } from '@/components/providers/app-provider';
 import { ChartCard } from '@/components/charts/chart-card';
@@ -54,6 +54,7 @@ function View() {
         title={tx('Extracurriculars', 'الأنشطة اللاصفية')}
         subtitle={tx('Log sessions as you go. Hours, personal bests and trends update instantly.', 'سجّل جلساتك أولاً بأول. تتحدث الساعات والأرقام فوراً.')}
         actions={<>
+          <Button variant="outline" onClick={() => router.push('/app/health')}><HeartPulse />{tx('From my watch', 'من ساعتي')}</Button>
           <Button variant="outline" onClick={() => router.push(`/app/chat?q=${encodeURIComponent(`How's my ${act.area} progress?`)}`)}><MessageCircle />{tx('Ask about this', 'اسأل عن هذا')}</Button>
           <LogSessionDialog activityId={act.id} open={logOpen} onOpenChange={setLogOpen} trigger={<Button><Plus />{tx('Log a session', 'تسجيل جلسة')}</Button>} />
         </>}
