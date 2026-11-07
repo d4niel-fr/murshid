@@ -119,7 +119,7 @@ export default function HealthPage() {
         subtitle={tx('Steps, active minutes, sleep and workouts from your phone or watch, next to your schoolwork. Only you see them: not teachers, not parents.', 'الخطوات ودقائق النشاط والنوم والتمارين من هاتفك أو ساعتك بجانب دراستك. أنت وحدك تراها: لا المعلمون ولا أولياء الأمور.')} />
       <input ref={input} type="file" multiple accept=".gpx,.tcx,.csv,.txt,.zip,.xml,application/zip,text/csv,application/gpx+xml" className="hidden" onChange={(e) => void onFiles(e.target.files)} />
 
-      <section className="on-deep mb-6 grid gap-3 rounded-[var(--radius-band)] bg-[var(--deep)] p-5 text-white sm:grid-cols-2 lg:grid-cols-4 md:p-6">
+      <section className="on-deep mb-6 grid grid-cols-2 gap-2.5 rounded-[var(--radius-band)] bg-[var(--deep)] p-3 text-white sm:gap-3 sm:p-5 md:p-6 lg:grid-cols-4">
         {[
           [HeartPulse, tx('Active a day (7-day average)', 'النشاط يومياً (متوسط 7 أيام)'), d.summary.activeMinutes === null ? '–' : tx(`${d.summary.activeMinutes} min`, `${d.summary.activeMinutes} د`), tx(`Aim for ${d.goals.activeMinutes} minutes of moving that gets you breathing harder`, `الهدف ${d.goals.activeMinutes} دقيقة من حركة ترفع أنفاسك`)],
           [Check, tx('Days you hit 60 minutes', 'أيام بلغت فيها 60 دقيقة'), `${d.summary.activeDays}/7`, d.summary.streak > 1 ? tx(`${d.summary.streak} days in a row`, `${d.summary.streak} أيام متتالية`) : tx('This week', 'هذا الأسبوع')],
@@ -128,10 +128,10 @@ export default function HealthPage() {
         ].map(([I, label, value, sub]) => {
           const Icon = I as typeof Activity;
           return (
-            <div key={label as string} className="glass rounded-[20px] p-4">
-              <p className="eyebrow flex items-center gap-2"><Icon className="size-3.5" />{label as string}</p>
-              <p className="figure mt-2 text-[1.875rem] leading-none">{value as string}</p>
-              <p className="mt-1.5 text-xs text-white/65">{sub as string}</p>
+            <div key={label as string} className="glass min-w-0 rounded-[20px] p-3.5 sm:p-4">
+              <p className="eyebrow flex items-start gap-2 text-[0.625rem] sm:text-[0.6875rem]"><Icon className="mt-px size-3.5 shrink-0" />{label as string}</p>
+              <p className="figure mt-2 text-[1.5rem] leading-none sm:text-[1.875rem]">{value as string}</p>
+              <p className="mt-1.5 text-[0.6875rem] leading-snug text-white/65 sm:text-xs">{sub as string}</p>
             </div>
           );
         })}
@@ -143,9 +143,7 @@ export default function HealthPage() {
             action={<Segmented size="sm" value={metric} onChange={setMetric} ariaLabel={tx('Measure', 'المقياس')} options={[{ value: 'activeMinutes', label: tx('Active', 'النشاط') }, { value: 'steps', label: tx('Steps', 'الخطوات') }, { value: 'sleepMinutes', label: tx('Sleep', 'النوم') }]} />} />
           {!anything ? <Muted>{tx('Connect an app below (or upload a file) and your days fill in here.', 'اربط تطبيقاً أدناه (أو ارفع ملفاً) وستظهر أيامك هنا.')}</Muted> : (
             <div className="relative">
-              <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[var(--text-muted)]/60" style={{ bottom: `calc(${(goal / max) * 100}% * 0.86 + 1.5rem)` }}>
-                <span className="absolute -top-5 end-0 text-[0.6875rem] text-muted-foreground">{tx('Goal', 'الهدف')} {fmt(goal)}</span>
-              </div>
+              <div aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[var(--text-muted)]/60" style={{ bottom: `calc(${(goal / max) * 100}% * 0.86 + 1.5rem)` }} />
               <div className="flex h-56 gap-1.5 sm:gap-2" role="img" aria-label={d.days.map((x) => `${x.date}: ${fmt(x[metric])}`).join(', ')}>
                 {d.days.map((x) => {
                   const v = x[metric]; const met = v !== null && v >= goal;
@@ -159,6 +157,10 @@ export default function HealthPage() {
                   );
                 })}
               </div>
+              <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="w-5 border-t border-dashed border-[var(--text-muted)]" />{tx(`Goal: ${fmt(goal)}`, `الهدف: ${fmt(goal)}`)}</span>
+                <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[var(--brand)]" />{tx('Goal reached', 'بلغت الهدف')}</span>
+              </p>
             </div>
           )}
         </Card>
@@ -179,15 +181,18 @@ export default function HealthPage() {
               {d.workouts.slice(0, 20).map((w) => {
                 const I = SPORT_ICON[w.sport] ?? Activity; const m = matchOf(w); const done = logged.has(`health-${w.id}`);
                 return (
-                  <li key={w.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <li key={w.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface"><I className="size-4" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium" dir="auto">{w.title}</span>
                       <span className="block text-xs text-muted-foreground">{dayLabel(w.date, locale)} · {tx(`${w.minutes} min`, `${w.minutes} د`)}{w.distanceKm ? ` · ${w.distanceKm} km` : ''} · {d.providers.find((p) => p.id === w.source)?.name}</span>
                     </span>
+                    {/* phones: the action sits on its own line, under the name */}
+                    <span className="flex w-full justify-start ps-[3.25rem] sm:w-auto sm:ps-0">
                     {done ? <Badge tone="success"><Check className="size-3" />{tx('Logged', 'مُسجّل')}</Badge>
-                      : acts.length > 0 && (m ? <Button size="sm" variant="secondary" onClick={() => logTo(w, m.id)}><Link2 className="size-3.5" />{tx(`Log to ${m.name}`, `سجّل في ${m.name}`)}</Button>
-                        : <select aria-label={tx('Log to an activity', 'سجّل في نشاط')} defaultValue="" onChange={(e) => e.target.value && logTo(w, e.target.value)} className="h-9 rounded-full border border-border bg-transparent px-3 text-xs"><option value="">{tx('Log to…', 'سجّل في…')}</option>{acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>)}
+                      : acts.length > 0 && (m ? <Button size="sm" variant="secondary" className="max-w-full" onClick={() => logTo(w, m.id)}><Link2 className="size-3.5 shrink-0" /><span className="truncate">{tx(`Log to ${m.name}`, `سجّل في ${m.name}`)}</span></Button>
+                        : <select aria-label={tx('Log to an activity', 'سجّل في نشاط')} defaultValue="" onChange={(e) => e.target.value && logTo(w, e.target.value)} className="h-9 max-w-full rounded-full border border-border bg-transparent px-3 text-xs"><option value="">{tx('Log to…', 'سجّل في…')}</option>{acts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>)}
+                    </span>
                   </li>
                 );
               })}
