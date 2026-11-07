@@ -65,6 +65,10 @@ describe('feelings check-in', () => {
     expect((await req('POST', `/teacher/classes/${CLASS}/feelings/prompt`, THOMAS, { question: 'How ready do you feel for Thursday?' })).status).toBe(201);
     expect((await req('GET', '/student/feelings', AHAMED)).body.prompt.question).toMatch(/Thursday/);
     expect((await req('GET', '/student/today-at-school', AHAMED)).body.prompt.question).toMatch(/Thursday/);
+    // a few a day at most (each one notifies the whole class)
+    await req('POST', `/teacher/classes/${CLASS}/feelings/prompt`, THOMAS, { question: 'Second question today' });
+    await req('POST', `/teacher/classes/${CLASS}/feelings/prompt`, THOMAS, { question: 'Third question today' });
+    expect((await req('POST', `/teacher/classes/${CLASS}/feelings/prompt`, THOMAS, { question: 'Fourth question today' })).status).toBe(429);
   });
 });
 

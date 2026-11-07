@@ -219,6 +219,7 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
   api.route({ method: 'post', path: '/teacher/classes/:id/feelings/prompt', tag: 'life', auth: 'custom', body: S.Prompt, summary: 'Ask the class a check-in question today (shown above the check-in)' },
     async (c, { body }) => {
       const s = await h.staff(c); const st = h.classOf(s, c.req.param('id')!);
+      if ((life.prompts[st.id] ?? []).filter((x) => x.date === h.today(c)).length >= 3) throw new HTTPException(429, { message: 'this class already has 3 check-in questions today', cause: { code: 'too_many_prompts' } });
       const p = { id: life.id('prm'), streamId: st.id, question: (body as { question: string }).question, date: h.today(c), by: staffName(s) };
       (life.prompts[st.id] ??= []).push(p);
       if (life.prompts[st.id]!.length > 60) life.prompts[st.id]!.shift();
@@ -485,6 +486,9 @@ export function registerLife(api: Api, schools: SchoolStore, h: Helpers) {
   api.route({ method: 'post', path: '/teacher/classes/:id/polls', tag: 'life', auth: 'custom', body: S.Poll, summary: 'Ask the class: a multiple-choice poll, a confidence check, or an exit ticket (a short written answer)' },
     async (c, { body }) => {
       const s = await h.staff(c); const st = h.classOf(s, c.req.param('id')!); const b = body as z.infer<typeof S.Poll>;
+      // every poll notifies the whole class: keep it to a sensible number
+      const hourAgo = new Date(c.get('deps').now().getTime() - 3_600_000).toISOString();
+      if (life.polls.filter((x) => x.streamId === st.id && x.at >= hourAgo).length >= 20) throw new HTTPException(429, { message: 'that is 20 questions for this class in the last hour: wait a little before asking more', cause: { code: 'too_many_polls' } });
       const p: Poll = { id: life.id('poll'), streamId: st.id, kind: b.kind, question: b.question, options: b.kind === 'choice' ? b.options : [], anonymous: b.anonymous, open: true, at: c.get('deps').now().toISOString(), closedAt: null, by: s.actor, answers: {} };
       life.polls.push(p);
       if (life.polls.length > 3000) life.polls.splice(0, life.polls.length - 3000);
