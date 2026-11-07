@@ -53,7 +53,9 @@ export function Reader({ text, title, onClose }: { text: string; title?: string;
   const [rulerY, setRulerY] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const run = useRef(0);
-  const can = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  // known only in the browser (set after the first paint, so server and browser render the same)
+  const [can, setCan] = useState(true);
+  useEffect(() => { setCan('speechSynthesis' in window); }, []);
   const lineH = p.size * p.spacing;
 
   useEffect(() => {

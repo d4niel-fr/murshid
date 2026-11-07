@@ -13,7 +13,9 @@ export function NotificationsCard() {
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [push, setPush] = useState(false);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { void getInbox(client.devUser).then(setInbox).catch(() => undefined); void pushOn().then(setPush); }, [client.devUser]);
+  // only known in the browser: checked after the first paint so the server and browser render the same text
+  const [supported, setSupported] = useState<boolean | null>(null);
+  useEffect(() => { setSupported(pushSupported()); void getInbox(client.devUser).then(setInbox).catch(() => undefined); void pushOn().then(setPush); }, [client.devUser]);
   const key = inbox?.pushKey ?? process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY ?? null;
   const togglePush = async () => {
     setBusy(true);
@@ -33,8 +35,8 @@ export function NotificationsCard() {
       <p className="mb-4 text-sm text-muted-foreground">{tx('New work, marks, messages from teachers and reminders the day before something is due. Never during school hours or at night.', 'الأعمال الجديدة والدرجات ورسائل المعلمين وتذكير قبل يوم من الموعد. لا شيء خلال الدوام المدرسي أو في الليل.')}</p>
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
-          <div><p className="text-sm font-medium">{tx('On this device', 'على هذا الجهاز')}</p><p className="text-xs text-muted-foreground">{!pushSupported() ? tx('Not available in this browser.', 'غير متاح في هذا المتصفح.') : !key ? tx('Not switched on for this Murshid yet.', 'لم تُفعَّل بعد لهذا الإصدار من مرشد.') : push ? tx('On', 'مفعّلة') : tx('Off', 'متوقفة')}</p></div>
-          <Button size="sm" variant="secondary" onClick={() => void togglePush()} disabled={busy || !pushSupported() || !key}>{push ? <BellOff /> : <Bell />}{push ? tx('Turn off', 'إيقاف') : tx('Turn on', 'تفعيل')}</Button>
+          <div><p className="text-sm font-medium">{tx('On this device', 'على هذا الجهاز')}</p><p className="text-xs text-muted-foreground">{supported === null ? '…' : !supported ? tx('Not available in this browser.', 'غير متاح في هذا المتصفح.') : !key ? tx('Not switched on for this Murshid yet.', 'لم تُفعَّل بعد لهذا الإصدار من مرشد.') : push ? tx('On', 'مفعّلة') : tx('Off', 'متوقفة')}</p></div>
+          <Button size="sm" variant="secondary" onClick={() => void togglePush()} disabled={busy || !supported || !key}>{push ? <BellOff /> : <Bell />}{push ? tx('Turn off', 'إيقاف') : tx('Turn on', 'تفعيل')}</Button>
         </div>
         {live && (
           <div className="flex items-center justify-between gap-3">
