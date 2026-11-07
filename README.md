@@ -2,7 +2,7 @@
 
 **The AI study planner for UAE students and schools.** Murshid keeps a high-school student's week under control (tests, homework, training, applications), gives them study tools that remember what they know, and tells teachers who needs support and the best day to set homework.
 
-Built by Vardan (Sam) Kapur, Grade 11, Dubai.
+Made by Daniel Davidson, Grade 11, and Vardan (Sam) Kapur, Grade 11, Dubai.
 
 > Demo build. Every student and teacher is fictional (synthetic data). Microsoft 365 sign-in is simulated. The school in the demo (Demo Secondary School) is fictional.
 
