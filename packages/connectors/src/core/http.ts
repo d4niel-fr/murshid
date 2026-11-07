@@ -8,6 +8,8 @@ export interface HttpOptions {
   retries?: number;
   /** injectable sleep for tests */
   sleep?: (ms: number) => Promise<void>;
+  /** injectable DNS lookup for the SSRF guard (tests); default: the system resolver */
+  lookup?: (host: string) => Promise<{ address: string }[]>;
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

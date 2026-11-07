@@ -25,7 +25,9 @@ import { registerStudy } from './v1/study';
 import { registerLive } from './v1/live';
 import { registerSync } from './v1/sync';
 import type { ChatProvider } from '@murshid/agent-gateway';
-import { DEFAULT_LIMITS, idempotency, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
+import { concurrency, idempotency, limitsWith, rateLimit, requestId, timeout, type Limits } from './lib/middleware';
+import { safeEqual, securityHeaders, trustFromEnv } from './lib/security';
+import { turnstile } from './lib/turnstile';
 import { BillingStore, registerBilling } from './billing/routes';
 import { Stripe, stripeFromEnv } from './billing/stripe';
 import { backendFromEnv, blobsFromEnv, Durable, type BlobStore, type StateBackend } from './lib/durable';
@@ -48,7 +50,7 @@ export interface CreateAppOptions {
   surveySink?: SurveySink;
   /** Single-plan subscriptions (default: fresh, in memory) */
   billing?: BillingStore;
-  /** per-IP rate limits; false turns them off (default: on, except under the test runner unless passed) */
+  /** per-IP and per-person rate limits and lockouts; false turns them off (default: on, except under the test runner unless passed) */
   rateLimit?: Partial<Limits> | false;
   /** request timeout in ms for non-streaming routes (default 15 s) */
   timeoutMs?: number;
@@ -77,18 +79,27 @@ export function buildApi(opts: CreateAppOptions = {}) {
   app.use('*', cors({
     // only listed origins (the apps themselves are same-origin); anything else gets no CORS header at all
     origin: (origin) => (origin && allowed.has(origin) ? origin : null),
-    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id'],
+    allowHeaders: ['authorization', 'content-type', 'accept', 'last-event-id', 'x-dev-user', 'x-dev-user-id', 'x-dev-role', 'x-dev-email', 'x-dev-school-id', 'x-inbox-secret', 'x-admin-passcode', 'idempotency-key', 'x-request-id', 'x-live-host', 'x-child', 'cf-turnstile-response'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['x-request-id', 'retry-after', 'ratelimit-limit', 'ratelimit-remaining', 'ratelimit-reset', 'idempotent-replayed'],
     maxAge: 600,
   }));
   // request ids first, so every later response (and error) can be traced
   app.use('*', requestId());
+  // nosniff, no-referrer, a CSP that loads nothing, no framing, no caching of personal data; HSTS in production
+  app.use('*', securityHeaders({ hsts: env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production' }));
+  const trust = trustFromEnv(env);
   const limitsOn = opts.rateLimit !== false && (opts.rateLimit !== undefined || (env.NODE_ENV !== 'test' && env.RATE_LIMIT !== 'off'));
-  if (limitsOn) app.use('*', rateLimit({ ...DEFAULT_LIMITS, ...(opts.rateLimit || {}) }));
+  if (limitsOn) {
+    const limits = limitsWith(opts.rateLimit || {});
+    app.use('*', concurrency(Number(env.MAX_IN_FLIGHT) || limits.maxInFlight));
+    app.use('*', rateLimit(limits, { trust, devHeaders: deps.config.authMode === 'dev' }));
+  }
   // request bodies: 5 MB at most (a 3 MB file upload is ~4.2 MB of base64); bigger is a clear 413
   app.use('*', bodyLimit({ maxSize: 5 * 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too big. Files can be up to 3 MB.', code: 'too_large', requestId: c.get('requestId') }, 413) }));
-  app.use('*', idempotency());
+  // optional bot check on sign-up style forms (TURNSTILE_SECRET_KEY); after the rate limits, before any work
+  if (env.TURNSTILE_SECRET_KEY?.trim()) app.use('*', turnstile(env.TURNSTILE_SECRET_KEY.trim(), trust));
+  app.use('*', idempotency(undefined, undefined, undefined, trust));
   app.use('*', timeout(opts.timeoutMs ?? Number(env.REQUEST_TIMEOUT_MS ?? 15_000)));
   app.use('*', async (c, next) => { c.set('deps', deps); await next(); });
   // Public demo deployments: when ADMIN_PASSCODE is set, admin data (platform admin, school admin, survey results,
@@ -103,7 +114,7 @@ export function buildApi(opts: CreateAppOptions = {}) {
         || path.startsWith('/admin') || path.startsWith('/licensing') || /^\/orgs\/[^/]+(\/|$)/.test(path)
         // study buddy switches (guardian and school): visitors to the public demo can see the buddy, not flip it
         || (c.req.method === 'PUT' && path === '/buddy/controls');
-      if (adminish && c.req.header('x-admin-passcode') !== adminPasscode) {
+      if (adminish && !safeEqual(c.req.header('x-admin-passcode'), adminPasscode)) {
         return c.json({ error: 'admin passcode required', code: 'admin_passcode' }, 401);
       }
       return next();

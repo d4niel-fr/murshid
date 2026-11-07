@@ -12,7 +12,25 @@ import type { Api } from '../lib/router';
 const NAMES = /^[a-z][a-z0-9-]{1,30}$/;
 /** a store may hold pictures (notebooks, boards): keep each under the hosts' request limit */
 const MAX_BYTES = 4 * 1024 * 1024;
-const Put = z.object({ base: z.number().int().min(0), data: z.unknown() });
+/** nesting and size limits for a synced document (deeply nested JSON is slow to handle and never needed) */
+const MAX_DEPTH = 32; const MAX_NODES = 200_000;
+const Put = z.object({ base: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), data: z.unknown() });
+/** demo user ids (dev mode) become part of storage keys: letters, digits and - _ . @ only */
+const DEV_ID = /^[\w.@-]{1,64}$/;
+
+/** True when the value is plain JSON within the depth and size limits. */
+export function jsonShapeOk(v: unknown, maxDepth = MAX_DEPTH, maxNodes = MAX_NODES): boolean {
+  let nodes = 0;
+  const walk = (x: unknown, depth: number): boolean => {
+    if (++nodes > maxNodes) return false;
+    if (x === null || typeof x !== 'object') return true;
+    if (depth >= maxDepth) return false;
+    const kids = Array.isArray(x) ? x : Object.values(x as Record<string, unknown>);
+    for (const k of kids) if (!walk(k, depth + 1)) return false;
+    return true;
+  };
+  return walk(v, 0);
+}
 const Names = z.object({ names: z.string().max(400).optional() });
 
 export function registerSync(api: Api, backend: StateBackend | null) {
@@ -23,6 +41,7 @@ export function registerSync(api: Api, backend: StateBackend | null) {
     if (whoami && !(config.authMode === 'dev' && !c.req.header('authorization'))) return (await whoami(c)).authUserId;
     const dev = c.req.header('x-dev-user') ?? c.req.header('x-dev-user-id');
     if (!dev) throw new HTTPException(401, { message: 'sign in to sync' });
+    if (!DEV_ID.test(dev)) throw new HTTPException(400, { message: 'bad demo user id' });
     return `dev:${dev}`;
   };
   const key = (who: string, name: string) => `user:${who}:${name}`;
@@ -51,8 +70,9 @@ export function registerSync(api: Api, backend: StateBackend | null) {
       const name = c.req.param('name') ?? '';
       if (!NAMES.test(name)) throw new HTTPException(400, { message: 'bad store name' });
       const b = body as z.output<typeof Put>;
-      const size = JSON.stringify(b.data ?? null).length;
+      const size = Buffer.byteLength(JSON.stringify(b.data ?? null));
       if (size > MAX_BYTES) throw new HTTPException(413, { message: 'this is too big to sync (over 4 MB): remove some pictures', cause: { code: 'too_large', size } });
+      if (!jsonShapeOk(b.data)) throw new HTTPException(400, { message: 'this is nested too deeply to sync', cause: { code: 'too_deep' } });
       const k = key(who, name);
       const res = await docs.save(k, { data: b.data, updatedAt: new Date().toISOString() }, b.base);
       if (res.ok) return c.json({ version: res.version });

@@ -12,7 +12,7 @@ export const ProgressQuery = z.object({
 
 const ChatMessage = z.object({
   role: z.enum(['user', 'assistant', 'system', 'tool']),
-  content: z.union([z.string(), z.array(z.object({ type: z.string(), text: z.string().optional() }).passthrough())]),
+  content: z.union([z.string().max(8000), z.array(z.object({ type: z.string().max(40), text: z.string().max(8000).optional() })).max(20)]),
 });
 export const ChatInput = z.object({
   message: z.string().min(1).max(2000).optional(),
@@ -33,7 +33,7 @@ export const ExtracurricularsQuery = z.object({
 export const SessionCreate = z.object({
   date: isoDate.optional().describe('YYYY-MM-DD (Asia/Dubai); default today'),
   minutes: z.number().int().min(1).max(720),
-  metrics: z.record(z.string(), z.number().finite()).default({}),
+  metrics: z.record(z.string().max(40), z.number().finite()).refine((m) => Object.keys(m).length <= 20, 'at most 20 metrics').default({}),
   note: z.string().max(280).nullable().optional(),
 });
 

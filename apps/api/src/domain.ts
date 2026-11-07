@@ -12,8 +12,8 @@ import {
   TASK_STATUSES,
 } from '@murshid/core';
 
-export const uuid = z.string().min(1);
-export const isoDateTime = z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'invalid date-time');
+export const uuid = z.string().min(1).max(100);
+export const isoDateTime = z.string().max(40).refine((s) => !Number.isNaN(Date.parse(s)), 'invalid date-time');
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD');
 
 export const Curriculum = z.enum(CURRICULA);
@@ -109,7 +109,7 @@ export const Opportunity = z.object({
 });
 export type Opportunity = z.infer<typeof Opportunity>;
 
-export const ChecklistItem = z.object({ item: z.string().min(1), done: z.boolean() });
+export const ChecklistItem = z.object({ item: z.string().min(1).max(200), done: z.boolean() });
 export type ChecklistItem = z.infer<typeof ChecklistItem>;
 
 export const Application = z.object({
@@ -144,57 +144,58 @@ export type AuditLog = z.infer<typeof AuditLog>;
 
 // ---------- Input schemas (create = no id/server fields; update = partial) ----------
 export const StudentCreate = Student.omit({ id: true, auth_user_id: true, created_at: true }).extend({
-  preferred_name: z.string().nullable().default(null),
+  full_name: z.string().min(1).max(120),
+  preferred_name: z.string().max(80).nullable().default(null),
   school_id: uuid.nullable().default(null),
-  emirate: z.string().nullable().default(null),
-  nationality: z.string().nullable().default(null),
-  languages: z.array(z.string()).default([]),
-  interests: z.array(z.string()).default([]),
-  strengths: z.array(z.string()).default([]),
+  emirate: z.string().max(40).nullable().default(null),
+  nationality: z.string().max(60).nullable().default(null),
+  languages: z.array(z.string().max(80)).max(30).default([]),
+  interests: z.array(z.string().max(80)).max(30).default([]),
+  strengths: z.array(z.string().max(80)).max(30).default([]),
 });
 export const StudentUpdate = StudentCreate.partial();
 
 export const GoalCreate = z.object({
-  title: z.string().min(1), category: GoalCategory, target_date: isoDate.nullable().default(null),
+  title: z.string().max(200).min(1), category: GoalCategory, target_date: isoDate.nullable().default(null),
   status: GoalStatus.default('active'), parent_goal_id: uuid.nullable().default(null),
   progress: z.number().int().min(0).max(100).default(0),
 });
 export const GoalUpdate = GoalCreate.partial();
 
 export const MilestoneCreate = z.object({
-  title: z.string().min(1), due_date: isoDate.nullable().default(null), done: z.boolean().default(false),
+  title: z.string().max(200).min(1), due_date: isoDate.nullable().default(null), done: z.boolean().default(false),
 });
 export const MilestoneUpdate = MilestoneCreate.partial();
 
 export const CourseCreate = z.object({
-  name: z.string().min(1), teacher: z.string().nullable().default(null), source: z.string().default('manual'),
-  external_id: z.string().nullable().default(null),
+  name: z.string().max(120).min(1), teacher: z.string().max(120).nullable().default(null), source: z.string().max(40).default('manual'),
+  external_id: z.string().max(200).nullable().default(null),
 });
 export const CourseUpdate = CourseCreate.partial();
 
 export const MaterialCreate = z.object({
-  course_id: uuid, title: z.string().min(1), kind: MaterialKind.default('note'),
-  body_text: z.string().nullable().default(null), file_url: z.string().nullable().default(null),
-  due_at: isoDateTime.nullable().default(null), source: z.string().default('manual'),
-  external_id: z.string().nullable().default(null),
+  course_id: uuid, title: z.string().max(200).min(1), kind: MaterialKind.default('note'),
+  body_text: z.string().max(50000).nullable().default(null), file_url: z.string().max(2000).nullable().default(null),
+  due_at: isoDateTime.nullable().default(null), source: z.string().max(40).default('manual'),
+  external_id: z.string().max(200).nullable().default(null),
 });
 export const MaterialUpdate = MaterialCreate.partial();
 
 export const MaterialUpload = z.object({
   course_id: uuid,
-  title: z.string().min(1),
+  title: z.string().max(200).min(1),
   kind: MaterialKind.default('note'),
-  file_url: z.string().min(1).describe('Storage URL/path the client uploaded to (e.g. Supabase Storage)'),
-  file_name: z.string().optional(),
-  mime_type: z.string().optional(),
+  file_url: z.string().max(2000).min(1).describe('Storage URL/path the client uploaded to (e.g. Supabase Storage)'),
+  file_name: z.string().max(255).optional(),
+  mime_type: z.string().max(100).optional(),
   size_bytes: z.number().int().nonnegative().optional(),
   due_at: isoDateTime.nullable().default(null),
-  body_text: z.string().nullable().default(null),
+  body_text: z.string().max(50000).nullable().default(null),
   create_task: z.boolean().default(true),
 });
 
 export const TaskCreate = z.object({
-  title: z.string().min(1), kind: TaskKind.default('study'), due_at: isoDateTime.nullable().default(null),
+  title: z.string().max(200).min(1), kind: TaskKind.default('study'), due_at: isoDateTime.nullable().default(null),
   est_minutes: z.number().int().min(0).max(24 * 60).nullable().default(null), status: TaskStatus.default('todo'),
   linked_goal_id: uuid.nullable().default(null), linked_material_id: uuid.nullable().default(null),
   linked_opportunity_id: uuid.nullable().default(null), ai_use_level: AiUseLevel.default('none'),
@@ -202,45 +203,48 @@ export const TaskCreate = z.object({
 export const TaskUpdate = TaskCreate.partial();
 
 export const CalendarEventCreate = z.object({
-  title: z.string().min(1), start_at: isoDateTime, end_at: isoDateTime, source: z.string().default('manual'),
-  external_id: z.string().nullable().default(null),
+  title: z.string().max(200).min(1), start_at: isoDateTime, end_at: isoDateTime, source: z.string().max(40).default('manual'),
+  external_id: z.string().max(200).nullable().default(null),
 });
 export const CalendarEventUpdate = CalendarEventCreate.partial();
 
 export const OpportunityCreate = Opportunity.omit({ id: true }).partial().extend({
-  title: z.string().min(1), organizer: z.string().min(1), type: OpportunityType,
+  title: z.string().max(200).min(1), organizer: z.string().max(200).min(1), type: OpportunityType,
+  url: z.string().max(2000).nullable().optional(), emirate: z.string().max(40).nullable().optional(), country: z.string().max(60).nullable().optional(),
+  eligibility_text: z.string().max(4000).nullable().optional(), nationality_restriction: z.array(z.string().max(60)).max(50).nullable().optional(),
+  tags: z.array(z.string().max(60)).max(30).optional(), source_id: z.string().max(100).nullable().optional(),
 });
 
 export const ApplicationCreate = z.object({
-  opportunity_id: uuid, status: ApplicationStatus.default('saved'), notes: z.string().nullable().default(null),
-  checklist: z.array(ChecklistItem).optional(),
+  opportunity_id: uuid, status: ApplicationStatus.default('saved'), notes: z.string().max(4000).nullable().default(null),
+  checklist: z.array(ChecklistItem).max(50).optional(),
 });
 export const ApplicationUpdate = z.object({
-  status: ApplicationStatus.optional(), notes: z.string().nullable().optional(),
-  checklist: z.array(ChecklistItem).optional(),
+  status: ApplicationStatus.optional(), notes: z.string().max(4000).nullable().optional(),
+  checklist: z.array(ChecklistItem).max(50).optional(),
 });
 
 export const AchievementCreate = z.object({
-  title: z.string().min(1), category: AchievementCategory, date: isoDate.nullable().default(null),
-  description: z.string().nullable().default(null), evidence_url: z.string().nullable().default(null),
+  title: z.string().max(200).min(1), category: AchievementCategory, date: isoDate.nullable().default(null),
+  description: z.string().max(2000).nullable().default(null), evidence_url: z.string().max(2000).nullable().default(null),
 });
 export const AchievementUpdate = AchievementCreate.partial();
 
 export const CvCreate = z.object({
-  target: CvTarget.default('general'), template: z.string().default('classic'),
-  basics: z.object({ email: z.string().optional(), phone: z.string().optional(), summary: z.string().optional() })
+  target: CvTarget.default('general'), template: z.string().max(40).default('classic'),
+  basics: z.object({ email: z.string().max(254).optional(), phone: z.string().max(40).optional(), summary: z.string().max(2000).optional() })
     .optional(),
 });
 
 export const InboundEmail = z.object({
-  to: z.string().min(1).describe('Recipient, e.g. inbox+<student_id>@inbox.murshid.local'),
-  from: z.string().default(''),
-  subject: z.string().default(''),
-  text: z.string().default(''),
-  html: z.string().optional(),
+  to: z.string().max(320).min(1).describe('Recipient, e.g. inbox+<student_id>@inbox.murshid.local'),
+  from: z.string().max(320).default(''),
+  subject: z.string().max(500).default(''),
+  text: z.string().max(200000).default(''),
+  html: z.string().max(500000).optional(),
   date: isoDateTime.optional().describe('Sent date; used to resolve "tomorrow"/weekday names'),
-  message_id: z.string().optional(),
+  message_id: z.string().max(500).optional(),
 });
 export type InboundEmail = z.infer<typeof InboundEmail>;
 
-export const AgentChatInput = z.object({ message: z.string().min(1).max(4000), thread_id: z.string().optional() });
+export const AgentChatInput = z.object({ message: z.string().min(1).max(4000), thread_id: z.string().max(200).optional() });

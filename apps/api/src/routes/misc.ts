@@ -88,7 +88,7 @@ export function registerConnections(api: Api) {
   api.route({
     method: 'get', path: '/connections/:provider/callback', tag: 'connections', auth: 'none',
     summary: 'OAuth callback placeholder: marks the connection connected (no token exchange yet)',
-    query: z.object({ state: z.string().min(1), code: z.string().optional(), error: z.string().optional() }),
+    query: z.object({ state: z.string().min(1).max(200), code: z.string().max(2000).optional(), error: z.string().max(500).optional() }),
   }, async (c, { query }) => {
     const { repo, now } = c.get('deps');
     const provider = c.req.param('provider')!;

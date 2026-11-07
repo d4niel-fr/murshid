@@ -70,6 +70,8 @@ export class GraphConnector {
       if (!res.ok) throw new Error(`Microsoft Graph ${res.status} for ${new URL(next).pathname}`);
       const j = (await res.json()) as { value: T[]; '@odata.nextLink'?: string };
       out.push(...j.value); next = j['@odata.nextLink'];
+      // the token goes with every page: only ever to Microsoft Graph itself
+      if (next && !next.startsWith('https://graph.microsoft.com/')) break;
     }
     return out;
   }

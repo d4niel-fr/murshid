@@ -1,6 +1,7 @@
 'use client';
 
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { safeRedirect } from './safe-redirect';
 
 /**
  * Sign-in for the real product (Supabase Auth: email and password, an emailed link, Google, Microsoft).
@@ -44,8 +45,8 @@ export async function authHeaders(devUser?: string | null): Promise<Record<strin
 export const callbackUrl = (next = '/app') => `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext(next))}`;
 /** Only same-site paths, so a link can never send someone to another website after signing in. */
 export function safeNext(next: string | null | undefined, fallback = '/app'): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\') || /[\r\n]/.test(next)) return fallback;
-  return next;
+  // also catches "/\t/evil.com" (browsers drop the tab and leave the site) and other tricks: see safe-redirect.ts
+  return safeRedirect(next, fallback);
 }
 
 export async function signInWithPassword(email: string, password: string) {

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { securityHeaders } from './src/lib/security-headers';
 
 // One Vercel project serves all three apps on one domain (root vercel.json): this app at /, the teacher portal at
 // /admin, the API at /api. Locally (`pnpm dev`, no Vercel) the same paths are proxied to the other dev servers.
@@ -10,6 +11,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_PROJECT_
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
+  // CSP, HSTS, no framing, nosniff, referrer and browser-feature rules on every page and file (see src/lib/security-headers.ts)
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders({
+      dev: process.env.NODE_ENV === 'development', https: onVercel,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL, apiUrl: process.env.NEXT_PUBLIC_MURSHID_API,
+      microphone: true, camera: true,
+    }) }];
+  },
   transpilePackages: ['@murshid/design', '@murshid/grade-bands', '@murshid/survey', '@murshid/study'],
   ...(siteUrl ? { env: { NEXT_PUBLIC_SITE_URL: siteUrl } } : {}),
   async rewrites() {

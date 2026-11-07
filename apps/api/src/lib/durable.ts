@@ -58,19 +58,31 @@ export interface StateBackend {
   list?(prefix: string): Promise<string[]>;
 }
 
+/**
+ * Keys name documents in every backend (a database row, a file name): letters, digits and : _ @ . - only, at most 200
+ * characters. Anything else is refused before it reaches a query or the file system.
+ */
+const KEY = /^[A-Za-z0-9:_@.-]{1,200}$/;
+export function assertKey(key: string): string {
+  if (typeof key !== 'string' || !KEY.test(key)) throw new Error('bad state key');
+  return key;
+}
+const keysOk = (keys: string[]) => keys.map(assertKey);
+
 /** Shared memory: one per process by default. Tests pass the same instance to two apps to act as two servers. */
 export class MemoryBackend implements StateBackend {
   readonly name = 'memory' as const;
   private rows = new Map<string, { json: string; version: number }>();
-  async versions(keys: string[]) { return Object.fromEntries(keys.flatMap((k) => (this.rows.has(k) ? [[k, this.rows.get(k)!.version]] : []))); }
-  async load(keys: string[]) { return Object.fromEntries(keys.flatMap((k) => { const r = this.rows.get(k); return r ? [[k, { data: JSON.parse(r.json), version: r.version }]] : []; })); }
+  async versions(keys: string[]) { return Object.fromEntries(keysOk(keys).flatMap((k) => (this.rows.has(k) ? [[k, this.rows.get(k)!.version]] : []))); }
+  async load(keys: string[]) { return Object.fromEntries(keysOk(keys).flatMap((k) => { const r = this.rows.get(k); return r ? [[k, { data: JSON.parse(r.json), version: r.version }]] : []; })); }
   async save(key: string, data: unknown, expect: number) {
+    assertKey(key);
     const cur = this.rows.get(key)?.version ?? 0;
     if (cur !== expect) return { ok: false as const };
     this.rows.set(key, { json: JSON.stringify(data), version: cur + 1 });
     return { ok: true as const, version: cur + 1 };
   }
-  async list(prefix: string) { return [...this.rows.keys()].filter((k) => k.startsWith(prefix)); }
+  async list(prefix: string) { assertKey(prefix); return [...this.rows.keys()].filter((k) => k.startsWith(prefix)); }
 }
 
 /** One JSON file per key in a folder (a single long-running server, e.g. a VPS). Writes are atomic (temp + rename). */
@@ -78,12 +90,16 @@ export class FileBackend implements StateBackend {
   readonly name = 'file' as const;
   private queue: Promise<unknown> = Promise.resolve();
   constructor(private dir: string) {}
-  private path(key: string) { return join(this.dir, `${encodeURIComponent(key)}.json`); }
+  /** one file per key inside the folder: the key is checked and encoded, so it can never name a path outside it */
+  private path(key: string) {
+    const safe = encodeURIComponent(assertKey(key));
+    return join(this.dir, `${safe.length > 200 ? createHash('sha256').update(key).digest('hex') : safe}.json`);
+  }
   private async read(key: string): Promise<Stored | null> {
     try { return JSON.parse(await readFile(this.path(key), 'utf8')) as Stored; } catch { return null; }
   }
-  async versions(keys: string[]) { const out: Record<string, number> = {}; for (const k of keys) { const r = await this.read(k); if (r) out[k] = r.version; } return out; }
-  async load(keys: string[]) { const out: Record<string, Stored> = {}; for (const k of keys) { const r = await this.read(k); if (r) out[k] = r; } return out; }
+  async versions(keys: string[]) { const out: Record<string, number> = {}; for (const k of keysOk(keys)) { const r = await this.read(k); if (r) out[k] = r.version; } return out; }
+  async load(keys: string[]) { const out: Record<string, Stored> = {}; for (const k of keysOk(keys)) { const r = await this.read(k); if (r) out[k] = r; } return out; }
   save(key: string, data: unknown, expect: number) {
     const run = async () => {
       const cur = (await this.read(key))?.version ?? 0;
@@ -116,7 +132,8 @@ export class SupabaseBackend implements StateBackend {
   private headers(extra: Record<string, string> = {}) {
     return { apikey: this.serviceKey, authorization: `Bearer ${this.serviceKey}`, 'content-type': 'application/json', ...extra };
   }
-  private inList(keys: string[]) { return `in.(${keys.map((k) => `"${k.replace(/"/g, '\\"')}"`).join(',')})`; }
+  /** PostgREST in-list; keys are checked first, and quotes and backslashes are escaped anyway */
+  private inList(keys: string[]) { return `in.(${keysOk(keys).map((k) => `"${k.replace(/["\\]/g, '\\$&')}"`).join(',')})`; }
   private async json<T>(res: Response, what: string): Promise<T> {
     if (!res.ok) throw new Error(`state ${what} failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
     return (await res.json()) as T;
@@ -132,6 +149,7 @@ export class SupabaseBackend implements StateBackend {
     return Object.fromEntries(rows.map((r) => [r.key, { data: r.data, version: Number(r.version) }]));
   }
   async save(key: string, data: unknown, expect: number) {
+    assertKey(key);
     const now = new Date().toISOString();
     if (expect === 0) {
       // insert, or nothing when another server created it first (then it is a conflict)
@@ -144,6 +162,7 @@ export class SupabaseBackend implements StateBackend {
     return rows.length ? { ok: true as const, version: expect + 1 } : { ok: false as const };
   }
   async list(prefix: string) {
+    assertKey(prefix);
     const rows = await this.json<{ key: string }[]>(await this.f(`${this.base}?select=key&key=like.${encodeURIComponent(`${prefix.replace(/[%_]/g, '\\$&')}*`)}`, { headers: this.headers() }), 'list');
     return rows.map((r) => r.key);
   }
