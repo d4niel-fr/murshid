@@ -4,6 +4,10 @@
  */
 import { z } from 'zod';
 
+// zod normally probes for eval (new Function) to speed up parsing; the portal's Content-Security-Policy forbids eval,
+// so the probe only produced a CSP violation report. Jitless mode skips it (same results, a little slower).
+z.config({ jitless: true });
+
 export const ACTIVITY_KINDS = ['athletics', 'gym', 'hackathon', 'robotics', 'music', 'football', 'swimming'] as const;
 export const ASSESSMENT_KINDS = ['quiz', 'test', 'assignment', 'exam', 'project'] as const;
 export const CURRICULA = ['british', 'american', 'indian_cbse', 'ib', 'uae_moe'] as const;

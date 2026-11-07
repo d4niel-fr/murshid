@@ -260,6 +260,42 @@ export function Guardrails() {
   );
 }
 
+/* ───────────────────────── 7b · built secure ───────────────────────── */
+
+// what is actually done (details and limits on /security); never "unhackable"
+const SECURE: { t: T; d: T }[] = [
+  { t: ['Encrypted on the way', 'مشفّر في الطريق'], d: ['Every page and request uses HTTPS, and browsers are told to never use anything else.', 'كل صفحة وطلب يمرّان عبر HTTPS، ويُطلب من المتصفحات ألا تستخدم غيره.'] },
+  { t: ['Each person sees their own', 'كلٌّ يرى ما يخصّه'], d: ['Sign-in and role are checked on every request; the database has row-level security on every table.', 'يُتحقق من الدخول والدور في كل طلب، ولقاعدة البيانات أمان على مستوى الصفوف في كل جدول.'] },
+  { t: ['Limits against guessing', 'حدود ضد التخمين'], d: ['Requests are rate limited, and repeated wrong codes lock out for a while, longer each time.', 'للطلبات حدود، والرموز الخاطئة المتكررة تُوقف المحاولة لفترة تطول في كل مرة.'] },
+  { t: ['Files are checked', 'الملفات تُفحص'], d: ['Only photos, PDFs, Office and text files up to 3 MB, and the content must match the type.', 'صور وملفات PDF وOffice ونصوص فقط حتى 3 ميغابايت، ويجب أن يطابق المحتوى النوع.'] },
+];
+
+export function BuiltSecure() {
+  const { tx } = useApp();
+  return (
+    <section id="secure" aria-labelledby="secure-h" className="bg-[var(--bg)] px-[1.5rem] pb-[5rem] sm:px-[2.5rem] sm:pb-[6rem]">
+      <div className="rounded-[1.5rem] bg-[var(--surface)] p-[1.75rem] sm:p-[2.5rem]">
+        <div className="flex flex-col gap-[1.5rem] sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <Eyebrow>{tx('Security and privacy', 'الأمان والخصوصية')}</Eyebrow>
+            <h2 id="secure-h" className="mk-h2 mt-[1rem] text-[2.5rem]">{tx('Built secure', 'مبني بأمان')}</h2>
+          </div>
+          <p className="max-w-[26rem] text-[0.875rem] leading-relaxed text-[var(--text-muted)] sm:text-right">{tx('No system is perfect, so here is exactly what we do, what we don’t, and how to tell us about a problem.', 'لا يوجد نظام كامل، لذا إليك بالضبط ما نفعله وما لا نفعله وكيف تخبرنا بمشكلة.')}</p>
+        </div>
+        <ul className="mt-[2.5rem] grid gap-[1.25rem] sm:grid-cols-2 lg:grid-cols-4">
+          {SECURE.map((s, i) => (
+            <Rise as="li" key={s.t[0]} delay={i * 90} y={26} config={spring(190, 26)} className="border-t border-[var(--border)] pt-[1.25rem]">
+              <p className="text-[1.125rem] font-medium leading-tight tracking-[-0.01em]">{tx(...s.t)}</p>
+              <p className="mt-[0.5rem] text-[0.9375rem] leading-relaxed text-[var(--text-muted)]">{tx(...s.d)}</p>
+            </Rise>
+          ))}
+        </ul>
+        <div className="mt-[2.5rem]"><Pill variant="outline" href="/security">{tx('How we protect your data', 'كيف نحمي بياناتك')}</Pill></div>
+      </div>
+    </section>
+  );
+}
+
 /* ───────────────────────── 8 · pick a seat ───────────────────────── */
 
 export function Seats() {
