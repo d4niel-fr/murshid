@@ -138,7 +138,7 @@ export default function ReadingCoachPage() {
           <CardHeader title={tx('Your progress', 'تقدّمك')} />
           {!recent.length ? <Muted>{tx('Your reads will show here.', 'ستظهر قراءاتك هنا.')}</Muted> : (
             <>
-              <div className="flex h-32 items-end gap-1.5" role="img" aria-label={tx('Words correct per minute, latest reads', 'كلمات صحيحة في الدقيقة لآخر القراءات')}>
+              <div className="flex h-32 gap-1.5" role="img" aria-label={tx('Words correct per minute, latest reads', 'كلمات صحيحة في الدقيقة لآخر القراءات')}>
                 {recent.map((h) => <div key={h.id} className="flex flex-1 flex-col items-center justify-end gap-1"><span className="text-[0.625rem] tabular-nums text-muted-foreground">{h.wcpm}</span><div className="w-full rounded-t-[6px] bg-[var(--brand)]" style={{ height: `${Math.min(100, (h.wcpm / Math.max(guide, ...recent.map((x) => x.wcpm))) * 100)}%` }} /></div>)}
               </div>
               <ul className="mt-4 divide-y divide-border text-sm">

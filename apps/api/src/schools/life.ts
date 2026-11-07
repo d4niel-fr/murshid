@@ -194,6 +194,23 @@ export function demoEvents(orgId: string, today: string): SchoolEvent[] {
   ];
 }
 
+/** Two example polls per demo class with a few answers already in, so the demo shows results (never for real schools). */
+export function seedDemoPolls(life: SchoolLife, streams: Stream[], members: Record<string, string[]>, skip: Set<string>, now: Date) {
+  const at = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString();
+  for (const st of streams) {
+    const ids = (members[st.id] ?? []).filter((id) => !skip.has(id));
+    if (ids.length < 4) continue;
+    const r = rng(`${st.id}|polls`);
+    const confidence: Poll = { id: `demo-poll-${st.id}-c`, streamId: st.id, kind: 'confidence', question: 'How sure are you about this week’s topic?', options: [], anonymous: false, open: true, at: at(3), closedAt: null, by: st.teacherId, answers: {} };
+    const choice: Poll = { id: `demo-poll-${st.id}-v`, streamId: st.id, kind: 'choice', question: 'When should we do the next practice test?', options: ['Monday', 'Wednesday', 'Thursday'], anonymous: false, open: false, at: at(50), closedAt: at(30), by: st.teacherId, answers: {} };
+    for (const id of ids) {
+      if (r() < 0.55) confidence.answers[id] = { choice: Math.min(3, Math.floor(r() * r() * 4 + r() * 1.2)), text: '', at: at(2) };
+      if (r() < 0.8) choice.answers[id] = { choice: Math.floor(r() * 3), text: '', at: at(40) };
+    }
+    life.polls.push(choice, confidence);
+  }
+}
+
 /* ------------------------------------------------------------------ summaries */
 
 export const markWeight: Record<Mark, number> = { present: 1, late: 1, excused: 1, absent: 0 };

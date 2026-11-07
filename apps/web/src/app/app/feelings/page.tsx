@@ -172,7 +172,7 @@ export default function FeelingsPage() {
           </Card>
           <Card>
             <CardHeader title={tx('Your last six weeks', 'آخر ستة أسابيع')} icon={<Heart />} action={d.streak > 1 ? <Badge tone="outline">{tx(`${d.streak} days in a row`, `${d.streak} أيام متتالية`)}</Badge> : undefined} />
-            <div className="flex h-28 items-end gap-2" role="img" aria-label={tx('Average mood by week', 'متوسط الشعور أسبوعياً')}>
+            <div className="flex h-28 gap-2" role="img" aria-label={tx('Average mood by week', 'متوسط الشعور أسبوعياً')}>
               {d.weeks.map((w) => (
                 <div key={w.from} className="flex flex-1 flex-col items-center gap-1.5">
                   <div className="flex w-full flex-1 items-end">

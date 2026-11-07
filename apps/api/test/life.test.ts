@@ -131,16 +131,17 @@ describe('points, polls, events and reports', () => {
     const { req } = await setup();
     const p = await req('POST', `/teacher/classes/${CLASS}/polls`, THOMAS, { kind: 'choice', question: 'Which poem next?', options: ['Ozymandias', 'Remains'] });
     expect(p.status).toBe(201);
-    let mine = (await req('GET', '/student/polls', AHAMED)).body.polls[0];
+    const find = async () => (await req('GET', '/student/polls', AHAMED)).body.polls.find((x: any) => x.id === p.body.id);
+    let mine = await find();
     expect(mine.counts).toBeNull();
     expect((await req('POST', `/student/polls/${p.body.id}/answer`, AHAMED, { choice: 7 })).status).toBe(400);
     expect((await req('POST', `/student/polls/${p.body.id}/answer`, AHAMED, { choice: 1 })).status).toBe(200);
-    mine = (await req('GET', '/student/polls', AHAMED)).body.polls[0];
+    mine = await find();
     expect(mine.counts).toEqual([0, 1]);
     const exit = await req('POST', `/teacher/classes/${CLASS}/polls`, THOMAS, { kind: 'exit', question: 'One thing you learned today' });
     await req('POST', `/student/polls/${exit.body.id}/answer`, AHAMED, { text: 'Iambic pentameter' });
     const t = await req('GET', `/teacher/classes/${CLASS}/polls`, THOMAS);
-    expect(t.body.polls[0].texts[0]).toMatchObject({ text: 'Iambic pentameter', name: expect.any(String) });
+    expect(t.body.polls.find((x: any) => x.id === exit.body.id).texts[0]).toMatchObject({ text: 'Iambic pentameter', name: expect.any(String) });
     // students never see each other's written answers
     expect((await req('GET', '/student/polls', AHAMED)).body.polls.every((x: any) => x.texts.length === 0)).toBe(true);
     await req('POST', `/teacher/polls/${p.body.id}/close`, THOMAS);

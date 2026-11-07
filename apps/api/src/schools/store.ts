@@ -5,7 +5,7 @@
 import { familyOrg, DEMO_SCHOOL, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
 import type { School, WorkItem } from './engine';
 import { ClassroomStore } from './classroom';
-import { SchoolLife } from './life';
+import { SchoolLife, seedDemoPolls } from './life';
 import { SimulatedMicrosoft365, type SchoolDirectoryConnector } from './microsoft';
 
 export interface StudentLicence {
@@ -46,6 +46,9 @@ export class SchoolStore {
     const s = seedStreams(this.roster);
     this.streams = s.streams;
     this.members = s.members;
+    // the flagship demo student answers for themselves; everyone else in the demo school already has
+    const flagship = new Set(this.roster.filter((r) => r.appId).map((r) => r.id));
+    seedDemoPolls(this.life, this.streams.filter((x) => !this.org(x.orgId)?.real), this.members, flagship, new Date());
     this.microsoft = new SimulatedMicrosoft365({
       orgs: () => this.orgs, teachers: () => this.teachers, roster: () => this.roster, streams: () => this.streams, members: () => this.members,
     });

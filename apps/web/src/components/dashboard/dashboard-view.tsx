@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useApp, useEndpoint } from '@/components/providers/app-provider';
 import { Bento, Page, RevealTitle } from '@/components/shared/page';
 import { SchoolToday } from '@/components/life/school-today';
@@ -70,10 +70,16 @@ export function DashboardView() {
       {/* Desktop: two columns (8 + 4). iPad: one stacked column of full-width cards, side widgets pair up 6+6. */}
       <Bento className="items-start">
         <div className="col-span-12 grid min-w-0 grid-cols-12 gap-4 lg:col-span-7 xl:col-span-8">
-          {main.map((w) => <Slot key={w} w={w}>{render(w)}</Slot>)}
+          {main.map((w, i) => (
+            <Fragment key={w}>
+              <Slot w={w}>{render(w)}</Slot>
+              {/* phones and iPad portrait: school today sits near the top, not after every other card */}
+              {i === 0 && <SchoolToday className="col-span-12 grid min-w-0 lg:hidden" />}
+            </Fragment>
+          ))}
         </div>
         <div className="col-span-12 grid min-w-0 grid-cols-12 gap-4 lg:col-span-5 xl:col-span-4">
-          <SchoolToday className="col-span-12 grid min-w-0 md:col-span-6 lg:col-span-12" />
+          <SchoolToday className="col-span-12 hidden min-w-0 lg:grid" />
           {side.map((w) => <Slot key={w} w={w} side>{render(w)}</Slot>)}
         </div>
       </Bento>

@@ -64,7 +64,7 @@ export default function WellbeingPage() {
                   {d.distribution.map((n: number, i: number) => n > 0 && <span key={i} style={{ width: `${(n / total) * 100}%`, background: TONE[i] }} />)}
                 </div>
                 <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">{d.distribution.map((n: number, i: number) => <li key={i} className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: TONE[i] }} />{MOOD[i]} {Math.round((n / total) * 100)}%</li>)}</ul>
-                <div className="mt-5 flex h-32 items-end gap-1" role="img" aria-label="Check-ins by day">
+                <div className="mt-5 flex h-32 gap-1" role="img" aria-label="Check-ins by day">
                   {d.byDay.map((x: any) => {
                     const n = x.counts.reduce((t: number, v: number) => t + v, 0);
                     const max = Math.max(...d.byDay.map((y: any) => y.counts.reduce((t: number, v: number) => t + v, 0)), 1);
