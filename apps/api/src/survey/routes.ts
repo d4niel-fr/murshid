@@ -11,6 +11,7 @@ import { HTTPException } from 'hono/http-exception';
 import { SURVEYS, SURVEY_VERSION_ID, summarizeSurvey, validateSurvey, type SurveyRow } from '@murshid/survey';
 import type { Api } from '../lib/router';
 import { requireAdmin } from '../admin/routes';
+import { clientIp, ipKey, trustFromEnv } from '../lib/security';
 
 export interface SurveySink {
   name: string;
@@ -49,12 +50,15 @@ export function surveySinkFromEnv(env: Record<string, string | undefined>): Surv
 
 export function registerSurvey(api: Api, sink: SurveySink, now: () => Date = () => new Date()) {
   const recent = new Map<string, number[]>(); // light per-IP rate limit: 20 responses / 10 min
+  const trust = trustFromEnv((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {});
   api.route({ method: 'get', path: '/survey/questions', tag: 'survey', auth: 'none', summary: 'Validation survey questions (student and teacher versions)' },
     (c) => c.json({ version: SURVEY_VERSION_ID, surveys: SURVEYS }));
 
   api.route({ method: 'post', path: '/survey', tag: 'survey', auth: 'none', summary: 'Submit one anonymous survey response (consent required; no personal data)' }, async (c) => {
-    const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local';
+    // the real client address (a client-sent x-forwarded-for is not trusted off Vercel)
+    const ip = ipKey(clientIp(c, trust));
     const t = now().getTime();
+    if (recent.size > 20_000) for (const [k, v] of recent) if (!v.some((x) => t - x < 600_000)) recent.delete(k);
     const hits = (recent.get(ip) ?? []).filter((x) => t - x < 600_000);
     if (hits.length >= 20) throw new HTTPException(429, { message: 'too many responses from this connection; try again later' });
     recent.set(ip, [...hits, t]);
@@ -74,7 +78,11 @@ export function registerSurvey(api: Api, sink: SurveySink, now: () => Date = () 
   api.route({ method: 'get', path: '/admin/survey', tag: 'admin', auth: 'custom', summary: 'Survey results: responses per version, counts per option, scale means, free text' }, async (c) => {
     await requireAdmin(c);
     let rows: SurveyRow[];
-    try { rows = await sink.list(); } catch (e) { throw new HTTPException(502, { message: `survey store unavailable: ${(e as Error).message}` }); }
+    try { rows = await sink.list(); } catch (e) {
+      // the reason goes to the server log, not to the browser
+      console.error('[survey] results', (e as Error).message);
+      throw new HTTPException(502, { message: 'the survey results are not available right now', cause: { code: 'survey_store' } });
+    }
     return c.json({ store: sink.name, ...summarizeSurvey(rows.filter((r) => (r.answers as Record<string, unknown> | null)?._test !== true).map((r) => ({ ...r, answers: Object.fromEntries(Object.entries(r.answers ?? {}).filter(([k]) => k !== '_v')) }))) });
   });
 }

@@ -11,6 +11,7 @@ import { TaskList } from '@/components/shared/task-list';
 import { messageIn } from '@/lib/motion';
 import { buildChartSpec, type ProgressQuery } from '@/lib/progress';
 import type { ChartRange, ChartSpec, Opportunity, Task } from '@/lib/types';
+import { authHeaders } from '@/lib/auth';
 
 /* Props from assistant-ui's ToolCallMessagePartProps; typed loosely because args come from the wire. */
 interface ToolProps { args: unknown; status?: { type: string } }
@@ -121,7 +122,7 @@ export function ShowCvTool({ args }: ToolProps) {
   const a = (args ?? {}) as { headline?: string; about?: string; skills?: string[]; experience?: { title: string; organization: string; bullets?: string[] }[]; featured?: { title: string }[] };
   const [copied, setCopied] = useState(false);
   const download = async () => {
-    const res = await fetch(client.cvPdfUrl(), { headers: { 'x-dev-user': client.devUser, 'x-dev-user-id': client.devUser } });
+    const res = await fetch(client.cvPdfUrl(), { headers: await authHeaders(client.devUser) });
     const url = URL.createObjectURL(await res.blob());
     window.open(url, '_blank');
   };

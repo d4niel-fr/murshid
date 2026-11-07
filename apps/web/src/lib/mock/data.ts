@@ -254,3 +254,20 @@ export function mockWorld(band: BandId, now: Date = new Date(), persona?: string
   if (!w) { w = buildMockWorld(band, now, persona); cache.set(key, w); }
   return w;
 }
+
+/** A signed-in student's world before anything is added: their name and grade, nothing invented. */
+export function emptyWorld(band: BandId, who: { name?: string | null; grade?: number | null; school?: string | null }, now: Date = new Date()): MockWorld {
+  const [firstName = 'there', ...rest] = (who.name ?? '').trim().split(/\s+/).filter(Boolean);
+  const grade = who.grade ?? 0;
+  return {
+    band, today: todayISO(now),
+    dashboard: {
+      student: { id: 'me', firstName, lastName: rest.join(' '), nameAr: who.name ?? '', grade, classLabel: grade ? `Grade ${grade}` : '', school: who.school ?? '', band },
+      band, today: [], upcoming: [], progress: { academics: 0, extracurriculars: 0, goals: 0 }, streaks: { current: 0, best: 0 }, highlights: [],
+    },
+    academics: { term: '', average: 0, subjects: [] },
+    extracurriculars: { activities: [] },
+    goals: [], opportunities: [], applications: [],
+    links: { linkedin: null, github: null, instagram: null, portfolio: null, resumeUrl: null, connectedAt: {} },
+  };
+}

@@ -31,7 +31,8 @@ describe('ICS parse', () => {
   it('connector maps to normalized rows, skips cancelled, warns on RRULE', async () => {
     const vault = new InMemoryTokenVault();
     const f = mockFetch([{ match: 'https://school.example/calendar.ics', fixture: 'ics/school.ics' }]);
-    const c = new IcsImportConnector({ vault, http: { fetch: f } });
+    // the SSRF guard resolves the host: answer with a public address in tests
+    const c = new IcsImportConnector({ vault, http: { fetch: f, lookup: async () => [{ address: '93.184.216.34' }] } });
     const g = await c.handleCallback({ kind: 'api_token', token: 'webcal://school.example/calendar.ics' });
     const r = await c.sync({ studentId: STUDENT, tokenRef: g.token_ref });
     expect(r.events.map((e) => e.title)).not.toContain('Cancelled assembly');

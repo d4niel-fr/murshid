@@ -30,7 +30,8 @@ export const FALLBACK_PLANS: { families: Plan[]; schools: Plan[] } = {
 };
 
 /** Buy the Single plan (demo: no card is charged). The idempotency key makes a double-click or a retry safe. */
-export interface CheckoutResult { orderId: string; plan: 'single'; billing: 'monthly' | 'yearly'; amountAed: number; status: 'active'; renewsAt: string }
+/** demo: the plan is active at once; real payments: `checkoutUrl` is Stripe's card page */
+export interface CheckoutResult { orderId: string; plan: 'single'; billing: 'monthly' | 'yearly'; amountAed: number; status: 'active'; renewsAt: string; checkoutUrl?: string; sessionId?: string }
 export const checkout = (body: { plan: 'single'; billing: 'monthly' | 'yearly'; name: string; email: string; who: 'parent' | 'student'; studentName?: string; grade: number }, idempotencyKey: string) =>
   req<CheckoutResult>('/billing/checkout', { method: 'POST', body, idempotencyKey });
 

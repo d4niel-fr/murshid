@@ -63,6 +63,8 @@ export interface MicrosoftLink {
 
 export interface Org {
   id: string;
+  /** a real school or family (created in production), as opposed to the demo tenants */
+  real?: boolean;
   name: string;
   shortName: string;
   kind: 'school_group' | 'school' | 'family';
@@ -137,8 +139,14 @@ export interface Account {
   email: string;
   /** parent: linked children; student: themselves */
   studentIds: string[];
-  via: 'email' | 'microsoft' | 'join_code';
+  via: 'email' | 'microsoft' | 'join_code' | 'google';
   createdAt: string;
+  /** the sign-in user (Supabase auth user id) once they have signed in */
+  authUserId?: string;
+  /** teachers: their teacher record */
+  teacherId?: string;
+  /** students: the code a parent types to link to them (made on request) */
+  parentCode?: string;
 }
 
 export function seedAccounts(): Account[] {
@@ -152,11 +160,15 @@ export function seedAccounts(): Account[] {
 
 // ---------------- school roster (synthetic) ----------------
 
-export type SubjectId = 'english' | 'maths' | 'physics' | 'chemistry' | 'biology' | 'economics' | 'business' | 'cs';
+export type SubjectId = 'english' | 'maths' | 'physics' | 'chemistry' | 'biology' | 'economics' | 'business' | 'cs'
+  | 'arabic' | 'islamic' | 'social' | 'french' | 'history' | 'geography' | 'science' | 'pe' | 'art' | 'music' | 'other';
 export const SUBJECT_NAMES: Record<SubjectId, string> = {
   english: 'English', maths: 'Mathematics', physics: 'Physics', chemistry: 'Chemistry', biology: 'Biology',
   economics: 'Economics', business: 'Business Studies', cs: 'Computer Science',
+  arabic: 'Arabic', islamic: 'Islamic Education', social: 'Social Studies', french: 'French', history: 'History', geography: 'Geography',
+  science: 'Science', pe: 'Physical Education', art: 'Art', music: 'Music', other: 'Other',
 };
+export const SUBJECT_IDS = Object.keys(SUBJECT_NAMES) as SubjectId[];
 
 export interface Teacher {
   id: string;
@@ -181,6 +193,8 @@ export interface Stream {
   minutes: number;
   /** Teams class id once Microsoft 365 is connected (simulated) */
   teamsClassId: string;
+  /** code students type to join (classes made in Murshid) */
+  joinCode?: string;
 }
 
 export interface RosterActivity { name: string; days: number[]; minutes: number }
@@ -196,6 +210,8 @@ export interface RosterStudent {
   seed?: string;
   /** the student's id in the Murshid app (DemoStore), when they use it in this demo */
   appId: string | null;
+  /** school email (Microsoft sync or a roster import), used to match a signing-in student */
+  email?: string;
   electives: SubjectId[];
   activities: RosterActivity[];
   /** event tags, e.g. 'football' (Thu fixtures), 'swim-gala', 'mun' */
@@ -204,6 +220,8 @@ export interface RosterStudent {
   diligence: number;
   /** 0..1 typical attainment */
   ability: number;
+  /** a real student (signed up or imported): the demo's invented numbers never apply */
+  real?: boolean;
 }
 
 const T = (id: string, name: string, subject: SubjectId, portal = false): Teacher =>

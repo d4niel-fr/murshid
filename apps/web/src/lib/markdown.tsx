@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
+import { linkTarget } from './safe-redirect';
 
 /**
  * A small, safe Markdown renderer for notes: headings, bold, italic, inline code, links (http/https/mailto only),
@@ -32,8 +33,9 @@ function inline(text: string, key = 'i'): ReactNode[] {
     else if (tok.startsWith('`')) out.push(<code key={id} className="md-code">{tok.slice(1, -1)}</code>);
     else if (tok.startsWith('[')) {
       const lm = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(tok)!;
-      const href = lm[2]!; const safe = /^(https?:|mailto:|\/)/i.test(href);
-      out.push(safe ? <a key={id} href={href} {...(href.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })} className="md-link">{lm[1]}</a> : lm[1]);
+      // http(s) / mailto open in a new tab, same-site paths stay here; javascript:, data:, //other-site are plain text
+      const link = linkTarget(lm[2]!);
+      out.push(link ? <a key={id} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="md-link">{lm[1]}</a> : lm[1]);
     } else out.push(<em key={id}>{inline(tok.slice(1, -1), id)}</em>);
     rest = rest.slice(m.index + tok.length);
   }

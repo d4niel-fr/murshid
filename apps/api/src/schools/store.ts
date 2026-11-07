@@ -5,6 +5,7 @@
 import { familyOrg, DEMO_SCHOOL, PLANS, seedAccounts, seedOrgs, seedRoster, seedStreams, STUDENT_TENANT, TEACHERS, type Account, type LicenceType, type Org, type PlanId, type RosterStudent, type Stream, type Teacher } from './catalog';
 import type { School, WorkItem } from './engine';
 import { ClassroomStore } from './classroom';
+import { SchoolLife, seedDemoPolls } from './life';
 import { SimulatedMicrosoft365, type SchoolDirectoryConnector } from './microsoft';
 
 export interface StudentLicence {
@@ -24,7 +25,8 @@ export class SchoolStore {
   readonly accounts: Account[] = seedAccounts();
   readonly tenant: Record<string, string> = { ...STUDENT_TENANT };
   readonly roster: RosterStudent[] = seedRoster();
-  readonly teachers: Teacher[] = TEACHERS;
+  // a copy: teachers one store invites must never show up in another store (each app, each test)
+  readonly teachers: Teacher[] = TEACHERS.map((t) => ({ ...t }));
   readonly streams: Stream[];
   readonly members: Record<string, string[]>;
   readonly posted: WorkItem[] = [];
@@ -37,12 +39,17 @@ export class SchoolStore {
   readonly microsoft: SchoolDirectoryConnector;
   /** files, hand-ins, messages, announcements and reminders (see classroom.ts) */
   readonly classroom = new ClassroomStore();
+  /** feelings, timetable, attendance, points, polls, events, term reports (see life.ts) */
+  readonly life = new SchoolLife();
   private seq = 0;
 
   constructor() {
     const s = seedStreams(this.roster);
     this.streams = s.streams;
     this.members = s.members;
+    // the flagship demo student answers for themselves; everyone else in the demo school already has
+    const flagship = new Set(this.roster.filter((r) => r.appId).map((r) => r.id));
+    seedDemoPolls(this.life, this.streams.filter((x) => !this.org(x.orgId)?.real), this.members, flagship, new Date());
     this.microsoft = new SimulatedMicrosoft365({
       orgs: () => this.orgs, teachers: () => this.teachers, roster: () => this.roster, streams: () => this.streams, members: () => this.members,
     });
@@ -62,6 +69,7 @@ export class SchoolStore {
       teachers: this.teachers.filter((t) => t.orgId === orgId),
       posted: this.posted,
       teamsConnected: Boolean(org?.microsoft?.connected),
+      real: Boolean(org?.real),
     };
   }
 

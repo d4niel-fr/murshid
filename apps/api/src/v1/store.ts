@@ -78,7 +78,9 @@ export interface StudentRecord {
   achievements: Achievement[];
   cv: CvFields;
   links: ProfileLinks | null;
-  createdBy: 'seed' | 'admin';
+  createdBy: 'seed' | 'admin' | 'signup';
+  /** a real account (signed up): no generated history, only what the student, teachers or Murshid add */
+  real?: boolean;
   /** latest generated LinkedIn pack (career agent / student / admin) */
   linkedin?: LinkedInPack;
 }
@@ -157,8 +159,8 @@ export class DemoStore {
     return rec;
   }
 
-  /** Create a new student (admin portal). Starts with no generated history. */
-  createStudent(input: Omit<DemoProfile, 'id' | 'band' | 'subjects' | 'activities' | 'goals' | 'links' | 'opportunities' | 'studyStreakDays'> & Partial<Pick<DemoProfile, 'studyStreakDays'>>, now: Date): StudentRecord {
+  /** Create a new student (admin portal, or a real sign-up with `real`). Starts with no generated history. */
+  createStudent(input: Omit<DemoProfile, 'id' | 'band' | 'subjects' | 'activities' | 'goals' | 'links' | 'opportunities' | 'studyStreakDays'> & Partial<Pick<DemoProfile, 'studyStreakDays'>>, now: Date, opts: { real?: boolean } = {}): StudentRecord {
     let id = `stu-${slug(input.name)}`;
     for (let n = 2; this.has(id); n++) id = `stu-${slug(input.name)}-${n}`;
     const profile: DemoProfile = {
@@ -168,7 +170,8 @@ export class DemoStore {
     this.seedProfiles[id] = profile;
     this.order.push(id);
     const rec = this.record(id, now);
-    rec.createdBy = 'admin';
+    rec.createdBy = opts.real ? 'signup' : 'admin';
+    if (opts.real) rec.real = true;
     return rec;
   }
 
@@ -200,7 +203,8 @@ export class DemoStore {
     const key = `${today}:${rec.version}`;
     let hit = this.cache.get(id);
     if (!hit || hit.key !== key) {
-      hit = { key, data: generateDemoData(rec.profile, today) };
+      // real accounts get no synthetic history: their views are built only from what was added
+      hit = { key, data: rec.real ? { today, assessments: [], sessions: [], events: [], projectSeries: {}, customTasks: [], taskStatus: {}, hiddenTasks: [] } : generateDemoData(rec.profile, today) };
       this.cache.set(id, hit);
     }
     const base = hit.data;

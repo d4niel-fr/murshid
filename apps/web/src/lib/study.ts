@@ -1,6 +1,7 @@
 'use client';
 
 import { createLocalStore, uid } from './local-store';
+import { authEnabled } from './auth';
 
 /* ------------------------------------------------------------------ types */
 export interface Deck { id: string; title: string; subject: string; createdAt: number; updatedAt: number;
@@ -132,7 +133,9 @@ function seed(): StudyState {
   return { decks: decks.map(([d]) => d), cards: decks.flatMap(([, c]) => c), notes, sessions, topics, quizzes: [], xp: { total: 0, days: {}, goal: 50 }, achievements: {} };
 }
 
-export const studyStore = createLocalStore<StudyState>('study', seed, {
+/** a real account starts empty (the demo starts with example decks and notes) */
+const start = (): StudyState => (authEnabled ? { decks: [], cards: [], notes: [], sessions: [], topics: [], quizzes: [], xp: { total: 0, days: {}, goal: 50 }, achievements: {} } : seed());
+export const studyStore = createLocalStore<StudyState>('study', start, {
   migrate: (raw) => {
     const r = raw as Partial<StudyState> | null;
     if (!r || !Array.isArray(r.decks) || !Array.isArray(r.cards)) return null;

@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/dates';
 import type { FeatureId } from '@/lib/bands';
 import type { LinkKey, ProfileLinks } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { authHeaders } from '@/lib/auth';
 
 const PROVIDERS: { key: LinkKey; name: string; Icon: ComponentType<{ className?: string }>; prefix: string; placeholder: string; requires: FeatureId; blurb: [string, string] }[] = [
   { key: 'linkedin', name: 'LinkedIn', Icon: LinkedInIcon, prefix: 'https://www.linkedin.com/in/', placeholder: 'your-name', requires: 'linkedin', blurb: ['Show your experience to programmes and universities.', 'اعرض خبراتك للبرامج والجامعات.'] },
@@ -196,7 +197,7 @@ function LinkedInCard() {
   useEffect(() => { let on = true; void client.getLinkedIn().then((p) => { if (on) setPack(p); }); return () => { on = false; }; }, [client]);
   if (!pack || apiStatus === 'down') return null;
   const openPdf = async () => {
-    const res = await fetch(client.cvPdfUrl(), { headers: { 'x-dev-user': client.devUser, 'x-dev-user-id': client.devUser } });
+    const res = await fetch(client.cvPdfUrl(), { headers: await authHeaders(client.devUser) });
     window.open(URL.createObjectURL(await res.blob()), '_blank');
   };
   return (

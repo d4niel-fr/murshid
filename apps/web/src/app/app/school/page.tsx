@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, Muted } from '@/components/ui/card';
 import { getSchool, getStream, type Announcement, type Reminder } from '@/lib/school-api';
 import { ClassStream, Reminders } from '@/components/school/stream';
+import { SchoolTabs } from '@/components/life/school-tabs';
 import { Workings } from '@/components/shared/workings';
 import { subjectName } from '@/lib/subjects';
 import { cn } from '@/lib/utils';
@@ -76,6 +77,7 @@ export default function SchoolPage() {
       <PageHeader eyebrow={lic.parentOrgName ?? tx('Your school', 'مدرستك')} title={lic.orgName}
         subtitle={tx('Demo school tenant for the proposed Grade 11 pilot. Work your teachers set lands here and in your plan automatically.', 'مدرسة تجريبية للمشروع التجريبي المقترح للصف 11. الواجبات التي يحددها معلموك تصل هنا وإلى خطتك تلقائيًا.')}
         actions={<span className="inline-flex h-9 items-center gap-2 rounded-full bg-surface px-4 text-xs font-medium">{lic.connectedVia === 'microsoft365' ? <><MicrosoftMark className="size-3.5" />{tx('Demo: simulated Microsoft 365 sign-in', 'تجريبي: تسجيل دخول Microsoft 365 محاكى')}</> : <><CheckCircle2 className="size-3.5 text-success" />{tx('School licence', 'ترخيص مدرسي')}</>}</span>} />
+      <SchoolTabs />
       <Reminders items={stream.reminders} onDismiss={(id) => setStream((x) => ({ ...x, reminders: x.reminders.filter((r) => r.id !== id) }))} />
       <Bento>
         <Card className="col-span-12 xl:col-span-7">

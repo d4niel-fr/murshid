@@ -178,15 +178,21 @@ function academicsChart(v: DemoView, range: ProgressRange, buckets: Bucket[]): C
     const xs = subs.map((s) => row[s.id]).filter((x): x is number => typeof x === 'number');
     return xs.length ? round(xs.reduce((a, b) => a + b, 0) / xs.length, 1) : 0;
   };
-  const first = data[0]!;
-  const last = data[data.length - 1]!;
-  const deltas = subs.map((s) => ({ s, d: round(Number(last[s.id] ?? 0) - Number(first[s.id] ?? 0), 1) })).sort((a, b) => b.d - a.d);
-  const a0 = avgOf(first);
-  const a1 = avgOf(last);
-  const top = deltas[0]!;
-  const insight = `Your average is ${a1}% (${a1 >= a0 ? '+' : ''}${round(a1 - a0, 1)} over ${RANGE_TEXT[range]}).` +
-    (top.d > 0 ? ` Biggest climb: ${top.s.name} (+${top.d}).` : '') +
-    (deltas[deltas.length - 1]!.d < -1 ? ` Keep an eye on ${deltas[deltas.length - 1]!.s.name}.` : '');
+  const first = data[0];
+  const last = data[data.length - 1];
+  const graded = v.data.assessments.some((a) => a.percent !== null && subs.some((s) => s.id === a.subjectId));
+  let insight: string;
+  if (!subs.length) insight = 'Add your subjects to see your progress here.';
+  else if (!graded || !first || !last) insight = 'Add a mark when you get one back, and your progress shows up here.';
+  else {
+    const deltas = subs.map((s) => ({ s, d: round(Number(last[s.id] ?? 0) - Number(first[s.id] ?? 0), 1) })).sort((a, b) => b.d - a.d);
+    const a0 = avgOf(first);
+    const a1 = avgOf(last);
+    const top = deltas[0]!;
+    insight = `Your average is ${a1}% (${a1 >= a0 ? '+' : ''}${round(a1 - a0, 1)} over ${RANGE_TEXT[range]}).` +
+      (top.d > 0 ? ` Biggest climb: ${top.s.name} (+${top.d}).` : '') +
+      (deltas[deltas.length - 1]!.d < -1 ? ` Keep an eye on ${deltas[deltas.length - 1]!.s.name}.` : '');
+  }
   return {
     id: `academics-${range}`, type: 'line', title: 'Academics', subtitle: `Rolling average of your last 3 results · ${RANGE_TITLE[range]}`,
     unit: '%', xKey: 'label', series: subs.map((s, i) => ({ key: s.id, label: s.name, color: color(i) })), data, insight, generatedBy: 'rules',

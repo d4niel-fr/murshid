@@ -14,11 +14,11 @@ export function registerTasks(api: Api) {
   ownedCrud(api, {
     path: '/tasks', tag: 'tasks', name: 'task', key: 'tasks', create: TaskCreate, update: TaskUpdate,
     listQuery: z.object({
-      status: z.string().optional().describe(`comma list of ${TaskStatus.options.join('|')}`),
+      status: z.string().max(200).optional().describe(`comma list of ${TaskStatus.options.join('|')}`),
       kind: TaskKind.optional(),
-      due_before: z.string().optional(),
-      due_after: z.string().optional(),
-      linked_goal_id: z.string().optional(),
+      due_before: z.string().max(200).optional(),
+      due_after: z.string().max(200).optional(),
+      linked_goal_id: z.string().max(200).optional(),
     }),
     filter: (rows: Task[], q) => {
       const statuses = csv(q.status);
@@ -42,7 +42,7 @@ export function registerCalendar(api: Api) {
   ownedCrud(api, {
     path: '/calendar', tag: 'calendar', name: 'calendar event', key: 'calendarEvents',
     create: CalendarEventCreate, update: CalendarEventUpdate, validate: checkRange,
-    listQuery: z.object({ from: z.string().optional(), to: z.string().optional(), source: z.string().optional() }),
+    listQuery: z.object({ from: z.string().max(200).optional(), to: z.string().max(200).optional(), source: z.string().max(200).optional() }),
     filter: (rows: CalendarEvent[], q) => rows
       .filter((e) => !q.from || iso(e.end_at) > iso(q.from))
       .filter((e) => !q.to || iso(e.start_at) < iso(q.to))

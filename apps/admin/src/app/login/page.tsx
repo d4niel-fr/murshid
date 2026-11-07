@@ -7,6 +7,8 @@ import { MicrosoftMark, MurshidStar, PasscodeGate, useAdminAccess } from '@/comp
 import { ErrorBox } from '@/components/ui';
 import { Star3D } from '@/components/star-3d';
 import { api, setSession } from '@/lib/api';
+import { authEnabled } from '@/lib/auth';
+import { LiveSignIn } from '@/components/live-sign-in';
 
 const ORG = 'demo-school';
 
@@ -48,7 +50,7 @@ export default function LoginPage() {
   const [demo, setDemo] = useState<string | null>(null);
   useEffect(() => { setDemo(new URLSearchParams(window.location.search).get('demo')); }, []);
   useEffect(() => {
-    if (!demo || access === 'checking') return;
+    if (authEnabled || !demo || access === 'checking') return;
     let on = true;
     (async () => {
       try {
@@ -91,7 +93,8 @@ export default function LoginPage() {
           </h1>
           <p className="mt-7 max-w-md text-[15px] leading-relaxed text-white/70">Post work once and it lands in every student&rsquo;s plan. See who is on track, who needs support, and the best day to set homework.</p>
           <div className="mt-10 flex items-end justify-between gap-6 border-t border-white/15 pt-6 text-[13px]">
-            <div><div className="font-medium">Demo Secondary School, Dubai</div><div className="mt-0.5 text-white/60">Fictional school &middot; proposed Grade 11 pilot (demo)</div></div>
+            {authEnabled ? <div><div className="font-medium">Murshid for Schools</div><div className="mt-0.5 text-white/60">UAE &middot; data kept per school</div></div>
+              : <div><div className="font-medium">Demo Secondary School, Dubai</div><div className="mt-0.5 text-white/60">Fictional school &middot; proposed Grade 11 pilot (demo)</div></div>}
             <div className="flex items-center gap-3">
               <div className="flex -space-x-2" aria-hidden>{['#5790e6', '#c2e029', '#0b6e97', '#ffffff'].map((c) => <span key={c} className="size-6 rounded-full border border-[rgb(15_47_99/0.5)]" style={{ background: c }} />)}</div>
               <span className="text-white/60">30 students</span>
@@ -102,7 +105,7 @@ export default function LoginPage() {
 
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-[420px]">
-          {step === 'passcode' ? (
+          {authEnabled ? <LiveSignIn /> : step === 'passcode' ? (
             <>
               <button onClick={() => { setStep('start'); setPendingAdmin(null); }} className="mb-5 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.16em] text-[var(--text-muted)] hover:text-[var(--text)]"><ArrowLeft className="size-3.5" />Back</button>
               <PasscodeGate compact />

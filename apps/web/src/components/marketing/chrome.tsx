@@ -378,7 +378,7 @@ function Loader({ onReady }: { onReady: () => void }) {
 const FOOT_COLS: { h: [string, string]; links: { label: [string, string]; href?: string; overlay?: Overlay }[] }[] = [
   { h: ['Try it', 'جرّبه'], links: [{ label: ['Open the demo', 'افتح العرض'], overlay: 'demo' }, { label: ['Watch the video', 'شاهد الفيديو'], overlay: 'video' }, { label: ['Student app', 'تطبيق الطالب'], href: '/#seats' }, { label: ['Teacher portal', 'بوابة المعلم'], href: TEACHER_DEMO_URL }] },
   { h: ['Product', 'المنتج'], links: [{ label: ['How it works', 'كيف يعمل'], href: '/how-it-works' }, { label: ['Study tools', 'أدوات الدراسة'], href: '/features' }, { label: ['Pricing', 'الأسعار'], href: '/pricing' }, { label: ['Get Murshid', 'احصل على مرشد'], href: '/welcome' }] },
-  { h: ['Help', 'المساعدة'], links: [{ label: ['FAQ', 'الأسئلة الشائعة'], href: '/faq' }, { label: ['Privacy and cookies', 'الخصوصية وملفات الارتباط'], href: '/privacy' }, { label: ['Guardrails', 'الضوابط'], href: '/how-it-works#guards' }, { label: ['Survey', 'الاستبيان'], href: '/survey' }] },
+  { h: ['Help', 'المساعدة'], links: [{ label: ['FAQ', 'الأسئلة الشائعة'], href: '/faq' }, { label: ['Privacy and cookies', 'الخصوصية وملفات الارتباط'], href: '/privacy' }, { label: ['Security', 'الأمان'], href: '/security' }, { label: ['Guardrails', 'الضوابط'], href: '/how-it-works#guards' }, { label: ['Survey', 'الاستبيان'], href: '/survey' }] },
 ];
 
 export function Footer() {
@@ -413,7 +413,7 @@ export function Footer() {
       </div>
       <div className="flex flex-col gap-[1.25rem] border-t border-white/15 pt-[2rem] text-[0.875rem] text-white/60 sm:flex-row sm:items-center sm:justify-between">
         <p>{tx('© 2026 Murshid. Demo build: every student and teacher is fictional.', '© 2026 مرشد. نسخة تجريبية: كل الطلاب والمعلمين وهميون.')}</p>
-        <p className="flex flex-wrap gap-x-[1.25rem] gap-y-[0.5rem]"><a href="/privacy" className="mk-link tap-row hover:text-white">{tx('Privacy', 'الخصوصية')}</a><a href="/privacy#cookies" className="mk-link tap-row hover:text-white">{tx('Cookies', 'ملفات الارتباط')}</a><span>{tx('Proposed Grade 11 pilot, subject to the school’s approval.', 'تجربة مقترحة للصف 11، رهناً بموافقة المدرسة.')}</span></p>
+        <p className="flex flex-wrap gap-x-[1.25rem] gap-y-[0.5rem]"><a href="/privacy" className="mk-link tap-row hover:text-white">{tx('Privacy', 'الخصوصية')}</a><a href="/privacy#cookies" className="mk-link tap-row hover:text-white">{tx('Cookies', 'ملفات الارتباط')}</a><a href="/security" className="mk-link tap-row hover:text-white">{tx('Security', 'الأمان')}</a><span>{tx('Proposed Grade 11 pilot, subject to the school’s approval.', 'تجربة مقترحة للصف 11، رهناً بموافقة المدرسة.')}</span></p>
       </div>
     </footer>
   );

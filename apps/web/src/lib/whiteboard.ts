@@ -1,6 +1,7 @@
 'use client';
 
 import { createLocalStore, uid } from './local-store';
+import { authEnabled } from './auth';
 
 /**
  * Whiteboards: an endless board of pen strokes, shapes, arrows, text, sticky notes and pictures, in board units
@@ -36,7 +37,7 @@ function seed(): BoardState {
   return { boards: [{ id: 'wb_forces', title: 'Forces: worked example', subject: 'Physics', background: 'dots', elements, view: { x: 40, y: 40, z: 1 }, createdAt: now, updatedAt: now }] };
 }
 
-export const boardStore = createLocalStore<BoardState>('boards', seed, {
+export const boardStore = createLocalStore<BoardState>('boards', () => (authEnabled ? { boards: [] } : seed()), {
   migrate: (raw) => (raw && typeof raw === 'object' && Array.isArray((raw as BoardState).boards) ? (raw as BoardState) : null),
 });
 export const useBoards = () => boardStore.use();

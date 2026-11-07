@@ -6,11 +6,22 @@ import { BANDS, t as bandT, type BandConfig, type BandId } from '@/lib/bands';
 import { createClient, type MurshidClient, type Result } from '@/lib/api';
 import { translate, type Locale, type MsgKey } from '@/lib/i18n';
 import { EMPTY_USER, mergeWorld, type UserState } from '@/lib/merge';
-import { mockWorld, type MockWorld } from '@/lib/mock/data';
+import { emptyWorld, mockWorld, type MockWorld } from '@/lib/mock/data';
+import { authEnabled } from '@/lib/auth';
 import { spring } from '@/lib/motion';
 import { PREFS_COOKIE, serializePrefs, type Prefs } from '@/lib/prefs';
 import { Toaster, type ToastInput, type ToastItem } from '@/components/ui/toaster';
 import { STORAGE_FULL } from '@/lib/local-store';
+
+/** The signed-in account (live product only): see GET /account on the API. */
+export interface Account {
+  me: { authUserId: string; email: string | null; name: string | null; role: 'student' | 'parent' | 'teacher' | 'school_admin' | 'platform_admin' | null; accountId: string | null; orgId: string | null; studentId: string | null; teacherId: string | null; children: { id: string; name: string }[] };
+  needsSetup: boolean;
+  needsParent: boolean;
+  licence: { type: 'family' | 'institution'; orgName: string; planName: string; status: string } | null;
+  /** filled by the app from the student's profile */
+  student?: { grade: number } | null;
+}
 
 interface AppCtx {
   prefs: Prefs;
@@ -31,6 +42,10 @@ interface AppCtx {
   apiStatus: 'unknown' | 'up' | 'down';
   reportSource: (s: Result<unknown>['source']) => void;
   hydrated: boolean;
+  /** true when this build signs people in (Supabase configured): no demo data, no demo switches */
+  live: boolean;
+  account: Account | null;
+  setAccount: (a: Account | null) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -90,7 +105,11 @@ export function AppProvider({ initialPrefs, children }: { initialPrefs: Prefs; c
   // Persona override (e.g. the flagship demo-ideal student): the shell, greetings and chat use the persona's own
   // identity from GET /dashboard instead of the band's bundled demo student.
   const [personaStudent, setPersonaStudent] = useState<{ id: string; who: Pick<MockWorld['dashboard']['student'], 'firstName' | 'lastName' | 'nameAr' | 'classLabel' | 'school' | 'grade'> } | null>(null);
-  const baseWorld = useMemo(() => mergeWorld(mockWorld(band, undefined, prefs.persona), user), [band, user, prefs.persona]);
+  // signed-in product: the person's own world (their name, nothing invented) under whatever the API returns
+  const [account, setAccount] = useState<Account | null>(null);
+  const baseWorld = useMemo(() => mergeWorld(authEnabled
+    ? emptyWorld(band, { name: account?.me.name, grade: account?.student?.grade ?? null, school: account?.licence?.orgName ?? null })
+    : mockWorld(band, undefined, prefs.persona), user), [band, user, prefs.persona, account]);
   const world = useMemo<MockWorld>(() => {
     if (!prefs.persona || personaStudent?.id !== prefs.persona) return baseWorld;
     return { ...baseWorld, dashboard: { ...baseWorld.dashboard, student: { ...baseWorld.dashboard.student, ...personaStudent.who } } };
@@ -148,8 +167,8 @@ export function AppProvider({ initialPrefs, children }: { initialPrefs: Prefs; c
     t: (k) => translate(locale, k),
     tx: (en, ar) => (locale === 'ar' ? ar : en),
     bt: (k, vars) => bandT(band, k, locale, vars),
-    world, client, user, update, resetUser, toast, apiStatus, reportSource, hydrated,
-  }), [prefs, setPrefs, band, locale, world, client, user, update, resetUser, toast, apiStatus, reportSource, hydrated]);
+    world, client, user, update, resetUser, toast, apiStatus, reportSource, hydrated, live: authEnabled, account, setAccount,
+  }), [prefs, setPrefs, band, locale, world, client, user, update, resetUser, toast, apiStatus, reportSource, hydrated, account]);
 
   return (
     <Ctx.Provider value={value}>

@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { parseRobots, type RobotsPolicy } from './robots.js';
+import { guardedFetch } from './net-guard.js';
 
 export type FetchImpl = (url: string, init?: { headers?: Record<string, string>; signal?: AbortSignal }) => Promise<{
   status: number;
@@ -97,7 +98,8 @@ export class PoliteFetcher {
     this.minInterval = o.minIntervalMs ?? Number(process.env.CRAWLER_MIN_INTERVAL_MS ?? 2000);
     this.timeout = o.timeoutMs ?? 20000;
     this.respectRobots = o.respectRobots ?? true;
-    this.fetchImpl = o.fetchImpl ?? (globalThis.fetch as unknown as FetchImpl);
+    // by default only public http(s) hosts, with each redirect checked (SSRF guard: a listed site could redirect inwards)
+    this.fetchImpl = o.fetchImpl ?? ((url, init) => guardedFetch(url, init as RequestInit, { timeoutMs: this.timeout + 1000 }));
     this.cache = o.cache ?? new MemoryCache();
     this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.clock = o.clock ?? (() => Date.now());

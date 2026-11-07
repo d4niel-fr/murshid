@@ -24,6 +24,8 @@ import { Switch } from '@/components/ui/switch';
 import { API_BASE, createClient } from '@/lib/api';
 import { BANDS, BAND_IDS, demoStudents, type BandId } from '@/lib/bands';
 import type { BuddyStatus } from '@/lib/types';
+import { AccountCard } from '@/components/account/account-card';
+import { NotificationsCard } from '@/components/account/notifications-card';
 
 function Row({ title, desc, children }: { title: ReactNode; desc?: ReactNode; children: ReactNode }) {
   return (
@@ -42,7 +44,7 @@ type Privacy = { shareDigest: boolean; analytics: boolean; publicProfile: boolea
 const DEFAULT_PRIVACY: Privacy = { shareDigest: true, analytics: false, publicProfile: false, personalisedOpps: true };
 
 export default function SettingsPage() {
-  const { prefs, setPrefs, tx, locale, band, bandConfig, toast, resetUser, apiStatus, reportSource, user, world } = useApp();
+  const { prefs, setPrefs, tx, locale, band, bandConfig, toast, resetUser, apiStatus, reportSource, user, world, live } = useApp();
   const router = useRouter();
   const [privacy, setPrivacy] = useState<Privacy>(DEFAULT_PRIVACY);
   const [testing, setTesting] = useState(false);
@@ -141,6 +143,8 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {live && <AccountCard />}
+        <NotificationsCard />
         <Card id="data" className="col-span-12 lg:col-span-6">
           <CardHeader title={tx('Data source', 'مصدر البيانات')} icon={<Database />} action={<Badge tone={apiStatus === 'up' ? 'success' : 'neutral'}>{apiStatus === 'up' ? <><Wifi className="size-3" />{tx('Live API', 'واجهة حية')}</> : tx('Demo data', 'بيانات تجريبية')}</Badge>} />
           <Row title={tx('Mode', 'الوضع')} desc={tx(`Auto tries ${API_BASE} first and falls back to bundled demo data.`, `التلقائي يجرب ${API_BASE} أولاً ثم البيانات المدمجة.`)}>

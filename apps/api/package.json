@@ -13,17 +13,19 @@
     "prewarm": "tsx scripts/prewarm.ts"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
     "@murshid/agent-gateway": "workspace:*",
     "@murshid/core": "workspace:*",
-    "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.14",
-    "zod": "^4.1.0",
     "@murshid/documents": "workspace:*",
+    "@murshid/study": "workspace:*",
     "@murshid/survey": "workspace:*",
-    "@murshid/study": "workspace:*"
+    "hono": "^4.6.14",
+    "web-push": "3.6.7",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/web-push": "3.6.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^3.0.0"

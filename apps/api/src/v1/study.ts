@@ -52,7 +52,7 @@ async function ask(engine: ChatEngine, system: string, user: string, maxTokens: 
 
 export function registerStudy(api: Api, store: DemoStore, engine: ChatEngine) {
   api.route({
-    method: 'post', path: '/study/generate', tag: 'study', auth: 'custom', body: Generate,
+    method: 'post', path: '/study/generate', tag: 'study', auth: 'custom', durable: 'none', body: Generate,
     summary: 'Flashcards and/or structured notes from pasted material (slides, PDF text, notes); model when configured, else rules',
   }, async (c, { body }) => {
     await demoView(c, store); // a signed-in student only
@@ -84,7 +84,7 @@ export function registerStudy(api: Api, store: DemoStore, engine: ChatEngine) {
   });
 
   api.route({
-    method: 'post', path: '/study/explain', tag: 'study', auth: 'custom', body: Explain,
+    method: 'post', path: '/study/explain', tag: 'study', auth: 'custom', durable: 'none', body: Explain,
     summary: 'Explain a flashcard: simpler, with an example, a memory hook or in more depth; model when configured, else rules',
   }, async (c, { body }) => {
     await demoView(c, store);

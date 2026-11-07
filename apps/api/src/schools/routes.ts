@@ -19,6 +19,7 @@ import { authMiddleware } from '../lib/auth';
 import type { Ctx } from '../lib/context';
 import type { Api } from '../lib/router';
 import { dubaiDate } from '../lib/time';
+import { findBySecret } from '../lib/security';
 import type { DemoStore, DemoView } from '../v1/store';
 import { DEMO_SCHOOL, PLANS, SUBJECT_NAMES, type Stream, type Teacher } from './catalog';
 import { assignedTo, classReport, delegation, homeworkTiming, shortDay, streamItems, studentWork, submission, weeklyReport, weeklyRollup, type WorkItem } from './engine';
@@ -26,16 +27,20 @@ import type { SchoolStore } from './store';
 import { replanForPost } from './automation';
 import { refOf } from './classroom';
 import { registerClassroom } from './classroom-routes';
+import { registerSetup } from './setup';
+import { registerLife } from './life-routes';
+import { GraphConnector, graphFromEnv } from './microsoft-graph';
 import { studentInsight, teacherStudents } from './insights';
+import { requireAdmin } from '../admin/routes';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
   .refine((d) => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; }, 'not a real date');
 export const SchoolSchemas = {
   Onboarding: z.union([
-    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email(), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
-    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
+    z.object({ path: z.literal('parent'), parentName: z.string().trim().min(1).max(80), email: z.string().email().max(160), childName: z.string().trim().min(1).max(80), childGrade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
+    z.object({ path: z.literal('student'), name: z.string().trim().min(1).max(80), email: z.string().email().max(160), grade: z.number().int().min(5).max(12), plan: z.enum(['single', 'family-plus', 'family-pro']).default('single').transform(() => 'single' as const) }),
     z.object({ path: z.literal('school'), via: z.literal('microsoft'), code: z.string().min(4).max(120) }),
-    z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email(), grade: z.number().int().min(5).max(12) }),
+    z.object({ path: z.literal('school'), via: z.literal('join_code'), joinCode: z.string().trim().min(3).max(20), name: z.string().trim().min(1).max(80), email: z.string().email().max(160), grade: z.number().int().min(5).max(12) }),
   ]),
   MsAuthorize: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).default('teacher'), adminConsent: z.enum(['true', 'false']).optional() }),
   MsAccounts: z.object({ org: z.string().max(60).default(DEMO_SCHOOL), role: z.enum(['teacher', 'student', 'school_admin']).optional() }),
@@ -89,6 +94,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
     if (config.authMode === 'dev' && !c.req.header('authorization')) {
       role = c.req.header('x-dev-role'); userId = c.req.header('x-dev-user-id'); orgId = c.req.header('x-dev-school-id');
       if (!role) throw new HTTPException(401, { message: 'teacher or school admin required (dev: x-dev-role: teacher + x-dev-user-id)' });
+    } else if (c.get('deps').whoami) {
+      const me = await c.get('deps').whoami!(c);
+      if (me.role === 'teacher') { role = 'teacher'; userId = me.teacherId ?? undefined; }
+      else if (me.role === 'school_admin') { role = 'school_admin'; userId = me.accountId ?? me.authUserId; orgId = me.orgId ?? undefined; }
+      else throw new HTTPException(403, { message: 'the school portal is for teachers and school staff', cause: { code: me.role ? 'not_staff' : 'needs_setup' } });
     } else {
       await authMiddleware(c, async () => {});
       const a = c.get('auth');
@@ -100,6 +110,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return { role: 'teacher', teacher: t, orgId: t.orgId, actor: t.id };
     }
     if (role === 'admin' || role === 'school_admin') {
+      // the demo school is the default only in dev mode; a signed-in school admin always has their own school
+      if (!orgId && config.authMode !== 'dev') throw new HTTPException(403, { message: 'no school on this account' });
       const id = orgId ?? DEMO_SCHOOL;
       if (schools.org(id)?.licence?.type !== 'institution') throw new HTTPException(403, { message: 'not a licensed school' });
       return { role: 'school_admin', orgId: id, actor: userId ?? 'dev-admin' };
@@ -136,6 +148,9 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'post', path: '/onboarding', tag: 'schools', auth: 'none', body: SchoolSchemas.Onboarding, summary: 'Get Murshid: "I\'m a parent" | "I\'m a student" | "My school provides Murshid"' },
     async (c, { body }) => {
+      // demo sign-up: it makes accounts for any email typed in, which a real sign-in with that email would then claim.
+      // With real sign-in (jwt mode) accounts are made by POST /account/setup, from a verified email only.
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(410, { message: 'sign in to get started (this demo sign-up is off)', cause: { code: 'use_sign_in' } });
       const now = c.get('deps').now();
       const day = dubaiDate(now);
       const b = body as z.output<typeof SchoolSchemas.Onboarding>;
@@ -156,7 +171,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
         if (who.role !== 'student' || !who.appId) throw new HTTPException(400, { message: 'this Microsoft account is not a student account at a Murshid school' });
         return c.json({ path: 'school', via: 'microsoft', account: { id: who.id, name: who.name, email: who.email, role: 'student', orgId: who.orgId }, org: orgCard(who.orgId), student: { id: who.appId, name: who.name }, licence: schools.licenceOf(who.appId), demo: true }, 201);
       }
-      const org = schools.orgs.find((o) => o.joinCode && o.joinCode.toLowerCase() === b.joinCode.toLowerCase());
+      const org = findBySecret(schools.orgs, (o) => o.joinCode?.toLowerCase(), b.joinCode.toLowerCase());
       if (!org) throw new HTTPException(400, { message: 'school code not recognised' });
       const st = mkStudent(b.name, b.grade, org.name);
       schools.tenant[st.id] = org.id;
@@ -173,6 +188,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'get', path: '/auth/microsoft/accounts', tag: 'schools', auth: 'none', query: SchoolSchemas.MsAccounts, summary: 'Accounts on the simulated Microsoft sign-in page (demo only)' },
     (c, { query }) => {
+      // the simulated sign-in page lists staff names and emails: demo only
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(404, { message: 'the simulated Microsoft sign-in is only in the demo' });
       const q = query as z.output<typeof SchoolSchemas.MsAccounts>;
       const org = schools.org(q.org);
       return c.json({ org: org ? { id: org.id, name: org.name, domain: org.microsoft?.domain ?? null } : null, simulated: true,
@@ -181,6 +198,7 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   api.route({ method: 'post', path: '/auth/microsoft/callback', tag: 'schools', auth: 'none', body: SchoolSchemas.MsCallback, summary: 'Finish Microsoft sign-in: maps the Entra identity to a Murshid teacher / student / school admin' },
     (c, { body }) => {
+      if (c.get('deps').config.authMode !== 'dev') throw new HTTPException(404, { message: 'the simulated Microsoft sign-in is only in the demo' });
       const who = schools.microsoft.exchangeCode((body as { code: string }).code);
       if (!who) throw new HTTPException(400, { message: 'Microsoft sign-in failed (unknown code)' });
       const headers: Record<string, string> = who.role === 'teacher' ? { 'x-dev-role': 'teacher', 'x-dev-user-id': who.teacherId! }
@@ -259,9 +277,11 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       const extras = [attachments.length ? `${attachments.length} attachment${attachments.length === 1 ? '' : 's'}` : '', b.photosRequired ? 'hand in photos of your notes' : ''].filter(Boolean).join(' \u00b7 ');
       const how = (extras ? ` \u00b7 ${extras}` : '') + (b.format === 'google_form' ? ` \u00b7 Google Form: ${item.formUrl}` : b.format === 'microsoft_form' ? ` \u00b7 Microsoft Form: ${item.formUrl}` : b.format === 'form' ? ` \u00b7 Answer the ${item.questions!.length}-question form on your School page` : '');
       const delivered: { studentId: string; appId: string; taskId: string }[] = [];
+      const hub = c.get('deps').notify;
       for (const rid of targets) {
         const r = schools.roster.find((x) => x.id === rid);
         if (!r?.appId || !store.has(r.appId)) continue;
+        hub?.notify(r.appId, { kind: 'assignment', title: `New from ${teacher.name}: ${b.title}`, body: `${SUBJECT_NAMES[st.subject]} · due ${shortDay(b.dueDate)}`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
         const rec = store.record(r.appId, now);
         const subj = rec.profile.subjects.find((x) => x.id === st.subject || x.name.toLowerCase().startsWith(SUBJECT_NAMES[st.subject].toLowerCase().slice(0, 5)));
         const taskId = `school-${item.id}-${r.appId}`;
@@ -368,10 +388,38 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
       return c.json({ orgId: id, roster: schools.roster.filter((r) => r.orgId === id).map((r) => ({ id: r.id, name: r.name, section: r.section, appId: r.appId })), appStudents: app });
     });
 
-  api.route({ method: 'post', path: '/orgs/:id/microsoft/connect', tag: 'schools', auth: 'custom', summary: 'Connect Microsoft 365 (simulated admin consent): Entra sign-in for staff and students, Teams classes + assignments sync' },
+  // real Microsoft 365 (MS_CLIENT_ID + MS_CLIENT_SECRET): the school's IT admin approves Murshid once, then classes sync
+  const graph = (() => { const cfg = graphFromEnv((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}); return cfg ? new GraphConnector(cfg) : null; })();
+  const webUrl = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PUBLIC_WEB_URL ?? '').replace(/\/+$/, '');
+  api.route({ method: 'get', path: '/orgs/:id/microsoft/consent', tag: 'schools', auth: 'custom', summary: 'School admin: the link where the school IT admin approves Murshid for the Microsoft tenant' },
+    async (c) => {
+      const { s, id } = await orgAccess(c);
+      if (s.role !== 'school_admin') throw new HTTPException(403, { message: 'school admin role required' });
+      if (!graph) throw new HTTPException(404, { message: 'Microsoft 365 is not set up on this server (MS_CLIENT_ID)', cause: { code: 'graph_off' } });
+      return c.json({ url: graph.consentUrl(id) });
+    });
+  api.route({ method: 'get', path: '/auth/microsoft/consent-callback', tag: 'schools', auth: 'none', durable: 'tx', summary: 'Microsoft sends the school IT admin back here after approving Murshid' },
+    async (c) => {
+      const back = (q: string) => c.redirect(`${webUrl}/admin/school?${q}`, 302);
+      if (!graph) return back('microsoft=off');
+      const orgId = graph.readState(c.req.query('state') ?? '');
+      const tenant = c.req.query('tenant') ?? '';
+      if (!orgId || !schools.org(orgId) || c.req.query('admin_consent') !== 'True' || !/^[0-9a-f-]{36}$/i.test(tenant)) return back('microsoft=declined');
+      const org = schools.org(orgId)!;
+      org.microsoft = { connected: true, tenantId: tenant, domain: org.microsoft?.domain ?? '', connectedAt: c.get('deps').now().toISOString(), connectedBy: 'Microsoft admin consent', lastSyncAt: null, synced: null };
+      return back('microsoft=connected');
+    });
+
+  api.route({ method: 'post', path: '/orgs/:id/microsoft/connect', tag: 'schools', auth: 'custom', durable: 'late', summary: 'Connect Microsoft 365 / sync now: Teams classes, teachers, students and assignments (simulated in the demo)' },
     async (c) => {
       const { s, id } = await orgAccess(c);
       const org = schools.org(id)!;
+      if (graph && org.real) {
+        if (!org.microsoft?.tenantId) throw new HTTPException(409, { message: 'approve Murshid in Microsoft first', cause: { code: 'needs_consent', url: graph.consentUrl(id) } });
+        const synced = await graph.sync(schools, org, today(c)).catch((e: Error) => { throw new HTTPException(502, { message: e.message, cause: { code: 'graph_failed' } }); });
+        org.microsoft.connected = true; org.microsoft.lastSyncAt = c.get('deps').now().toISOString(); org.microsoft.synced = synced; org.microsoft.connectedBy ??= s.actor;
+        return c.json({ ...orgCard(id), classes: schools.streams.filter((x) => x.orgId === id).map(classCard) });
+      }
       if (!org.microsoft) throw new HTTPException(400, { message: 'no Microsoft tenant on file for this school' });
       const now = c.get('deps').now().toISOString();
       const classes = schools.microsoft.listClasses(id);
@@ -396,10 +444,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
 
   // ---------- platform: licensing overview ----------
   api.route({ method: 'get', path: '/licensing/overview', tag: 'schools', auth: 'custom', summary: 'Families vs institutions, kept apart (Murshid platform admin)' }, async (c) => {
-    const { config } = c.get('deps');
-    if (config.authMode === 'dev' && !c.req.header('authorization')) {
-      if (c.req.header('x-dev-role') !== 'admin') throw new HTTPException(c.req.header('x-dev-role') ? 403 : 401, { message: 'admin role required' });
-    } else { await authMiddleware(c, async () => {}); if (c.get('auth').role !== 'admin') throw new HTTPException(403, { message: 'admin role required' }); }
+    // the same check as the admin portal (production: PLATFORM_ADMIN_EMAILS)
+    await requireAdmin(c);
     const now = c.get('deps').now();
     const studentsOf = (orgId: string) => Object.entries(schools.tenant).filter(([sid, o]) => o === orgId && store.has(sid)).map(([sid]) => ({ id: sid, name: store.view(sid, now).profile.name }));
     const pick = (type: 'family' | 'institution') => schools.orgs.filter((o) => o.licence?.type === type).map((o) => ({
@@ -496,5 +542,8 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
     });
 
   // ---------- classroom: files, hand-ins, review, messages, reminders, announcements, inbox, gradebook ----------
-  registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
+  const room = registerClassroom(api, schools, store, { view, staff, classOf, today, nowMinutes, classCard });
+  registerSetup(api, schools, store, { staff, classOf, classCard, view });
+  // ---------- school life: feelings, timetable, attendance and leave, points, polls, events, term reports ----------
+  registerLife(api, schools, { view, staff, classOf, today, nowMinutes, averages: room.averages });
 }

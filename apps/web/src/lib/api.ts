@@ -8,6 +8,7 @@ import { normalizeToolArgs, toAcademics, toChartSpec, toDashboard, toLinks } fro
 import { mockChatReply, type Intent } from './intent';
 import { mockWorld, type MockWorld } from './mock/data';
 import { buildChartSpec, type Locale } from './progress';
+import { authHeaders } from './auth';
 import type { BuddyStatus, ChartRange, ChartType, ChatAgentRun, ChatProgress, ChatReply, ChatToolCall, ProfileLinks, WorkTrace } from './types';
 
 export type DataMode = 'auto' | 'mock';
@@ -59,7 +60,7 @@ export function createClient(opts: ClientOptions) {
       const res = await f(`${baseUrl}${path}`, {
         ...init,
         signal: ctrl.signal,
-        headers: { 'content-type': 'application/json', accept: 'application/json', 'x-dev-user-id': devUser, ...(init?.headers ?? {}) },
+        headers: { 'content-type': 'application/json', accept: 'application/json', ...(await authHeaders(devUser)), ...(init?.headers ?? {}) },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const parsed = parse(await res.json());
@@ -93,13 +94,13 @@ export function createClient(opts: ClientOptions) {
     async getLinkedIn(): Promise<Record<string, unknown> | null> {
       if (mode === 'mock' || !f) return null;
       try {
-        const res = await f(`${baseUrl}/student/cv/linkedin`, { headers: { 'x-dev-user-id': devUser, 'x-dev-user': devUser } });
+        const res = await f(`${baseUrl}/student/cv/linkedin`, { headers: await authHeaders(devUser) });
         return res.ok ? ((await res.json()) as Record<string, unknown>) : null;
       } catch { return null; }
     },
     cvPdfUrl: () => `${baseUrl}/student/cv/linkedin.pdf`,
     /** Study buddy availability; offline when the API is down (the buddy needs the server's guardrails). */
-    getBuddy: () => call<BuddyStatus>('/buddy', toBuddy, () => ({ available: false, reason: 'offline', band, controls: { guardian: null, school: null }, turnsToday: 0 }), { headers: { 'x-dev-user': devUser } }),
+    getBuddy: () => call<BuddyStatus>('/buddy', toBuddy, () => ({ available: false, reason: 'offline', band, controls: { guardian: null, school: null }, turnsToday: 0 }), {}),
     /**
      * Demo: a guardian switches study buddy mode on or off (audit-logged on the server). On the public demo the API
      * asks for the demo passcode (ADMIN_PASSCODE): `needsPasscode` is set when it is missing or wrong.
@@ -110,7 +111,7 @@ export function createClient(opts: ClientOptions) {
       try {
         const res = await f(`${baseUrl}/buddy/controls`, {
           method: 'PUT', body: JSON.stringify({ by: 'guardian', enabled }),
-          headers: { 'content-type': 'application/json', accept: 'application/json', 'x-dev-user-id': devUser, 'x-dev-user': devUser, 'x-dev-role': 'guardian', ...(passcode ? { 'x-admin-passcode': passcode } : {}) },
+          headers: { 'content-type': 'application/json', accept: 'application/json', ...(await authHeaders(devUser)), 'x-dev-role': 'guardian', ...(passcode ? { 'x-admin-passcode': passcode } : {}) },
         });
         if (res.status === 401) return { data: offline, source: 'mock', needsPasscode: true };
         const parsed = res.ok ? toBuddy(await res.json()) : null;
@@ -140,7 +141,7 @@ export function createClient(opts: ClientOptions) {
       try {
         const res = await f(`${baseUrl}/chat`, {
           method: 'POST', signal: ctrl.signal,
-          headers: { 'content-type': 'application/json', accept: 'text/event-stream', 'x-dev-user-id': devUser, 'x-dev-user': devUser },
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream', ...(await authHeaders(devUser)) },
           body: JSON.stringify({ message, band, locale, ...(opts.history?.length ? { history: opts.history.slice(-10).map((m) => ({ role: m.role, content: m.content.slice(0, 4000) })) } : {}), ...(opts.persona === 'buddy' ? { persona: 'buddy' } : {}) }),
         });
         if (res.status === 400 || res.status === 413) {

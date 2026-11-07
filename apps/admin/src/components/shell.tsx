@@ -3,28 +3,46 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, BarChart3, Building2, ClipboardList, GraduationCap, Inbox, KeyRound, LogIn, LogOut, Megaphone, Menu, ScrollText, Sheet, Users, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, Award, BarChart3, Building2, CalendarCheck, CalendarClock, CalendarDays, CalendarOff, ClipboardList, FileText, GraduationCap, Heart, HeartPulse, Inbox, KeyRound, LogIn, LogOut, Megaphone, Menu, Plug, ScrollText, Settings2, Sheet, Users, Vote, WifiOff, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { adminAccess, api, API_BASE, checkAdminPasscode, getAdminPasscode, getSession, setAdminPasscode, setSession, type StaffSession } from '@/lib/api';
 import { cn, PasswordInput } from './ui';
 
 type NavGroup = { section: string; items: { href: string; label: string; icon: typeof Users }[] };
 /** Teachers see their own classes and students; the school sections are for school admins only. */
+const CLASS_LIFE: NavGroup = { section: 'Class life', items: [
+  { href: '/teacher/register', label: 'Register', icon: CalendarCheck },
+  { href: '/teacher/points', label: 'Points', icon: Award },
+  { href: '/teacher/polls', label: 'Polls and exit tickets', icon: Vote },
+  { href: '/teacher/wellbeing', label: 'Wellbeing', icon: Heart },
+  { href: '/teacher/reports', label: 'Term reports', icon: FileText },
+  { href: '/teacher/timetable', label: 'Timetable', icon: CalendarClock },
+] };
 const TEACHER_NAV: NavGroup[] = [
   { section: 'Teaching', items: [{ href: '/teacher/inbox', label: 'Inbox', icon: Inbox }, { href: '/teacher', label: 'My classes', icon: ClipboardList }, { href: '/teacher/students', label: 'My students', icon: GraduationCap }, { href: '/teacher/gradebook', label: 'Gradebook', icon: Sheet }] },
+  CLASS_LIFE,
 ];
 const ADMIN_NAV: NavGroup[] = [
   { section: 'Teaching', items: [{ href: '/teacher', label: 'All classes', icon: ClipboardList }, { href: '/teacher/students', label: 'Student progress', icon: GraduationCap }, { href: '/teacher/gradebook', label: 'Gradebook', icon: Sheet }] },
+  CLASS_LIFE,
+  { section: 'School life', items: [
+    { href: '/school/wellbeing', label: 'Wellbeing and attendance', icon: HeartPulse },
+    { href: '/school/leave', label: 'Leave requests', icon: CalendarOff },
+    { href: '/school/events', label: 'School dates', icon: CalendarDays },
+  ] },
   { section: 'School', items: [
     { href: '/', label: 'Students', icon: Users },
     { href: '/school', label: 'School & licence', icon: Building2 },
+    { href: '/school/setup', label: 'School setup', icon: Settings2 },
     { href: '/opportunities', label: 'Opportunities', icon: Megaphone },
     { href: '/audit', label: 'Audit log', icon: ScrollText },
   ] },
   { section: 'Validation', items: [{ href: '/survey', label: 'Survey results', icon: BarChart3 }] },
+  { section: 'Murshid', items: [{ href: '/schools', label: 'Schools', icon: Building2 }, { href: '/integrations', label: 'Integrations', icon: Plug }] },
 ];
 const isActive = (href: string, path: string) =>
-  href === '/' ? path === '/' || path.startsWith('/students') : href === '/teacher' ? path === '/teacher' || path.startsWith('/teacher/assignments') : path.startsWith(href);
+  href === '/' ? path === '/' || path.startsWith('/students') : href === '/teacher' ? path === '/teacher' || path.startsWith('/teacher/assignments')
+    : href === '/school' ? path === '/school' : path === href || path.startsWith(`${href}/`);
 
 export function useSession(): StaffSession | null {
   const [s, setS] = useState<StaffSession | null>(null);

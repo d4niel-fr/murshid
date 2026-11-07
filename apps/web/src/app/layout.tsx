@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from 'react';
 import { AppProvider } from '@/components/providers/app-provider';
 import { CookieBanner } from '@/components/shared/cookie-banner';
 import { SiteTracker } from '@/components/shared/site-tracker';
+import { SwRegister } from '@/components/shared/sw-register';
 import { parsePrefs, PREFS_COOKIE } from '@/lib/prefs';
 import { jsonLd, ORG_LD, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 import './globals.css';
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', siteName: SITE_NAME, locale: 'en_AE', alternateLocale: ['ar_AE'], url: '/', title: `${SITE_NAME} · ${SITE_TAGLINE}`, description: 'Ask once, plan the week. Murshid plans around tests, homework and sport, and shows every step.' },
   twitter: { card: 'summary_large_image', title: `${SITE_NAME} · ${SITE_TAGLINE}`, description: 'Ask once, plan the week.' },
   formatDetection: { telephone: false },
+  // added to the Home Screen on iPhone and iPad it opens full screen, like an app
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
@@ -40,6 +43,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
           <CookieBanner />
           <Suspense fallback={null}><SiteTracker /></Suspense>
+          <SwRegister />
         </AppProvider>
       </body>
     </html>

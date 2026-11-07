@@ -1,4 +1,5 @@
 import { API_BASE } from './api';
+import { authHeaders } from './auth';
 
 /**
  * One fetch wrapper for the web app: timeouts, retries with backoff for failures that are safe to retry, and errors
@@ -15,6 +16,8 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown; headers?: Record<string, string>;
   timeoutMs?: number; retries?: number; idempotencyKey?: string; signal?: AbortSignal; baseUrl?: string;
+  /** send no sign-in token (public endpoints such as live quiz rooms) */
+  anonymous?: boolean;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -33,7 +36,8 @@ export async function request<T>(path: string, o: RequestOptions = {}): Promise<
     try {
       const res = await fetch(`${o.baseUrl ?? API_BASE}${path}`, {
         method, cache: 'no-store', signal: ctrl.signal,
-        headers: { accept: 'application/json', ...(o.body !== undefined ? { 'content-type': 'application/json' } : {}), ...(o.idempotencyKey ? { 'idempotency-key': o.idempotencyKey } : {}), ...o.headers },
+        // the sign-in token when there is one (the caller's demo headers still apply in the demo)
+        headers: { accept: 'application/json', ...(o.body !== undefined ? { 'content-type': 'application/json' } : {}), ...(o.idempotencyKey ? { 'idempotency-key': o.idempotencyKey } : {}), ...o.headers, ...(o.anonymous ? {} : await authHeaders()) },
         body: o.body !== undefined ? JSON.stringify(o.body) : undefined,
       });
       const text = await res.text();

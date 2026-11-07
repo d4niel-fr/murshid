@@ -48,7 +48,7 @@ const fileId = z.string().min(8).max(64);
 export const ClassroomSchemas = {
   Upload: z.object({
     name: z.string().trim().min(1).max(200),
-    mime: z.string().refine((m) => m in MIME_KIND, 'this file type is not supported: use a photo (JPG, PNG, WebP), PDF, PowerPoint, Word, Excel or text file'),
+    mime: z.string().max(120).refine((m) => m in MIME_KIND, 'this file type is not supported: use a photo (JPG, PNG, WebP), PDF, PowerPoint, Word, Excel or text file'),
     // base64 (a data: URL prefix is fine); 3 MB of file is ~4.2 MB of base64
     data: z.string().min(8).max(Math.ceil(MAX_FILE_BYTES / 3) * 4 + 120),
   }),
@@ -85,7 +85,12 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
     if (!r) throw new HTTPException(404, { message: 'assignments come with a school licence', cause: { code: 'no_school' } });
     return { v, r };
   }
-  const isStaffRequest = (c: Ctx) => Boolean(c.req.header('x-dev-role'));
+  const isStaffRequest = async (c: Ctx) => {
+    const whoami = c.get('deps').whoami;
+    if (!whoami || (c.get('deps').config.authMode === 'dev' && !c.req.header('authorization'))) return Boolean(c.req.header('x-dev-role'));
+    const me = await whoami(c);
+    return me.role === 'teacher' || me.role === 'school_admin';
+  };
   const teacherName = (s: Staff) => (s.role === 'teacher' ? s.teacher.name : 'School admin');
 
   /** An item this student has: a posted one (if it is for them) or one generated for their classes. */
@@ -143,23 +148,24 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
     async (c, { body }) => {
       const b = body as z.output<typeof ClassroomSchemas.Upload>;
       let owner: string; let ownerRole: 'student' | 'teacher' | 'school_admin';
-      if (isStaffRequest(c)) { const s = await h.staff(c); owner = s.actor; ownerRole = s.role; }
+      if (await isStaffRequest(c)) { const s = await h.staff(c); owner = s.actor; ownerRole = s.role; }
       else { const v = await h.view(c); owner = v.profile.id; ownerRole = 'student'; }
       const b64 = b.data.replace(/^data:[^;,]+;base64,/, '');
       if (!/^[A-Za-z0-9+/=\s]+$/.test(b64)) throw new HTTPException(400, { message: 'file data must be base64', cause: { code: 'bad_encoding' } });
       const data = Buffer.from(b64, 'base64');
       if (data.length > MAX_FILE_BYTES) throw new HTTPException(413, { message: `that file is ${(data.length / 1048576).toFixed(1)} MB; the limit is 3 MB`, cause: { code: 'too_large' } });
       if (!sniffOk(b.mime, data)) throw new HTTPException(400, { message: "the file doesn't match its type: try saving it again", cause: { code: 'type_mismatch' } });
-      const f = room.putFile({ name: cleanName(b.name), mime: b.mime, kind: MIME_KIND[b.mime]!, data, owner, ownerRole, at: c.get('deps').now().toISOString() });
+      const f = await room.putFile({ name: cleanName(b.name), mime: b.mime, kind: MIME_KIND[b.mime]!, data, owner, ownerRole, at: c.get('deps').now().toISOString() });
       return c.json(refOf(f), 201);
     });
 
   api.route({ method: 'get', path: '/files/:id', tag: 'classroom', auth: 'none', summary: 'Download a file by its link (images and PDFs open inline)' },
-    (c) => {
+    async (c) => {
       const f = room.files.get(c.req.param('id')!);
-      if (!f) throw new HTTPException(404, { message: 'file not found' });
+      const data = f ? await room.fileBytes(f.id) : null;
+      if (!f || !data) throw new HTTPException(404, { message: 'file not found' });
       const inline = f.kind === 'image' || f.kind === 'pdf';
-      return new Response(new Uint8Array(f.data), {
+      return new Response(new Uint8Array(data), {
         headers: {
           'content-type': f.kind === 'text' ? 'text/plain; charset=utf-8' : f.mime,
           'content-length': String(f.size),
@@ -218,6 +224,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const rec = store.has(v.profile.id) ? store.record(v.profile.id, v.now) : null;
       const task = rec?.customTasks.find((t) => t.id === `school-${item.id}-${v.profile.id}`);
       if (task) task.status = 'done';
+      c.get('deps').notify?.notify(item.teacherId, { kind: 'handin', title: `${r.name} handed in "${item.title}"${late ? ' (late)' : ''}`, body: text.slice(0, 120) || `${files.length} file${files.length === 1 ? '' : 's'}`, url: `/admin/teacher/assignments/${encodeURIComponent(item.id)}?class=${encodeURIComponent(item.streamId)}&student=${encodeURIComponent(r.id)}` });
       audit(v.profile.id, 'student', v.profile.id, prev ? 'update' : 'create', 'handin', item.id, `${prev ? (prev.state === 'returned' ? 'Resubmitted' : 'Updated the hand-in for') : 'Handed in'} "${item.title}"${files.length ? ` with ${files.length} file${files.length === 1 ? '' : 's'}` : ''}${late ? ' (late)' : ''}`, at);
       return c.json({ assignmentId: item.id, handIn: next, updated: Boolean(prev) }, prev ? 200 : 201);
     });
@@ -246,6 +253,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const msg: Message = { id: room.id('msg'), from: 'student', authorId: r.id, name: r.name, text: b.text, files: ownFiles(b.fileIds, v.profile.id), at };
       const th = room.thread(item.id, r.id);
       th.messages.push(msg); th.seenByStudent = th.messages.length;
+      c.get('deps').notify?.notify(item.teacherId, { kind: 'message', title: `${r.name} about "${item.title}"`, body: b.text.slice(0, 140), url: `/admin/teacher/assignments/${encodeURIComponent(item.id)}?class=${encodeURIComponent(item.streamId)}&student=${encodeURIComponent(r.id)}` });
       return c.json(msg, 201);
     });
 
@@ -359,6 +367,9 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
         th.messages.push({ id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: `${b.action === 'mark' ? `Marked${grade !== null ? ` ${grade}%` : ''}` : 'Returned for revision'}: ${b.feedback.trim()}`, files: [], at, review: { action: b.action, grade: b.action === 'mark' ? grade : null, feedback: b.feedback.trim() } });
         th.seenByTeacher = th.messages.length;
       }
+      if (m.appId) c.get('deps').notify?.notify(m.appId, b.action === 'mark'
+        ? { kind: 'marked', title: `Marked: ${item.title}${grade !== null ? ` · ${grade}%` : ''}`, body: b.feedback?.trim().slice(0, 140) || `${teacherName(s)} marked your work.`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` }
+        : { kind: 'returned', title: `Returned for revision: ${item.title}`, body: b.feedback?.trim().slice(0, 140) || `${teacherName(s)} asked for another go.`, url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
       audit(s.actor, 'admin', m.appId ?? null, 'update', 'handin', item.id, `${teacherName(s)} ${b.action === 'mark' ? `marked "${item.title}"${grade !== null ? ` (${grade}%)` : ''}` : `returned "${item.title}" for revision`} for ${m.name}`, at);
       return c.json({ studentId: m.id, handIn: hand });
     });
@@ -373,6 +384,7 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       const msg: Message = { id: room.id('msg'), from: 'teacher', authorId: s.actor, name: teacherName(s), text: b.text, files: ownFiles(b.fileIds, s.actor), at };
       const th = room.thread(item.id, m.id);
       th.messages.push(msg); th.seenByTeacher = th.messages.length;
+      if (m.appId) c.get('deps').notify?.notify(m.appId, { kind: 'message', title: `${teacherName(s)} about "${item.title}"`, body: b.text.slice(0, 140), url: `/app/school/assignments/${encodeURIComponent(item.id)}` });
       return c.json(msg, 201);
     });
 
@@ -459,6 +471,10 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       };
       if (a.pinned) for (const x of room.announcements[st.id] ?? []) x.pinned = false;
       (room.announcements[st.id] ??= []).push(a);
+      for (const rid of schools.members[st.id] ?? []) {
+        const appId = schools.roster.find((x) => x.id === rid)?.appId;
+        if (appId) c.get('deps').notify?.notify(appId, { kind: 'announcement', title: `${st.name}: ${teacherName(s)}`, body: b.text.slice(0, 140), url: '/app/school' });
+      }
       audit(s.actor, 'admin', null, 'create', 'announcement', a.id, `${teacherName(s)} posted to ${st.name}: "${b.text.slice(0, 60)}"`, at);
       return c.json(a, 201);
     });
@@ -516,4 +532,20 @@ export function registerClassroom(api: Api, schools: SchoolStore, store: DemoSto
       }
       return c.json({ class: h.classCard(st), columns: cols, rows });
     });
+
+  /** Each student's average and missing work in a class (the gradebook's numbers), for term reports. */
+  function averages(st: Stream, day: string) {
+    const items = streamItems(schools.school(st.orgId), st, day).filter((it) => it.setDate <= day);
+    const out = new Map<string, { average: number | null; missing: number }>();
+    const grades = new Map<string, number[]>();
+    for (const it of items) for (const r of rowsFor(st, it, day)) {
+      const o = out.get(r.studentId) ?? { average: null, missing: 0 };
+      if (r.state === 'not_started' && r.overdue) o.missing++;
+      if (r.grade !== null) { const g = grades.get(r.studentId) ?? []; g.push(r.grade); grades.set(r.studentId, g); }
+      out.set(r.studentId, o);
+    }
+    for (const [id, g] of grades) out.get(id)!.average = Math.round(g.reduce((t, x) => t + x, 0) / g.length);
+    return out;
+  }
+  return { averages };
 }
