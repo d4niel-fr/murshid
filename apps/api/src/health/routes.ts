@@ -42,7 +42,7 @@ export const HealthSchemas = {
   }),
 };
 
-interface Helpers { view: (c: Ctx) => Promise<DemoView>; cfg: HealthConfig; fetch?: FetchLike }
+interface Helpers { view: (c: Ctx) => Promise<DemoView>; cfg: HealthConfig; fetch?: FetchLike; demo?: boolean }
 
 export function registerHealth(api: Api, health: HealthStore, h: Helpers) {
   const { cfg } = h; const f = h.fetch ?? fetch;
@@ -92,6 +92,14 @@ export function registerHealth(api: Api, health: HealthStore, h: Helpers) {
   api.route({ method: 'get', path: '/me/health', tag: 'health', auth: 'custom', query: HealthSchemas.Query, summary: 'My steps, active minutes, sleep and workouts by day, and each connected source' },
     async (c, { query }) => {
       const { who, v } = await me(c); const today = dubaiDate(v.now); const n = (query as { days: number }).days;
+      // the demo: a phone and a watch already connected, with three weeks of example numbers
+      if (h.demo && dev(c) && !health.people[who] && !health.demoSeeded[who]) {
+        health.demoSeeded[who] = true;
+        for (const id of ['apple', 'strava'] as const) {
+          health.person(who).conns[id] = { provider: id, connectedAt: v.now.toISOString(), lastSync: null, error: null, sealed: null, simulated: true, account: null };
+          await syncOne(who, id, v.now);
+        }
+      }
       const p = health.people[who];
       const days = Array.from({ length: n }, (_, i) => {
         const d = addDays(today, i - n + 1); const src = p?.days[d] ?? {};
