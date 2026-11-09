@@ -96,12 +96,23 @@ Also set `HEALTH_TOKEN_KEY` (any long random string, API only): the services' to
 Strava covers Garmin, Huawei, Samsung, Polar, COROS and Apple Watch for anyone who shares their workouts to Strava.
 Each service has its own age rules (Fitbit and Strava: 13 and over).
 
-## 7. Hosting checks
+## 7. Other settings (optional)
 
-- `CORS_ORIGINS`: only needed if the apps are on different domains from the API.
-- Leave `ADMIN_PASSCODE` empty in production (it guards the public demo only).
+| Setting | App | What it is |
+|---|---|---|
+| `SURVEY_ADMIN_CODE` | API | Any long random string; lets Murshid admins read survey results (also run `supabase/survey.sql`) |
+| `INBOX_WEBHOOK_SECRET`, `INBOX_DOMAIN` | API | Only if you set up email forwarding of school emails (an email provider's inbound webhook) |
+| `CORS_ORIGINS` | API | Only if the apps are on different domains from the API |
+| `ADMIN_PASSCODE` | API | Leave empty in production (it guards the public demo only) |
+| `TURNSTILE_SECRET_KEY` | API | Leave empty for now: the forms do not show Cloudflare's widget yet |
+
+`TRUST_PROXY` needs no setting on Vercel (it is detected).
+
+## 8. Hosting checks
+
 - Vercel → Firewall: turn on Bot Protection and an `/api/*` rate-limit rule (see `docs/SECURITY.md`).
 - Run `node scripts/check-links.mjs https://YOUR-DOMAIN` after the first deploy.
+- Murshid admins: open **Portal → Integrations** to see which services are live.
 
 ## What stays on the device
 
