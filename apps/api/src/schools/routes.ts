@@ -546,4 +546,5 @@ export function registerSchools(api: Api, schools: SchoolStore, store: DemoStore
   registerSetup(api, schools, store, { staff, classOf, classCard, view });
   // ---------- school life: feelings, timetable, attendance and leave, points, polls, events, term reports ----------
   registerLife(api, schools, { view, staff, classOf, today, nowMinutes, averages: room.averages });
+  return { averages: room.averages };
 }

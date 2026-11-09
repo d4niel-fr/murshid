@@ -23,6 +23,8 @@ export class HealthStore {
   pending: Record<string, { who: string; provider: OAuthId; verifier: string; at: number }> = {};
   /** shortcut link hash -> student */
   shortcuts: Record<string, string> = {};
+  /** demo students who already got example data (so deleting it does not bring it back) */
+  demoSeeded: Record<string, true> = {};
 
   person(who: string): Person { return (this.people[who] ??= { conns: {}, days: {}, workouts: [], shortcut: null }); }
 

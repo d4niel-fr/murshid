@@ -16,6 +16,7 @@ import { registerAgent, registerConnections, registerCv, registerGuardian, regis
 import { demoView, registerV1 } from './v1/routes';
 import { registerAdmin, requireAdmin } from './admin/routes';
 import { registerSurvey, surveySinkFromEnv, type SurveySink } from './survey/routes';
+import { seedDemoSchool } from './schools/demo-seed';
 import { registerSchools } from './schools/routes';
 import { registerAccounts, signedIn } from './schools/accounts';
 import { SchoolStore } from './schools/store';
@@ -65,6 +66,8 @@ export interface CreateAppOptions {
   /** health and activity data (default: fresh) and the fetch used to call Fitbit, Strava and Oura (tests pass a fake) */
   health?: HealthStore;
   healthFetch?: (url: string, init?: RequestInit) => Promise<Response>;
+  /** fill the demo school and demo students with example activity (default: on, except under the test runner) */
+  demoExtras?: boolean;
   /** real payments (default: Stripe when STRIPE_SECRET_KEY is set; null = the demo checkout) */
   stripe?: Stripe | null;
 }
@@ -165,6 +168,8 @@ export function buildApi(opts: CreateAppOptions = {}) {
   schools.classroom.blobs = opts.blobs ?? blobsFromEnv(env);
   const hub = new NotificationHub(notifyFromEnv(env), deps.now);
   const health = opts.health ?? new HealthStore();
+  // example data in the demo (off under the test runner, where tests set up exactly what they check)
+  const demoExtras = opts.demoExtras ?? env.NODE_ENV !== 'test';
   // what else we keep about a student: in "download my data", and erased with the account
   deps.personalData = [
     { name: 'health', export: (id) => { const p = health.people[id]; return p ? { connections: Object.values(p.conns).map((x) => ({ provider: x!.provider, connectedAt: x!.connectedAt, lastSync: x!.lastSync })), days: p.days, workouts: p.workouts } : null; }, forget: (id) => health.forget(id) },
@@ -208,11 +213,13 @@ export function buildApi(opts: CreateAppOptions = {}) {
   registerStudy(api, store, engine);
   registerLive(api, persistent ? backend : null);
   registerSync(api, persistent ? backend : null);
-  registerHealth(api, health, { view: (c) => demoView(c, store), cfg: healthFromEnv(env, deps.config.authMode === 'dev'), fetch: opts.healthFetch });
+  registerHealth(api, health, { view: (c) => demoView(c, store), cfg: healthFromEnv(env, deps.config.authMode === 'dev'), fetch: opts.healthFetch, demo: demoExtras });
   registerNotifications(api, hub, schools, store, env);
   registerIntegrations(api, env, () => ({ state: persistent ? backend.name : 'memory', files: schools.classroom.blobs.name, chat: engine.provider?.name ?? null, authMode: deps.config.authMode }));
   registerAdmin(api, store, (id) => schools.licenceOf(id), (c) => demoView(c, store));
-  registerSchools(api, schools, store, (c) => demoView(c, store));
+  const sch = registerSchools(api, schools, store, (c) => demoView(c, store));
+  // the demo school looks lived-in (posted work, hand-ins, announcements, reports...); real schools start empty
+  if (demoExtras) seedDemoSchool(schools, hub, deps.now(), sch.averages);
   registerAccounts(api, schools, store);
   registerSurvey(api, opts.surveySink ?? surveySinkFromEnv(env), deps.now);
   registerBilling(api, billing, deps.now, opts.stripe !== undefined ? opts.stripe : stripeFromEnv(env) ? new Stripe(stripeFromEnv(env)!) : null, {
