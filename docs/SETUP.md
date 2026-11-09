@@ -35,8 +35,8 @@ admins sign in with the email you gave and set up teachers, students and classes
 | Setting | App | What it is |
 |---|---|---|
 | `GATEWAY_MODE=openrouter` | API | Use models (otherwise Murshid answers with its built-in rules) |
-| `OPENROUTER_API_KEY` | API (server) | Model access. Other providers: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` |
-| `OPENROUTER_MODELS` | API | Optional: which models, in order |
+| `OPENROUTER_API_KEY` | API (server) | From openrouter.ai → Keys. One key reaches Claude, GPT, Gemini and free models |
+| `OPENROUTER_MODELS` | API | Optional: which models, in order (default: free models; free use is about 50 requests a day, about US$10 of credit raises it to 1,000) |
 
 ## 3. Payments (Stripe)
 
