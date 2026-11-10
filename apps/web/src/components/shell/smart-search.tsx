@@ -18,6 +18,7 @@ import { useNotebooks } from '@/lib/notebook';
 import { cn } from '@/lib/utils';
 import { NAV_ICONS } from './icons';
 import { appNav } from './nav';
+import { hiddenInDemo } from '@/lib/demo-scope';
 
 type Group = 'ask' | 'recent' | 'pages' | 'assignments' | 'notes' | 'decks' | 'boards' | 'opportunities' | 'help' | 'actions';
 interface Item { id: string; group: Group; label: string; hint?: string; icon: ReactNode; run: () => void; text?: string }
@@ -115,6 +116,7 @@ export function SmartSearch({ open, onOpenChange }: { open: boolean; onOpenChang
       ['/privacy', tx('Privacy', 'الخصوصية'), 'data consent cookies', I('Shield')],
     ];
     for (const [href, label, text, icon] of extra) {
+      if (hiddenInDemo(href)) continue;
       const same = pages.find((p) => p.id === `p:${href}`);
       if (same) { same.text = `${same.text ?? same.label} ${label} ${text}`; continue; }
       pages.push({ id: `p:${href}`, group: 'pages', label, icon, run: go(href), text: `${label} ${text}` });

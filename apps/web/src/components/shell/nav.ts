@@ -1,5 +1,6 @@
 import { visibleNav, type BandId, type NavId } from '@/lib/bands';
 import type { Locale } from '@/lib/i18n';
+import { hiddenInDemo } from '@/lib/demo-scope';
 
 /** Where each grade-bands NavId lives in this app (several catalog items share a page). */
 export const NAV_ROUTE: Record<NavId, string> = {
@@ -38,7 +39,7 @@ export function appNav(band: BandId, locale: Locale): AppNavItem[] {
   out.splice(actIdx >= 0 ? actIdx + 1 : out.length, 0, health);
   out.push({ key: 'saved', href: '/app/saved', icon: 'Bookmark', label: locale === 'ar' ? 'المحفوظات' : 'Saved', primary: false });
   // Profile & links is always reachable from Settings; surface it in nav when the band has no profile item.
-  return out;
+  return out.filter((i) => !hiddenInDemo(i.href));
 }
 
 /** School sections that light up the School item in the nav. */
