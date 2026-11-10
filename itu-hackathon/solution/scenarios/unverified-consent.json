@@ -1,0 +1,19 @@
+{
+  "id": "unverified-consent",
+  "title": "Students onboarded through a school code without verified guardian consent",
+  "setting": "Murshid requires guardian OTP verification for 13-17s and blocks under-13s with a neutral age gate. All details are synthetic.",
+  "stages": [
+    {"t": "Day 1 09:00 (T+0)", "events": [
+      {"id": "E1", "visible_to": ["murshid_operator"], "tags": ["consent_unverified", "minor_data"],
+       "text": "Internal audit: 63 accounts aged 13-17 joined with the school join code OOW-G11; the guardian e-mail OTP step was skipped by a bug in the school onboarding path. Their timetables and grades are being synced from the school connector."}]},
+    {"t": "Day 1 14:00 (T+5h)", "events": [
+      {"id": "E2", "visible_to": ["school_khda"], "tags": ["consent_unverified"],
+       "text": "Asked by Murshid, the school says parents signed a generic 'educational technology' clause in the enrolment contract and it considers that sufficient consent for any EdTech tool."}]},
+    {"t": "Day 2 10:00 (T+1d)", "events": [
+      {"id": "E3", "visible_to": ["murshid_operator", "child_safety"], "tags": ["consent_unverified", "age_verification", "minor_data"],
+       "text": "Two of the 63 accounts belong to 12-year-olds (Grade 7) who typed a wrong birth year; the self-declared age gate let them through."}]},
+    {"t": "Day 3 09:00 (T+2d)", "events": [
+      {"id": "E4", "visible_to": ["data_office"], "tags": ["complaint", "consent_unverified"],
+       "text": "A guardian asks the Data Office who is responsible, the school or the app, and asks for all of her child's data to be deleted."}]}
+  ]
+}

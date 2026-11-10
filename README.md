@@ -6,6 +6,31 @@ Made by Daniel Davidson, Grade 11, and Vardan (Sam) Kapur, Grade 11, Dubai.
 
 > Demo build. Every student and teacher is fictional (synthetic data). Microsoft 365 sign-in is simulated. The school in the demo (Demo Secondary School) is fictional.
 
+## ITU AI for Good Lab Hackathon (UAE) submission
+
+Team **Murshid** · domain **Education** · team leader Vardan (Sam) Kapur, team member Daniel Davidson.
+
+The three hackathon deliverables live in [`itu-hackathon/`](itu-hackathon/):
+
+| Deliverable | Where |
+|---|---|
+| Knowledge base: 22 official UAE and global documents (1,058 pages), chunked and vectorised with the ITU reference pipeline | [`itu-hackathon/knowledge-base/`](itu-hackathon/knowledge-base/) · [`MANIFEST.md`](itu-hackathon/knowledge-base/MANIFEST.md) |
+| Agentic solution: policy and legal adviser, five institutional agents (Murshid operator, school + KHDA, UAE Data Office, Ministry of Education, Child Digital Safety Council / TDRA), progressively released error scenarios, SHA-256 hash-chained audit log, gap analysis | [`itu-hackathon/solution/`](itu-hackathon/solution/) · sample runs in [`outputs/`](itu-hackathon/solution/outputs/) |
+| Technical report (5 pages, official template) | [`itu-hackathon/report/Murshid-ITU-Technical-Report.pdf`](itu-hackathon/report/Murshid-ITU-Technical-Report.pdf) |
+
+Run it in about two minutes with no API key:
+
+```bash
+cd itu-hackathon/solution
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+python -m murshid_policy simulate minor-data-leak     # rules + retrieval engine, zero cost
+python -m murshid_policy verify outputs/<run>/audit.jsonl
+python -m pytest -q tests
+```
+
+The rest of this README describes the Murshid student and teacher app the scenarios are built around. All scenario data is synthetic.
+
 ## What is in here
 
 | | Path | What it is |
@@ -16,6 +41,7 @@ Made by Daniel Davidson, Grade 11, and Vardan (Sam) Kapur, Grade 11, Dubai.
 | Shared packages | `packages/*` | Agent gateway, privacy, connectors, opportunities, documents (CV/PDF), core types, design tokens, grade bands, survey |
 | Database | `supabase/` | Postgres migrations with row-level security, seed data |
 | Docs | `docs/` | Schools and licensing, design system, grade bands |
+| ITU hackathon submission | `itu-hackathon/` | Policy knowledge base, policy adviser and institutional agents, error scenarios, audit log, technical report |
 | Scripts | `scripts/` | `check-links.mjs` crawls the built site for broken links and missing titles or headings |
 
 ## Features

@@ -1,0 +1,7 @@
+# downloaded originals are large; rebuild with knowledge-base/scripts/download.py
+knowledge-base/raw/**/*.pdf
+knowledge-base/raw/**/*.html
+knowledge-base/.embed_cache/
+**/__pycache__/
+**/.pytest_cache/
+.venv/
