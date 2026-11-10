@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { securityHeaders } from './src/lib/security-headers';
+import { FOCUSED_DEMO, FOCUSED_DEMO_HIDDEN } from './src/lib/demo-scope';
 
 // One Vercel project serves all three apps on one domain (root vercel.json): this app at /, the teacher portal at
 // /admin, the API at /api. Locally (`pnpm dev`, no Vercel) the same paths are proxied to the other dev servers.
@@ -42,6 +43,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     const app = ['chat', 'planner', 'academics', 'extracurriculars', 'goals', 'opportunities', 'profile', 'settings', 'insights', 'school', 'study', 'saved'];
     return [
+      // focused judges demo: extras are hidden and their pages go back to the student home
+      ...(FOCUSED_DEMO ? FOCUSED_DEMO_HIDDEN.flatMap((p) => [{ source: p, destination: '/app', permanent: false }, { source: `${p}/:path*`, destination: '/app', permanent: false }]) : []),
       // the landing page moved from /judges to /, the student app from / to /app
       { source: '/judges', destination: '/', permanent: true },
       { source: '/dashboard', destination: '/app', permanent: true },

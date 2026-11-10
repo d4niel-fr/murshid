@@ -21,7 +21,7 @@
     "@murshid/survey": "workspace:*",
     "hono": "^4.6.14",
     "web-push": "3.6.7",
-    "zod": "^4.1.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
